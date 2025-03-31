@@ -30,7 +30,7 @@ except Exception:
 
 T = TypeVar("T", bound="ModelBase")
 
- 
+
 class ModelBase:
     """Base class for all models"""
 
