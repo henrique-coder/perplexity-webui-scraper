@@ -5,8 +5,8 @@ from typing import Any, Literal, TypeVar
 
 # Third-party modules
 from geocoder import ip
+from httpx import Client, Response, Timeout
 from orjson import loads
-from requests import Response, Session
 from tzlocal import get_localzone_name
 
 
@@ -97,7 +97,7 @@ class ModelType:
                 _identifier = "r1"
                 _mode = "copilot"
 
-            class O3mini(ModelBase):
+            class o3mini(ModelBase):
                 """OpenAI's reasoning model"""
 
                 _identifier = "o3mini"
@@ -124,9 +124,7 @@ class Perplexity:
             "Origin": "https://www.perplexity.ai",
         }
         self._cookies = {"__Secure-next-auth.session-token": session_token}
-        self._session = Session()
-        self._session.headers.update(self._headers)
-        self._session.cookies.update(self._cookies)
+        self._client = Client(headers=self._headers, cookies=self._cookies, timeout=Timeout(1800, read=None))
 
         self.reset_response_data()
 
@@ -144,7 +142,10 @@ class Perplexity:
     def _extract_json_line(line: str | bytes) -> dict[str, Any] | None:
         """Extract JSON data from a line in the response"""
 
-        return loads(line[6:]) if line.startswith(b"data: ") else None
+        if isinstance(line, bytes):
+            return loads(line[6:]) if line.startswith(b"data: ") else None
+        else:
+            return loads(line[6:].encode()) if line.startswith("data: ") else None
 
     def _prepare_json_data(
         self,
@@ -299,10 +300,34 @@ class Perplexity:
         )
 
         # Initialize the session with the query
-        self._session.get("https://www.perplexity.ai/search/new", params={"q": query})
+        self._client.get("https://www.perplexity.ai/search/new", params={"q": query})
 
-        # Make the main API request
-        response = self._session.post("https://www.perplexity.ai/rest/sse/perplexity_ask", json=json_data, stream=True)
+        # Process the response either streaming or all at once
+        if stream:
 
-        # Process the response based on streaming preference
-        return self._process_response(response, stream)
+            def stream_generator() -> Generator[dict[str, Any], None, None]:
+                with self._client.stream("POST", "https://www.perplexity.ai/rest/sse/perplexity_ask", json=json_data) as r:
+                    for line in r.iter_lines():
+                        data = self._extract_json_line(line)
+
+                        if data:
+                            self._process_data(data)
+
+                            yield data
+
+                            if data.get("final"):
+                                break
+
+            return stream_generator()
+        else:
+            with self._client.stream("POST", "https://www.perplexity.ai/rest/sse/perplexity_ask", json=json_data) as r:
+                for line in r.iter_lines():
+                    data = self._extract_json_line(line)
+
+                    if data:
+                        self._process_data(data)
+
+                        if data.get("final"):
+                            break
+
+            return None
