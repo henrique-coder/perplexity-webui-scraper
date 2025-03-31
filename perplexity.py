@@ -1,7 +1,8 @@
 # Standard modules
 from collections.abc import Generator
+from enum import Enum
 from locale import LC_ALL, getlocale, setlocale
-from typing import Any, Literal, TypeVar
+from typing import Any, TypeVar
 
 # Third-party modules
 from geocoder import ip
@@ -10,23 +11,35 @@ from orjson import loads
 from tzlocal import get_localzone_name
 
 
-try:
-    setlocale(LC_ALL, "")
-    lang_code, country_code = getlocale()[0].split("_")
-    LOCAL_LANGUAGE = f"{lang_code.lower()}-{country_code.upper()}"
-except Exception:
-    LOCAL_LANGUAGE = "en-US"
+def get_locale() -> str | None:
+    try:
+        setlocale(LC_ALL, "")
+        lang_code, country_code = getlocale()[0].split("_")
 
-try:
-    LOCAL_TIMEZONE = get_localzone_name()
-except Exception:
-    LOCAL_TIMEZONE = None
+        return f"{lang_code.lower()}-{country_code.upper()}"
+    except Exception:
+        return "en-US"
 
-try:
-    location = ip("me")
-    LOCAL_COORDINATES = tuple(location.latlng) if location.latlng else None
-except Exception:
-    LOCAL_COORDINATES = None
+
+def get_timezone() -> str | None:
+    try:
+        return get_localzone_name()
+    except Exception:
+        return None
+
+
+def get_coordinates() -> tuple[float, float] | None:
+    try:
+        location = ip("me")
+
+        return tuple(location.latlng) if location.latlng else None
+    except Exception:
+        return None
+
+
+LOCAL_LANGUAGE = get_locale()
+LOCAL_TIMEZONE = get_timezone()
+LOCAL_COORDINATES = get_coordinates()
 
 T = TypeVar("T", bound="ModelBase")
 
@@ -116,6 +129,20 @@ class ModelType:
         _mode = "copilot"
 
 
+class TimeRange(Enum):
+    ALL = None
+    TODAY = "DAY"
+    LAST_WEEK = "WEEK"
+    LAST_MONTH = "MONTH"
+    LAST_YEAR = "YEAR"
+
+
+class Source(Enum):
+    WEB = "web"
+    SCHOLAR = "scholar"
+    SOCIAL = "social"
+
+
 class Perplexity:
     def __init__(self, session_token: str) -> None:
         self._headers = {
@@ -154,8 +181,8 @@ class Perplexity:
         model: type[ModelBase],
         save_to_library: bool,
         enable_web_search: bool,
-        sources: list[Literal["web", "scholar", "social"]] | Literal["web", "scholar", "social"],
-        time_range: Literal["all", "today", "last_week", "last_month", "last_year"],
+        sources: list[Source] | Source,
+        time_range: TimeRange,
         language: str,
         timezone: str | None,
         coordinates: tuple[float, float] | None,
@@ -163,7 +190,11 @@ class Perplexity:
         """Prepare the JSON data for the API request"""
 
         search_focus = ["internet"] if enable_web_search else ["writing"]
-        time_range_mapping = {"all": None, "today": "DAY", "last_week": "WEEK", "last_month": "MONTH", "last_year": "YEAR"}
+
+        if isinstance(sources, Source):
+            sources = [sources.value]
+        elif isinstance(sources, list):
+            sources = [s.value for s in sources]
 
         return {
             "params": {
@@ -173,11 +204,11 @@ class Perplexity:
                 "client_coordinates": {"location_lat": coordinates[0], "location_lng": coordinates[1], "name": ""}
                 if coordinates
                 else None,
-                "sources": [sources] if isinstance(sources, str) else sources,
+                "sources": sources,
                 "model_preference": model.get_identifier(),
                 "mode": model.get_mode(),
                 "search_focus": search_focus,
-                "search_recency_filter": time_range_mapping[time_range],
+                "search_recency_filter": time_range.value,
                 "is_incognito": not save_to_library,
                 "use_schematized_api": True,
                 "local_search_enabled": True,
@@ -251,8 +282,8 @@ class Perplexity:
         model: type[ModelBase] = ModelType.Pro.Best,
         save_to_library: bool = False,
         enable_web_search: bool = True,
-        sources: list[Literal["web", "scholar", "social"]] | Literal["web", "scholar", "social"] = "web",
-        time_range: Literal["all", "today", "last_week", "last_month", "last_year"] = "all",
+        sources: list[Source] | Source = Source.WEB,
+        time_range: TimeRange = TimeRange.ALL,
         language: str = LOCAL_LANGUAGE,
         timezone: str | None = LOCAL_TIMEZONE,
         coordinates: tuple[float, float] | None = LOCAL_COORDINATES,
@@ -266,9 +297,9 @@ class Perplexity:
             attachment_urls: Optional list of URLs to attach (max 10). Defaults to None.
             model: The model to use for the response. Defaults to ModelType.Pro.Best.
             save_to_library: Whether to save this query to your library. Defaults to False.
-            enable_web_search: Whether to enable web search. Defaults to True.
-            sources: Source type(s) to use. Defaults to "web".
-            time_range: Time range for search results. Defaults to "all".
+            enable_web_search: Whether to enable web search. Defaults to T rue.
+            sources: Source type(s) to use. Defaults to Source.WEB.
+            time_range: Time range for search results. Defaults to TimeRange.ALL.
             language: Language code. (e.g., "en-US"). Defaults to LOCAL_LANGUAGE.
             timezone: Timezone code (e.g., "America/New_York"). Defaults to LOCAL_TIMEZONE.
             coordinates: Location coordinates (latitude, longitude). Defaults to LOCAL_COORDINATES.
