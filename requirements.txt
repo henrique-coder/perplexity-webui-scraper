@@ -1,0 +1,9 @@
+geocoder
+orjson
+requests
+tzlocal
+
+# Development
+httpx  # For testing
+rich
+ruff
