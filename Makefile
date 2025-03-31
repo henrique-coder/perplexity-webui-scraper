@@ -5,10 +5,10 @@ VENV := .venv
 .DEFAULT_GOAL := help
 
 lint:
-	poetry run ruff check
+	ruff check
 
 format:
-	poetry run ruff format
+	ruff format
 
 help:
 	@echo "Available commands:"
