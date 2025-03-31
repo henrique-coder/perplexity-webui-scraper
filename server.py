@@ -1,11 +1,11 @@
 # Standard modules
 from threading import Event, Thread
+from time import sleep
 
 # Third-party modules
 from camoufox.sync_api import Camoufox
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
-from orjson import dumps
 from uvicorn import Config as UvicornConfig
 from uvicorn import Server as UvicornServer
 
@@ -38,25 +38,6 @@ class Server:
         self.started = True
         self.server.run()
 
-    def wait_online(self, timeout: float = 60) -> str:
-        """
-        Wait for the server to be online and return the URL.
-
-        Args:
-            timeout: Maximum time to wait in seconds
-
-        Returns:
-            The server URL
-
-        Raises:
-            TimeoutError: If the server doesn't start within the timeout
-        """
-
-        if not self.ready_event.wait(timeout):
-            raise TimeoutError(f"Server failed to start within {timeout} seconds")
-
-        return self._url
-
     def start(self) -> str:
         self._url = f"http://{self.host}:{self.port}"
 
@@ -85,17 +66,12 @@ class Server:
 
 
 app = FastAPI()
-request_endpoint = "https://httpbin.org/post"
-request_details = {
-    "method": "POST",
-    "headers": {"Content-Type": "application/json"},
-    "body": dumps("Hello, World!").decode("utf-8"),
-}
+request_endpoint = "https://www.perplexity.ai/rest/uploads/create_upload_url?version=2.18&source=default"
 
 
 @app.get("/", response_class=HTMLResponse)
 async def root() -> str:
-    return f"""
+    return """
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -156,7 +132,6 @@ async def root() -> str:
                 const responseBox = document.getElementById('responseBox');
                 const statusIndicator = document.getElementById('statusIndicator');
 
-                // Disable button during fetch to prevent multiple requests
                 function setButtonState(disabled) {{
                     button.disabled = disabled;
                     button.style.opacity = disabled ? '0.7' : '1';
@@ -166,12 +141,35 @@ async def root() -> str:
                     responseBox.textContent = '';
                     statusIndicator.classList.remove('active');
                     setButtonState(true);
-
-                    fetch('{request_endpoint}', {{
-                        method: '{request_details["method"]}',
-                        headers: {dumps(request_details["headers"]).decode("utf-8")},
-                        body: {request_details["body"]}
-                    }})
+                    fetch("https://www.perplexity.ai/rest/uploads/create_upload_url?version=2.18&source=default", {
+                        "method": "POST",
+                        "headers": {
+                            "accept": "*/*",
+                            "accept-language": "pt-BR,pt;q=0.9,en;q=0.8",
+                            "content-type": "application/json",
+                            "priority": "u=1, i",
+                            "sec-ch-ua": "'Google Chrome';v='135', 'Not-A.Brand';v='8', 'Chromium';v='135'",
+                            "sec-ch-ua-mobile": "?0",
+                            "sec-ch-ua-platform": "'Linux'",
+                            "sec-fetch-dest": "empty",
+                            "sec-fetch-site": "same-origin",
+                            "x-app-apiclient": "default",
+                            "x-app-apiversion": "2.18",
+                            "x-perplexity-request-endpoint": "https://www.perplexity.ai/rest/uploads/create_upload_url?version=2.18&source=default",
+                            "x-perplexity-request-try-number": "1",
+                            "x-perplexity-url-template": "/rest/uploads/create_upload_url"
+                        },
+                        "body": JSON.stringify({
+                            filename: "Henrique (IA).png",
+                            content_type: "image/png",
+                            source: "default",
+                            file_size: 1143480,
+                            force_image: false
+                        }),
+                        "credentials": "include",
+                        "referrer": "https://www.perplexity.ai/",
+                        "referrerPolicy": "strict-origin-when-cross-origin"
+                    })
                     .then(response => response.text())
                     .then(data => {{
                         responseBox.textContent = data;
@@ -196,12 +194,13 @@ if __name__ == "__main__":
 
     with Camoufox(headless=False, humanize=False, geoip=False) as browser:
         page = browser.new_page(java_script_enabled=True)
-        # server.wait_online()
 
-        page.goto(server_url, wait_until="domcontentloaded")
+        page.goto(server_url, wait_until="networkidle", referer="https://www.perplexity.ai/")
         page.click("#postButton")
         page.wait_for_selector(".status-indicator.active")
         response_text = page.inner_html("#responseBox")
         print(response_text)
+
+        # sleep(10)
 
     server.stop()
