@@ -4,5 +4,8 @@ orjson
 tzlocal
 
 # Development
+camoufox
+fastapi
 rich
 ruff
+uvicorn
