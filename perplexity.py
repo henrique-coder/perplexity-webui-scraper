@@ -89,8 +89,8 @@ class ModelType:
             _identifier = "gpt4o"
             _mode = "copilot"
 
-        class Gemini20Flash(ModelBase):
-            """Google's fast model"""
+        class Gemini25Pro(ModelBase):
+            """Google's latest model"""
 
             _identifier = "gemini2flash"
             _mode = "copilot"
