@@ -37,9 +37,9 @@ def get_coordinates() -> tuple[float, float] | None:
         return None
 
 
-LOCAL_LANGUAGE = get_locale()
-LOCAL_TIMEZONE = get_timezone()
-LOCAL_COORDINATES = get_coordinates()
+LOCAL_LANGUAGE = get_locale
+LOCAL_TIMEZONE = get_timezone
+LOCAL_COORDINATES = get_coordinates
 
 T = TypeVar("T", bound="ModelBase")
 
@@ -129,18 +129,23 @@ class ModelType:
         _mode = "copilot"
 
 
+class SearchFocus(Enum):
+    WEB = "internet"
+    WRITING = "writing"
+
+
+class SourceFocus(Enum):
+    WEB = "web"
+    ACADEMIC = "scholar"
+    SOCIAL = "social"
+
+
 class TimeRange(Enum):
     ALL = None
     TODAY = "DAY"
     LAST_WEEK = "WEEK"
     LAST_MONTH = "MONTH"
     LAST_YEAR = "YEAR"
-
-
-class Source(Enum):
-    WEB = "web"
-    SCHOLAR = "scholar"
-    SOCIAL = "social"
 
 
 class Perplexity:
@@ -152,6 +157,7 @@ class Perplexity:
         }
         self._cookies = {"__Secure-next-auth.session-token": session_token}
         self._client = Client(headers=self._headers, cookies=self._cookies, timeout=Timeout(1800, read=None))
+        self._backend_uuid: str | None = None
 
         self.reset_response_data()
 
@@ -164,6 +170,7 @@ class Perplexity:
         self.last_chunk: str | None = None
         self.search_results: list[str] = []
         self.raw_response: dict[str, Any] = {}
+        self._backend_uuid: str | None = None
 
     @staticmethod
     def _extract_json_line(line: str | bytes) -> dict[str, Any] | None:
@@ -180,8 +187,8 @@ class Perplexity:
         attachment_urls: list[str] | None,
         model: type[ModelBase],
         save_to_library: bool,
-        enable_web_search: bool,
-        sources: list[Source] | Source,
+        search_focus: SearchFocus,
+        source_focus: list[SourceFocus] | SourceFocus,
         time_range: TimeRange,
         language: str,
         timezone: str | None,
@@ -189,10 +196,8 @@ class Perplexity:
     ) -> dict[str, Any]:
         """Prepare the JSON data for the API request"""
 
-        search_focus = ["internet"] if enable_web_search else ["writing"]
-
-        if isinstance(sources, Source):
-            sources = [sources.value]
+        if isinstance(source_focus, SourceFocus):
+            sources = [source_focus.value]
         elif isinstance(sources, list):
             sources = [s.value for s in sources]
 
@@ -207,7 +212,7 @@ class Perplexity:
                 "sources": sources,
                 "model_preference": model.get_identifier(),
                 "mode": model.get_mode(),
-                "search_focus": search_focus,
+                "search_focus": search_focus.value,
                 "search_recency_filter": time_range.value,
                 "is_incognito": not save_to_library,
                 "use_schematized_api": True,
@@ -221,6 +226,9 @@ class Perplexity:
 
     def _process_data(self, data: dict[str, Any]) -> None:
         """Process the data from the API response"""
+
+        if self._backend_uuid is None and "backend_uuid" in data:
+            self._backend_uuid = data["backend_uuid"]
 
         if "text" in data:
             text_data = loads(data["text"])
@@ -275,18 +283,33 @@ class Perplexity:
                 if data.get("final"):
                     break
 
+    def _maybe_delete_thread(self, save_to_library: bool) -> None:
+        """Deletes the thread if save_to_library argument is False and backend_uuid of the thread is known."""
+
+        # if not save_to_library and self._backend_uuid:
+        #     print(f"Debug: Attempting to delete thread with backend_uuid: {self._backend_uuid}")
+        #     json_data = {"entry_uuid": self._backend_uuid, "read_write_token": ""}
+        #
+        #     r = self._client.request(
+        #         "DELETE", "https://www.perplexity.ai/rest/thread/delete_thread_by_entry_uuid", json=json_data
+        #     )
+        #     print(r.status_code, r.reason_phrase)
+        #     r.raise_for_status()
+
+        return None
+
     def ask(
         self,
         query: str,
         attachment_urls: list[str] | None = None,
         model: type[ModelBase] = ModelType.Pro.Best,
         save_to_library: bool = False,
-        enable_web_search: bool = True,
-        sources: list[Source] | Source = Source.WEB,
+        search_focus: SearchFocus = SearchFocus.WEB,
+        source_focus: list[SourceFocus] | SourceFocus = SourceFocus.WEB,
         time_range: TimeRange = TimeRange.ALL,
-        language: str = LOCAL_LANGUAGE,
-        timezone: str | None = LOCAL_TIMEZONE,
-        coordinates: tuple[float, float] | None = LOCAL_COORDINATES,
+        language: str = LOCAL_LANGUAGE(),
+        timezone: str | None = LOCAL_TIMEZONE(),
+        coordinates: tuple[float, float] | None = LOCAL_COORDINATES(),
         stream: bool = False,
     ) -> Generator[dict[str, Any], None, None] | None:
         """
@@ -297,12 +320,12 @@ class Perplexity:
             attachment_urls: Optional list of URLs to attach (max 10). Defaults to None.
             model: The model to use for the response. Defaults to ModelType.Pro.Best.
             save_to_library: Whether to save this query to your library. Defaults to False.
-            enable_web_search: Whether to enable web search. Defaults to T rue.
-            sources: Source type(s) to use. Defaults to Source.WEB.
+            search_focus: Search focus type. Defaults to SearchFocus.WEB.
+            source_focus: Source focus type. Defaults to SourceFocus.WEB.
             time_range: Time range for search results. Defaults to TimeRange.ALL.
-            language: Language code. (e.g., "en-US"). Defaults to LOCAL_LANGUAGE.
-            timezone: Timezone code (e.g., "America/New_York"). Defaults to LOCAL_TIMEZONE.
-            coordinates: Location coordinates (latitude, longitude). Defaults to LOCAL_COORDINATES.
+            language: Language code. (e.g., "en-US"). Defaults to LOCAL_LANGUAGE().
+            timezone: Timezone code (e.g., "America/New_York"). Defaults to LOCAL_TIMEZONE().
+            coordinates: Location coordinates (latitude, longitude). Defaults to LOCAL_COORDINATES().
             stream: Whether to stream the response. Defaults to False.
 
         Returns:
@@ -322,8 +345,8 @@ class Perplexity:
             attachment_urls,
             model,
             save_to_library,
-            enable_web_search,
-            sources,
+            search_focus,
+            source_focus,
             time_range,
             language,
             timezone,
@@ -337,28 +360,37 @@ class Perplexity:
         if stream:
 
             def stream_generator() -> Generator[dict[str, Any], None, None]:
+                try:
+                    with self._client.stream("POST", "https://www.perplexity.ai/rest/sse/perplexity_ask", json=json_data) as r:
+                        r.raise_for_status()
+
+                        for line in r.iter_lines():
+                            data = self._extract_json_line(line)
+                            if data:
+                                self._process_data(data)
+
+                                yield data
+
+                                if data.get("final"):
+                                    break
+                finally:
+                    self._maybe_delete_thread(save_to_library)
+
+            return stream_generator()
+        else:
+            try:
                 with self._client.stream("POST", "https://www.perplexity.ai/rest/sse/perplexity_ask", json=json_data) as r:
+                    r.raise_for_status()
+
                     for line in r.iter_lines():
                         data = self._extract_json_line(line)
 
                         if data:
                             self._process_data(data)
 
-                            yield data
-
                             if data.get("final"):
                                 break
-
-            return stream_generator()
-        else:
-            with self._client.stream("POST", "https://www.perplexity.ai/rest/sse/perplexity_ask", json=json_data) as r:
-                for line in r.iter_lines():
-                    data = self._extract_json_line(line)
-
-                    if data:
-                        self._process_data(data)
-
-                        if data.get("final"):
-                            break
+            finally:
+                self._maybe_delete_thread(save_to_library)
 
             return None
