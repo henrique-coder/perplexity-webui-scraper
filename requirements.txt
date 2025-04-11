@@ -1,6 +1,7 @@
 geocoder
 httpx
 orjson
+python-dotenv
 tzlocal
 
 # Development
