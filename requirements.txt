@@ -1,3 +1,4 @@
+# Main
 geocoder
 httpx
 orjson
@@ -9,3 +10,9 @@ fastapi
 rich
 ruff
 uvicorn
+
+# Discord bot
+audioop-lts
+py-cord
+python-dotenv
+rich
