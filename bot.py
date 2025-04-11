@@ -42,7 +42,7 @@ try:
     ai_client = Perplexity(session_token=PERPLEXITY_SESSION_TOKEN)
     console.log("[success]Perplexity client initialized successfully.[/success]")
 except Exception as e:
-    console.log(f"[error]Failed to initialize Perplexity client: {e}[/error]", exc_info=True)
+    console.log(f"[error]Failed to initialize Perplexity client: {e}[/error]")
     exit(1)
 
 # --- Bot Configuration ---
@@ -124,7 +124,7 @@ async def ask(
     # 3. Determine Selected Model
     selected_model_key = model if model else DEFAULT_MODEL_KEY
     model_info = AVAILABLE_MODELS.get(selected_model_key, AVAILABLE_MODELS[DEFAULT_MODEL_KEY])
-    selected_model_type, model_display_name, model_description = model_info  # Unpack description too
+    selected_model_type, model_display_name, model_description = model_info
 
     console.log(f"[info]📩 Query from [highlight]{user}[/highlight] in '{guild_name}'[/info]")
     console.log(f"   Query: '{query}'")
@@ -137,37 +137,37 @@ async def ask(
         search_results = ai_client.search_results
 
         if search_results:
-            # get the name and url of each search result and format like  this: [[1]](url), [[2]](url)
-            search_results_str = ", ".join(f"[[{i + 1}]]({result['url']})" for i, result in enumerate(search_results))
-            response_content += f"\n\n**Search Results**: {search_results_str}"
+            search_results_str = ", ".join(f"[[{i + 1}]](<{result['url']}>)" for i, result in enumerate(search_results))
+            search_results = f"\n\n**Search Results**: {search_results_str}"
 
-        if not response_content:
+        full_response = f"{response_content}{search_results or ''}"
+
+        if not full_response.strip():
             response_content = "The AI returned an empty response. Please try rephrasing your query."
             console.log(f"[warning]Empty response received for query from [highlight]{user}[/highlight][/warning]")
             # Send short empty response directly
             await ctx.followup.send(content=response_content)
 
         # --- Check response length and send accordingly ---
-        elif len(response_content) <= MESSAGE_CHARACTER_LIMIT:
+        elif len(full_response) <= MESSAGE_CHARACTER_LIMIT:
             # Send response normally if within limit
-            await ctx.followup.send(content=response_content)
+            await ctx.followup.send(content=full_response)
         else:
             # Send response as a file if over limit
             console.log(f"[warning]Response exceeded character limit ({len(response_content)} chars). Sending as file.[/warning]")
             # Create file-like object in memory
-            response_bytes = io.BytesIO(response_content.encode("utf-8"))  # Encode to bytes
+            response_bytes = io.BytesIO(response_content.encode("utf-8"))
             # Create discord.File object
             response_file = discord.File(response_bytes, filename="perplexity.md")
             # Send the file using followup
             await ctx.followup.send(
-                content="The AI response was too long to display directly. See the attached file:", file=response_file
+                content=f"The AI response was too long to display directly. See the attached file.{search_results}",
+                file=response_file,
             )
-        # ----------------------------------------------------
 
         console.log(f"[success]✅ Response sent to [highlight]{user}[/highlight] in '{guild_name}'[/success]")
-
     except Exception as e:
-        console.log(f"[error]❌ Error processing query for [highlight]{user}[/highlight]: {e}[/error]", exc_info=True)
+        console.log(f"[error]❌ Error processing query for [highlight]{user}[/highlight]: {e}[/error]")
 
         try:
             # Use followup for errors after defer()
@@ -178,77 +178,6 @@ async def ask(
             console.log(f"[warning]Could not send error followup to {user}, interaction likely expired.[/warning]")
         except Exception as followup_error:
             console.log(f"[error]Failed to send error followup to {user}: {followup_error}")
-
-
-# --- DM Handling ---
-@bot.event
-async def on_message(message: discord.Message) -> None:
-    if message.author.bot or message.guild is not None or not message.content.lower().startswith("/ask "):
-        return
-
-    user = message.author
-    query = message.content[5:].strip()
-
-    if not query:
-        await message.channel.send("Please provide your query after `/ask `.")
-        return
-
-    if not await check_rate_limit(user.id):
-        await message.channel.send(f"⏳ Please wait {RATE_LIMIT_SECONDS} seconds between queries.")
-        console.log(f"[warning]Rate limit hit for DM user [highlight]{user}[/highlight][/warning]")
-        return
-
-    default_model_type, default_model_name, _ = AVAILABLE_MODELS[DEFAULT_MODEL_KEY]
-    console.log(
-        f"[info]📩 DM Query from [highlight]{user}[/highlight]: '{query}' (Using [model]{default_model_name}[/model])[/info]"
-    )
-
-    processing_msg = await message.channel.send(
-        f"⏳ Thinking... Processing your DM request using the {default_model_name} model..."
-    )
-
-    try:
-        ai_client.ask(query=query, model=default_model_type, save_to_library=False, language="en-US")
-        response_content = ai_client.answer
-
-        if not response_content:
-            response_content = "The AI returned an empty response."
-            console.log(f"[warning]Empty DM response received for query from [highlight]{user}[/highlight][/warning]")
-            await processing_msg.edit(content=response_content)  # Edit for short empty response
-
-        # --- Check response length and send accordingly for DMs ---
-        elif len(response_content) <= MESSAGE_CHARACTER_LIMIT:
-            # Edit the processing message if within limit
-            await processing_msg.edit(content=response_content)
-        else:
-            # Send as file if over limit, then delete processing message
-            console.log(
-                f"[warning]DM response exceeded character limit ({len(response_content)} chars). Sending as file.[/warning]"
-            )
-            response_bytes = io.BytesIO(response_content.encode("utf-8"))
-            response_file = discord.File(response_bytes, filename="perplexity_response.txt")
-            # Send the file in the channel
-            await message.channel.send(
-                content="The AI response was too long to display directly. See the attached file:", file=response_file
-            )
-            # Attempt to delete the "Thinking..." message
-            try:
-                await processing_msg.delete()
-            except discord.NotFound:
-                pass  # Message already gone
-            except discord.Forbidden:
-                console.log("[warning]Missing permissions to delete processing message in DM channel.[/warning]")
-        # ---------------------------------------------------------
-
-        console.log(f"[success]✅ DM Response sent to [highlight]{user}[/highlight][/success]")
-
-    except Exception as e:
-        console.log(f"[error]❌ Error processing DM query for [highlight]{user}[/highlight]: {e}[/error]", exc_info=True)
-
-        try:
-            await processing_msg.edit(content="⚠️ An unexpected error occurred while processing your query in DMs.")
-        except Exception as edit_error:
-            console.log(f"[error]Failed to edit DM error message for {user}: {edit_error}")
 
 
 # --- Main Execution ---
@@ -262,10 +191,8 @@ if __name__ == "__main__":
     except ImportError as e:
         console.log(f"[error]❌ Failed to import a required library: {e}. Ensure all dependencies are installed.[/error]")
     except AttributeError as e:
-        console.log(
-            f"[error]❌ An attribute error occurred, possibly due to an incorrect ModelType structure: {e}[/error]", exc_info=True
-        )
+        console.log(f"[error]❌ An attribute error occurred, possibly due to an incorrect ModelType structure: {e}[/error]")
     except Exception as e:
-        console.log(f"[error]❌ An unexpected error occurred during bot startup or runtime: {e}[/error]", exc_info=True)
+        console.log(f"[error]❌ An unexpected error occurred during bot startup or runtime: {e}[/error]")
     finally:
         console.log("[info]⏹ Bot shutdown process initiated.[/info]")
