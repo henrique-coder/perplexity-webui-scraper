@@ -60,7 +60,7 @@ user_rate_limit = {}
 # Key: Internal identifier
 # Value: Tuple (ModelType object, User-facing name, Description)
 AVAILABLE_MODELS = {
-    "pro_best": (ModelType.Pro.Best, "Best (Auto)", "Selects the best model for each query"),
+    "pro_best": (ModelType.Pro.Best, "Best (Auto & Pro)", "Selects the best model for each query"),
     "pro_sonar": (ModelType.Pro.Sonar, "Sonar (Pro)", "Perplexity's fast model"),
     "pro_claude37sonnet": (ModelType.Pro.Claude37Sonnet, "Claude 3.7 Sonnet (Pro)", "Anthropic's advanced model"),
     "pro_gpt4o": (ModelType.Pro.GPT4o, "GPT-4o (Pro)", "OpenAI's versatile model"),
@@ -75,7 +75,7 @@ AVAILABLE_MODELS = {
     ),
     "deepresearch": (ModelType.DeepResearch, "Deep Research", "In-depth reports on complex topics (very slow)"),
 }
-DEFAULT_MODEL_KEY = "pro_gemini25pro"
+DEFAULT_MODEL_KEY = "pro_best"
 
 model_choices = [discord.OptionChoice(name=name, value=key) for key, (_, name, _) in AVAILABLE_MODELS.items()]
 
@@ -106,7 +106,7 @@ async def ask(
     ctx: discord.ApplicationContext,
     query: discord.Option(str, description="Your question for the AI", required=True),
     model: discord.Option(
-        str, description="Choose the AI model. Defaults to 'Gemini 2.5 Pro (Pro)'", required=False, choices=model_choices
+        str, description="Choose the AI model. Defaults to 'Best (Auto & Pro)'", required=False, choices=model_choices
     ),
 ) -> None:
     user = ctx.author
