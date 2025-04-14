@@ -12,6 +12,7 @@ __pycache__
 
 # Files
 dev.py
+discloud.config
 
 # Extensions
 *.env
