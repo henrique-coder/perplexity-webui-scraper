@@ -4,15 +4,15 @@ orjson
 python-dotenv
 tzlocal
 
+# Discord bot
+audioop-lts
+py-cord
+python-dotenv
+rich
+
 # Development
 camoufox
 fastapi
 rich
 ruff
 uvicorn
-
-# Discord bot
-audioop-lts
-py-cord
-python-dotenv
-rich
