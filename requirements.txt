@@ -1,3 +1,4 @@
+# Perplexity scraper
 geocoder
 httpx
 orjson
@@ -9,10 +10,3 @@ audioop-lts
 py-cord
 python-dotenv
 rich
-
-# Development
-camoufox
-fastapi
-rich
-ruff
-uvicorn

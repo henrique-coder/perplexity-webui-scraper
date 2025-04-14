@@ -1,0 +1,5 @@
+camoufox
+fastapi
+rich
+ruff
+uvicorn
