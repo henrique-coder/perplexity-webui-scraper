@@ -1,45 +1,12 @@
 # Standard modules
 from collections.abc import Generator
 from enum import Enum
-from locale import LC_ALL, getlocale, setlocale
 from typing import Any, TypeVar
 
 # Third-party modules
-from geocoder import ip
 from httpx import Client, Response, Timeout
 from orjson import loads
-from tzlocal import get_localzone_name
 
-
-def get_locale() -> str | None:
-    try:
-        setlocale(LC_ALL, "")
-        lang_code, country_code = getlocale()[0].split("_")
-
-        return f"{lang_code.lower()}-{country_code.upper()}"
-    except Exception:
-        return "en-US"
-
-
-def get_timezone() -> str | None:
-    try:
-        return get_localzone_name()
-    except Exception:
-        return None
-
-
-def get_coordinates() -> tuple[float, float] | None:
-    try:
-        location = ip("me")
-
-        return tuple(location.latlng) if location.latlng else None
-    except Exception:
-        return None
-
-
-LOCAL_LANGUAGE = get_locale
-LOCAL_TIMEZONE = get_timezone
-LOCAL_COORDINATES = get_coordinates
 
 T = TypeVar("T", bound="ModelBase")
 
@@ -283,21 +250,6 @@ class Perplexity:
                 if data.get("final"):
                     break
 
-    def _maybe_delete_thread(self, save_to_library: bool) -> None:
-        """Deletes the thread if save_to_library argument is False and backend_uuid of the thread is known."""
-
-        # if not save_to_library and self._backend_uuid:
-        #     print(f"Debug: Attempting to delete thread with backend_uuid: {self._backend_uuid}")
-        #     json_data = {"entry_uuid": self._backend_uuid, "read_write_token": ""}
-        #
-        #     r = self._client.request(
-        #         "DELETE", "https://www.perplexity.ai/rest/thread/delete_thread_by_entry_uuid", json=json_data
-        #     )
-        #     print(r.status_code, r.reason_phrase)
-        #     r.raise_for_status()
-
-        return None
-
     def ask(
         self,
         query: str,
@@ -307,9 +259,9 @@ class Perplexity:
         search_focus: SearchFocus = SearchFocus.WEB,
         source_focus: list[SourceFocus] | SourceFocus = SourceFocus.WEB,
         time_range: TimeRange = TimeRange.ALL,
-        language: str = LOCAL_LANGUAGE(),
-        timezone: str | None = LOCAL_TIMEZONE(),
-        coordinates: tuple[float, float] | None = LOCAL_COORDINATES(),
+        language: str = "en-US",
+        timezone: str | None = None,
+        coordinates: tuple[float, float] | None = None,
         stream: bool = False,
     ) -> Generator[dict[str, Any], None, None] | None:
         """
@@ -323,9 +275,9 @@ class Perplexity:
             search_focus: Search focus type. Defaults to SearchFocus.WEB.
             source_focus: Source focus type. Defaults to SourceFocus.WEB.
             time_range: Time range for search results. Defaults to TimeRange.ALL.
-            language: Language code. (e.g., "en-US"). Defaults to LOCAL_LANGUAGE().
-            timezone: Timezone code (e.g., "America/New_York"). Defaults to LOCAL_TIMEZONE().
-            coordinates: Location coordinates (latitude, longitude). Defaults to LOCAL_COORDINATES().
+            language: Language code. (e.g., "en-US"). Defaults to "en-US".
+            timezone: Timezone code (e.g., "America/New_York"). Defaults to None.
+            coordinates: Location coordinates (latitude, longitude). Defaults to None.
             stream: Whether to stream the response. Defaults to False.
 
         Returns:
@@ -360,37 +312,31 @@ class Perplexity:
         if stream:
 
             def stream_generator() -> Generator[dict[str, Any], None, None]:
-                try:
-                    with self._client.stream("POST", "https://www.perplexity.ai/rest/sse/perplexity_ask", json=json_data) as r:
-                        r.raise_for_status()
-
-                        for line in r.iter_lines():
-                            data = self._extract_json_line(line)
-                            if data:
-                                self._process_data(data)
-
-                                yield data
-
-                                if data.get("final"):
-                                    break
-                finally:
-                    self._maybe_delete_thread(save_to_library)
-
-            return stream_generator()
-        else:
-            try:
                 with self._client.stream("POST", "https://www.perplexity.ai/rest/sse/perplexity_ask", json=json_data) as r:
                     r.raise_for_status()
 
                     for line in r.iter_lines():
                         data = self._extract_json_line(line)
-
                         if data:
                             self._process_data(data)
 
+                            yield data
+
                             if data.get("final"):
                                 break
-            finally:
-                self._maybe_delete_thread(save_to_library)
+
+            return stream_generator()
+        else:
+            with self._client.stream("POST", "https://www.perplexity.ai/rest/sse/perplexity_ask", json=json_data) as r:
+                r.raise_for_status()
+
+                for line in r.iter_lines():
+                    data = self._extract_json_line(line)
+
+                    if data:
+                        self._process_data(data)
+
+                        if data.get("final"):
+                            break
 
             return None
