@@ -83,10 +83,10 @@ class ModelType:
             _identifier = "claude2"
             _mode = "copilot"
 
-        class GPT4o(ModelBase):
-            """OpenAI's versatile model"""
+        class GPT41(ModelBase):
+            """OpenAI's advanced model"""
 
-            _identifier = "gpt4o"
+            _identifier = "gpt41"
             _mode = "copilot"
 
         class Gemini25Pro(ModelBase):
