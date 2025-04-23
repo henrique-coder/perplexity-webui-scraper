@@ -62,7 +62,7 @@ class ModelType:
             _identifier = "gemini2flash"
             _mode = "copilot"
 
-        class Grok2(ModelBase):
+        class Grok3Beta(ModelBase):
             """xAI's latest model"""
 
             _identifier = "grok"
@@ -77,10 +77,10 @@ class ModelType:
                 _identifier = "r1"
                 _mode = "copilot"
 
-            class o3mini(ModelBase):
-                """OpenAI's reasoning model"""
+            class o4mini(ModelBase):
+                """OpenAI's latest reasoning model"""
 
-                _identifier = "o3mini"
+                _identifier = "o4mini"
                 _mode = "copilot"
 
             class Claude37SonnetThinking(ModelBase):
