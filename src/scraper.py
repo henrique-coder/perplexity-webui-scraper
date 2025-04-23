@@ -18,11 +18,11 @@ class ModelBase:
     _mode: str
 
     @classmethod
-    def get_identifier(cls: T) -> str:
+    def get_identifier(cls: type[T]) -> str:
         return cls._identifier
 
     @classmethod
-    def get_mode(cls: T) -> str:
+    def get_mode(cls: type[T]) -> str:
         return cls._mode
 
 
