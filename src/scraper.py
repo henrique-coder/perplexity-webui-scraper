@@ -202,8 +202,13 @@ class Perplexity:
 
             if isinstance(text_data, list):
                 for item in text_data:
-                    if item["step_type"] == "FINAL":
-                        self._update_response_data(data.get("thread_title", ""), loads(item["content"]["answer"]))
+                    if item["step_type"] == "GENERATE_IMAGE_RESULTS":
+                        self._update_response_data(
+                            data.get("thread_title", ""), {"answer": item["content"]["image_results"][0]["url"]}
+                        )
+                    else:
+                        if item["step_type"] == "FINAL":
+                            self._update_response_data(data.get("thread_title", ""), item["content"]["answer"])
 
                         break
             elif isinstance(text_data, dict):
