@@ -1,0 +1,17 @@
+# Scraper
+httpx
+orjson
+
+# Discord bot
+audioop-lts
+py-cord
+python-dotenv
+rich
+
+# Development
+camoufox
+fastapi
+python-dotenv
+rich
+ruff
+uvicorn

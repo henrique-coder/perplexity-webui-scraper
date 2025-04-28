@@ -1,6 +1,0 @@
-camoufox
-fastapi
-python-dotenv
-rich
-ruff
-uvicorn

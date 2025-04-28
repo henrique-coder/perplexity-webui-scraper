@@ -1,4 +1,0 @@
-audioop-lts
-py-cord
-python-dotenv
-rich
