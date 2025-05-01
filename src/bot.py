@@ -65,9 +65,9 @@ AVAILABLE_MODELS = {
     "pro_claude37sonnet": (ModelType.Pro.Claude37Sonnet, "Claude 3.7 Sonnet (Pro)", "Anthropic's advanced model"),
     "pro_gpt41": (ModelType.Pro.GPT41, "GPT-4.1 (Pro)", "OpenAI's advanced model"),
     "pro_gemini25pro": (ModelType.Pro.Gemini25Pro, "Gemini 2.5 Pro (Pro)", "Google's latest model"),
-    "pro_grok2": (ModelType.Pro.Grok2, "Grok 2 (Pro)", "xAI's latest model"),
+    "pro_grok3beta": (ModelType.Pro.Grok3Beta, "Grok 2 (Pro)", "xAI's latest model"),
     "pro_reasoning_r11776": (ModelType.Pro.Reasoning.R11776, "R1 (Pro & Reasoning)", "Perplexity's unbiased reasoning model"),
-    "pro_reasoning_o3mini": (ModelType.Pro.Reasoning.o3mini, "o3 mini (Pro & Reasoning)", "OpenAI's reasoning model"),
+    "pro_reasoning_o4mini": (ModelType.Pro.Reasoning.o4mini, "o4 mini (Pro & Reasoning)", "OpenAI's reasoning model"),
     "pro_reasoning_claude37sonnetthinking": (
         ModelType.Pro.Reasoning.Claude37SonnetThinking,
         "Claude 3.7 Sonnet Thinking (Pro & Reasoning)",
