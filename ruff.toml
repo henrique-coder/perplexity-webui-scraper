@@ -11,12 +11,15 @@ preview = true
 [lint]
 preview = true
 fixable = ["ALL"]
-select = ["E4", "E7", "E9", "F", "UP", "B", "SIM", "D200", "D204", "D403", "PERF102", "PERF401", "S602"]
+select = ["E4", "E7", "E9", "F", "UP", "B", "SIM", "D200", "D204", "D403", "PERF102", "PERF401", "S602", "I"]
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [lint.isort]
-force-single-line = false
+known-first-party = ["bot", "cogs", "lib", "services"]
 lines-after-imports = 2
+force-single-line = false
+force-sort-within-sections = true
+split-on-trailing-comma = true
 
 [lint.pydocstyle]
 convention = "google"
@@ -27,6 +30,6 @@ docstring-quotes = "double"
 [format]
 quote-style = "double"
 indent-style = "space"
-line-ending = "auto"
+line-ending = "lf"
 docstring-code-format = true
-skip-magic-trailing-comma = true
+skip-magic-trailing-comma = false

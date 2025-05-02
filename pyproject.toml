@@ -1,0 +1,33 @@
+[project]
+name = "perplexity-api"
+version = "0.1.0"
+description = "Perplexity API (Scraper)"
+readme = "README.md"
+authors = [
+    { name = "henrique-coder", email = "henriquemoreira10fk@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "httpx>=0.28.1",
+    "orjson>=3.10.18",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+discord-bot = [
+    "audioop-lts>=0.2.1",
+    "py-cord>=2.6.1",
+    "python-dotenv>=1.1.0",
+    "rich>=14.0.0",
+]
+dev = [
+    "camoufox",
+    "fastapi",
+    "python-dotenv",
+    "rich",
+    "ruff",
+    "uvicorn",
+]
