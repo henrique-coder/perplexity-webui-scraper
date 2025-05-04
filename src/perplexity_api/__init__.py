@@ -208,7 +208,7 @@ class Perplexity:
                         )
                     else:
                         if item["step_type"] == "FINAL":
-                            self._update_response_data(data.get("thread_title", ""), item["content"]["answer"])
+                            self._update_response_data(data.get("thread_title", ""), {"answer": item["content"]["answer"]})
 
                         break
             elif isinstance(text_data, dict):
