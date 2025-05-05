@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.theme import Theme
 
 # Local imports
-from src.perplexity_api import ModelType, Perplexity
+from perplexity_api import ModelType, Perplexity
 
 
 # --- Rich Console Setup ---
