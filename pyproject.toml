@@ -18,10 +18,10 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 discord-bot = [
-    "audioop-lts>=0.2.1",
-    "py-cord>=2.6.1",
-    "python-dotenv>=1.1.0",
-    "rich>=14.0.0",
+    "audioop-lts",
+    "py-cord",
+    "python-dotenv",
+    "rich",
 ]
 dev = [
     "camoufox",
