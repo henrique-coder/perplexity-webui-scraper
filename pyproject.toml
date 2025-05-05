@@ -10,6 +10,7 @@ requires-python = ">=3.13"
 dependencies = [
     "httpx>=0.28.1",
     "orjson>=3.10.18",
+    "pydantic>=2.11.4",
 ]
 
 [build-system]

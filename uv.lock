@@ -511,6 +511,7 @@ source = { editable = "." }
 dependencies = [
     { name = "httpx" },
     { name = "orjson" },
+    { name = "pydantic" },
 ]
 
 [package.dev-dependencies]
@@ -533,6 +534,7 @@ discord-bot = [
 requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "orjson", specifier = ">=3.10.18" },
+    { name = "pydantic", specifier = ">=2.11.4" },
 ]
 
 [package.metadata.requires-dev]
