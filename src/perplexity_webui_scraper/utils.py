@@ -7,9 +7,9 @@ from pydantic import BaseModel, Field
 
 
 class SearchResultItem(BaseModel):
-    title: str
-    snippet: str
-    url: str
+    title: str | None = None
+    snippet: str | None = None
+    url: str | None = None
 
 
 class StreamResponse(BaseModel):

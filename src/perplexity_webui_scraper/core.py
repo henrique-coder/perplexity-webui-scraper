@@ -9,7 +9,7 @@ from orjson import loads
 
 # Local modules
 from .models import ModelBase, ModelType
-from .utils import AskResponse, SearchFocus, SourceFocus, StreamResponse, TimeRange
+from .utils import AskResponse, SearchFocus, SearchResultItem, SourceFocus, StreamResponse, TimeRange
 
 
 class Perplexity:
@@ -134,7 +134,7 @@ class Perplexity:
         self.chunks = answer_data.get("chunks", [])
         self.last_chunk = self.chunks[-1] if self.chunks else None
         self.search_results = [
-            {"name": r.get("name", ""), "snippet": r.get("snippet", ""), "url": r.get("url", "")}
+            SearchResultItem(name=r.get("name"), snippet=r.get("snippet"), url=r.get("url"))
             for r in raw_search_results
             if isinstance(r, dict)
         ]
