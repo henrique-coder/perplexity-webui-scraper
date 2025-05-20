@@ -5,6 +5,7 @@ from importlib.metadata import version
 from .core import Perplexity
 from .models import ModelType
 from .utils import (
+    CitationMode,
     SearchFocus,
     SourceFocus,
     TimeRange,
@@ -14,6 +15,7 @@ from .utils import (
 __all__ = [
     "Perplexity",
     "ModelType",
+    "CitationMode",
     "SearchFocus",
     "SourceFocus",
     "TimeRange",

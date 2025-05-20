@@ -3,7 +3,7 @@ from collections.abc import Generator
 from enum import Enum
 from re import Match
 from re import compile as re_compile
-from typing import Any, Literal
+from typing import Any
 
 # Third-party modules
 from pydantic import BaseModel, Field
@@ -30,6 +30,21 @@ class AskResponse(BaseModel):
     chunks: list[str] = Field(default_factory=list)
     search_results: list[SearchResultItem] = Field(default_factory=list)
     raw_data: dict[str, Any] = Field(default_factory=dict)
+
+
+class CitationMode(Enum):
+    """
+    Available citation modes
+
+    Attributes:
+        DEFAULT: Use default Perplexity citation format (e.g., "`This is a citation[1]`")
+        MARKDOWN: Replace citations with markdown links (e.g., "`This is a citation[1](https://example.com)`")
+        CLEAN: Remove all citations (e.g., "`This is a citation`")
+    """
+
+    DEFAULT = "default"
+    MARKDOWN = "markdown"
+    CLEAN = "clean"
 
 
 class SearchFocus(Enum):
@@ -152,8 +167,8 @@ class AskCall:
                         break
 
 
-def format_citations(citation_mode: Literal["markdown", "remove"] | None, text: str, search_results: list) -> str:
-    if citation_mode is None or not text:
+def format_citations(citation_mode: CitationMode, text: str, search_results: list) -> str:
+    if citation_mode.value == "default" or not text:
         return text
 
     def citation_replacer(match: Match[str]) -> str:
@@ -167,9 +182,9 @@ def format_citations(citation_mode: Literal["markdown", "remove"] | None, text: 
         if 0 <= idx < len(search_results):
             url = getattr(search_results[idx], "url", "") or ""
 
-            if citation_mode == "markdown" and url:
+            if citation_mode.value == "markdown" and url:
                 return f"[{num}]({url})"
-            elif citation_mode == "remove":
+            elif citation_mode.value == "clean":
                 return ""
             else:
                 return match.group(0)

@@ -1,6 +1,6 @@
 # Standard modules
 from re import match
-from typing import Any, Literal
+from typing import Any
 
 # Third-party modules
 from httpx import Client, Timeout
@@ -8,7 +8,7 @@ from orjson import loads
 
 # Local modules
 from .models import ModelBase, ModelType
-from .utils import AskCall, SearchFocus, SearchResultItem, SourceFocus, TimeRange, format_citations
+from .utils import AskCall, CitationMode, SearchFocus, SearchResultItem, SourceFocus, TimeRange, format_citations
 
 
 class Perplexity:
@@ -38,7 +38,7 @@ class Perplexity:
         }
         self._cookies = {"__Secure-next-auth.session-token": session_token}
         self._client = Client(headers=self._headers, cookies=self._cookies, timeout=Timeout(1800, read=None))
-        self._citation_formatting = None
+        self._citation_mode = CitationMode.DEFAULT
         self.reset_response_data()
 
     def reset_response_data(self) -> None:
@@ -137,7 +137,7 @@ class Perplexity:
             for r in answer_data.get("web_results", [])
             if isinstance(r, dict)
         ]
-        self.answer = format_citations(self._citation_formatting, answer_data.get("answer"), self.search_results)
+        self.answer = format_citations(self._citation_mode, answer_data.get("answer"), self.search_results)
         self.chunks = answer_data.get("chunks", [])
         self.last_chunk = self.chunks[-1] if self.chunks else None
         self.raw_data = answer_data
@@ -145,9 +145,9 @@ class Perplexity:
     def ask(
         self,
         query: str,
-        citation_formatting: Literal["markdown", "remove"] | None = None,
+        citation_mode: CitationMode = CitationMode.DEFAULT,
         # attachment_urls: list[str] | None = None,
-        model: type[ModelBase] = ModelType.Pro.Best,
+        model: ModelBase = ModelType.Pro.Best,
         save_to_library: bool = False,
         search_focus: SearchFocus = SearchFocus.WEB,
         source_focus: SourceFocus | list[SourceFocus] = SourceFocus.WEB,
@@ -161,7 +161,7 @@ class Perplexity:
 
         Args:
             query: The question or prompt to send.
-            citation_formatting: The formatting for citations in the answer. Can be "markdown" or "remove". Defaults to None.
+            citation_mode: The citation mode to use. Defaults to CitationMode.DEFAULT.
             model: The model to use for the response. Defaults to ModelType.Pro.Best.
             save_to_library: Whether to save this query to your library. Defaults to False.
             search_focus: Search focus type. Defaults to SearchFocus.WEB.
@@ -175,7 +175,7 @@ class Perplexity:
             AskCall object, which can be used to retrieve the response directly or stream it.
         """
 
-        self._citation_formatting = citation_formatting
+        self._citation_mode = citation_mode
 
         # attachment_urls: Optional list of URLs to attach (max 10). Defaults to None.
         # if attachment_urls and len(attachment_urls) > 10:
