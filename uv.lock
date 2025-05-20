@@ -505,7 +505,7 @@ wheels = [
 ]
 
 [[package]]
-name = "perplexity-api"
+name = "perplexity-webui-scraper"
 version = "0.0.1"
 source = { editable = "." }
 dependencies = [

@@ -1,5 +1,5 @@
 [project]
-name = "perplexity-api"
+name = "perplexity-webui-scraper"
 version = "0.0.1"
 description = "Perplexity WebUI Scraper"
 readme = "README.md"
