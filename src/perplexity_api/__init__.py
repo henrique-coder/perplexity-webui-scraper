@@ -153,6 +153,16 @@ class Perplexity:
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
             "Referer": "https://www.perplexity.ai/",
             "Origin": "https://www.perplexity.ai",
+            "Accept": "text/event-stream",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Sec-Ch-Ua": '"Google Chrome";v="125", "Chromium";v="125", "Not.A/Brand";v="24"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"Windows"',
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin",
+            "DNT": "1",
+            "TE": "trailers",
         }
         self._cookies = {"__Secure-next-auth.session-token": session_token}
         self._client = Client(headers=self._headers, cookies=self._cookies, timeout=Timeout(1800, read=None))
