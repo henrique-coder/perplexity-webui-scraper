@@ -186,7 +186,7 @@ class Perplexity:
                 raw_data=self._parent.raw_data,
             )
 
-        def stream(self) -> Generator[StreamResponse, None, None]:
+        def stream(self) -> Generator[StreamResponse]:
             """
             Stream response data in real-time
 
