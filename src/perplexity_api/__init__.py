@@ -1,12 +1,15 @@
 # Standard modules
 from collections.abc import Generator
-from enum import Enum
 from typing import Any
 
 # Third-party modules
 from httpx import Client, Timeout
 from orjson import loads
 from pydantic import BaseModel
+
+# Local modules
+from .models import ModelBase, ModelType
+from .utils import SearchFocus, SourceFocus, TimeRange
 
 
 __all__ = [
@@ -18,123 +21,13 @@ __all__ = [
 ]
 
 
-class ModelBase:
-    """Base class for all models"""
-
-    _identifier: str
-    _mode: str
-
-    @classmethod
-    def get_identifier(cls) -> str:
-        return cls._identifier
-
-    @classmethod
-    def get_mode(cls) -> str:
-        return cls._mode
-
-
-class ModelType:
-    """Available models"""
-
-    class Pro:
-        """3x more sources with powerful models, increased limits, and detailed answers"""
-
-        class Best(ModelBase):
-            """Selects the best model for each query"""
-
-            _identifier = "pplx_pro"
-            _mode = "copilot"
-
-        class Sonar(ModelBase):
-            """Perplexity's fast model"""
-
-            _identifier = "experimental"
-            _mode = "copilot"
-
-        class Claude37Sonnet(ModelBase):
-            """Anthropic's advanced model"""
-
-            _identifier = "claude2"
-            _mode = "copilot"
-
-        class GPT41(ModelBase):
-            """OpenAI's advanced model"""
-
-            _identifier = "gpt41"
-            _mode = "copilot"
-
-        class Gemini25Pro(ModelBase):
-            """Google's latest model"""
-
-            _identifier = "gemini2flash"
-            _mode = "copilot"
-
-        class Grok3Beta(ModelBase):
-            """xAI's latest model"""
-
-            _identifier = "grok"
-            _mode = "copilot"
-
-        class Reasoning:
-            """Advanced problem solving"""
-
-            class R11776(ModelBase):
-                """Perplexity's unbiased reasoning model"""
-
-                _identifier = "r1"
-                _mode = "copilot"
-
-            class o4mini(ModelBase):
-                """OpenAI's latest reasoning model"""
-
-                _identifier = "o4mini"
-                _mode = "copilot"
-
-            class Claude37SonnetThinking(ModelBase):
-                """Anthropic's reasoning model"""
-
-                _identifier = "claude37sonnetthinking"
-                _mode = "copilot"
-
-    class Research(ModelBase):
-        """Advanced analysis on any topic"""
-
-        _identifier = "pplx_alpha"
-        _mode = "copilot"
-
-
-class SearchFocus(Enum):
-    """Available search focus"""
-
-    WEB = "internet"
-    WRITING = "writing"
-
-
-class SourceFocus(Enum):
-    """Available source focus"""
-
-    WEB = "web"
-    ACADEMIC = "scholar"
-    SOCIAL = "social"
-
-
-class TimeRange(Enum):
-    """Available time range"""
-
-    ALL = None
-    TODAY = "DAY"
-    LAST_WEEK = "WEEK"
-    LAST_MONTH = "MONTH"
-    LAST_YEAR = "YEAR"
-
-
 class StreamResponse(BaseModel):
-    raw: dict[str, Any]
     title: str | None
     answer: str | None
     chunks: list[str]
     last_chunk: str | None
     search_results: list[str]
+    raw_data: dict[str, Any]
 
 
 class AskResponse(BaseModel):
@@ -142,19 +35,25 @@ class AskResponse(BaseModel):
     answer: str | None
     chunks: list[str]
     search_results: list[str]
-    raw_response: dict[str, Any]
+    raw_data: dict[str, Any]
 
 
 class Perplexity:
-    """Client for interacting with Perplexity AI Web API"""
+    """Client for interacting with Perplexity AI WebUI"""
 
     def __init__(self, session_token: str) -> None:
+        """
+        Initialize the Perplexity client.
+
+        Args:
+            session_token: The session token (`__Secure-next-auth.session-token` cookie) to use for authentication.
+        """
+
         self._headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
             "Referer": "https://www.perplexity.ai/",
             "Origin": "https://www.perplexity.ai",
             "Accept": "text/event-stream",
-            "Accept-Language": "en-US,en;q=0.9",
             "Sec-Ch-Ua": '"Google Chrome";v="125", "Chromium";v="125", "Not.A/Brand";v="24"',
             "Sec-Ch-Ua-Mobile": "?0",
             "Sec-Ch-Ua-Platform": '"Windows"',
@@ -174,8 +73,8 @@ class Perplexity:
         self.chunks: list[str] = []
         self.last_chunk: str | None = None
         self.search_results: list[str] = []
-        self.raw_response: dict[str, Any] = {}
-        self._backend_uuid: str | None = None
+        self.conversation_uuid: str | None = None
+        self.raw_data: dict[str, Any] = {}
 
     @staticmethod
     def _extract_json_line(line: str | bytes) -> dict[str, Any] | None:
@@ -227,8 +126,8 @@ class Perplexity:
         }
 
     def _process_data(self, data: dict[str, Any]) -> None:
-        if self._backend_uuid is None and "backend_uuid" in data:
-            self._backend_uuid = data["backend_uuid"]
+        if self.conversation_uuid is None and "backend_uuid" in data:
+            self.conversation_uuid = data["backend_uuid"]
 
         if "text" in data:
             text_data = loads(data["text"])
@@ -247,53 +146,19 @@ class Perplexity:
         self.chunks = answer_data.get("chunks", [])
         self.last_chunk = self.chunks[-1] if self.chunks else None
         self.search_results = answer_data.get("web_results", [])
-        self.raw_response = answer_data
+        self.raw_data = answer_data
 
     class AskCall:
         def __init__(self, parent: "Perplexity", json_data: dict[str, Any]) -> None:
             self._parent = parent
             self._json_data = json_data
 
-        def stream(self) -> Generator[StreamResponse, None, None]:
-            """
-            Stream response data in real-time
-
-            Yields:
-                StreamResponse
-            """
-
-            self._parent.reset_response_data()
-            self._parent._client.get("https://www.perplexity.ai/search/new", params={"q": self._json_data["query_str"]})
-
-            with self._parent._client.stream(
-                "POST", "https://www.perplexity.ai/rest/sse/perplexity_ask", json=self._json_data
-            ) as response:
-                response.raise_for_status()
-
-                for line in response.iter_lines():
-                    data = self._parent._extract_json_line(line)
-
-                    if data:
-                        self._parent._process_data(data)
-
-                        yield StreamResponse(
-                            raw=data,
-                            title=self._parent.title,
-                            answer=self._parent.answer,
-                            chunks=list(self._parent.chunks),
-                            last_chunk=self._parent.last_chunk,
-                            search_results=list(self._parent.search_results),
-                        )
-
-                        if data.get("final"):
-                            break
-
         def run(self) -> AskResponse:
             """
             Run the ask request and return the response data
 
             Returns:
-                AskResponse
+                AskResponse object containing the response data.
             """
 
             self._parent.reset_response_data()
@@ -318,8 +183,42 @@ class Perplexity:
                 answer=self._parent.answer,
                 chunks=list(self._parent.chunks),
                 search_results=list(self._parent.search_results),
-                raw_response=self._parent.raw_response,
+                raw_data=self._parent.raw_data,
             )
+
+        def stream(self) -> Generator[StreamResponse, None, None]:
+            """
+            Stream response data in real-time
+
+            Yields:
+                StreamResponse object containing the streamed data.
+            """
+
+            self._parent.reset_response_data()
+            self._parent._client.get("https://www.perplexity.ai/search/new", params={"q": self._json_data["query_str"]})
+
+            with self._parent._client.stream(
+                "POST", "https://www.perplexity.ai/rest/sse/perplexity_ask", json=self._json_data
+            ) as response:
+                response.raise_for_status()
+
+                for line in response.iter_lines():
+                    data = self._parent._extract_json_line(line)
+
+                    if data:
+                        self._parent._process_data(data)
+
+                        yield StreamResponse(
+                            title=self._parent.title,
+                            answer=self._parent.answer,
+                            chunks=list(self._parent.chunks),
+                            last_chunk=self._parent.last_chunk,
+                            search_results=list(self._parent.search_results),
+                            raw_data=data,
+                        )
+
+                        if data.get("final"):
+                            break
 
     def ask(
         self,
