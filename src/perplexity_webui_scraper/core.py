@@ -124,18 +124,13 @@ class Perplexity:
                 self._update_response_data(data.get("thread_title"), json_data)
 
     def _update_response_data(self, title: str | None, answer_data: dict[str, Any]) -> None:
-        raw_search_results = answer_data.get("web_results", [])
-
-        if not isinstance(raw_search_results, list):
-            raw_search_results = []
-
         self.title = title
         self.answer = answer_data.get("answer")
         self.chunks = answer_data.get("chunks", [])
         self.last_chunk = self.chunks[-1] if self.chunks else None
         self.search_results = [
-            SearchResultItem(name=r.get("name"), snippet=r.get("snippet"), url=r.get("url"))
-            for r in raw_search_results
+            SearchResultItem(title=r.get("name"), snippet=r.get("snippet"), url=r.get("url"))
+            for r in answer_data.get("web_results", [])
             if isinstance(r, dict)
         ]
         self.raw_data = answer_data
