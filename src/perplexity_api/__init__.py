@@ -239,7 +239,7 @@ class Perplexity:
         self.search_results = answer_data.get("web_results", [])
         self.raw_response = answer_data
 
-    class _AskCall:
+    class AskCall:
         def __init__(self, parent: "Perplexity", json_data: dict[str, Any]) -> None:
             self._parent = parent
             self._json_data = json_data
@@ -323,7 +323,7 @@ class Perplexity:
         language: str = "en-US",
         timezone: str | None = None,
         coordinates: tuple[float, float] | None = None,
-    ) -> "_AskCall":
+    ) -> AskCall:
         """
         Send a query to Perplexity AI and get a response.
 
@@ -340,7 +340,7 @@ class Perplexity:
             coordinates: Location coordinates (latitude, longitude). Defaults to None.
 
         Returns:
-            _AskCall object, which can be used to retrieve the response directly or stream it.
+            AskCall object, which can be used to retrieve the response directly or stream it.
         """
 
         if attachment_urls and len(attachment_urls) > 10:
@@ -359,4 +359,4 @@ class Perplexity:
             coordinates,
         )
 
-        return Perplexity._AskCall(self, json_data)
+        return Perplexity.AskCall(self, json_data)
