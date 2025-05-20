@@ -1,16 +1,16 @@
 [project]
 name = "perplexity-api"
-version = "0.1.0"
-description = "Perplexity API (Scraper)"
+version = "0.0.1"
+description = "Perplexity WebUI Scraper"
 readme = "README.md"
 authors = [
     { name = "henrique-coder", email = "henriquemoreira10fk@gmail.com" }
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "httpx>=0.28.1",
-    "orjson>=3.10.18",
-    "pydantic>=2.11.4",
+    "httpx",
+    "orjson",
+    "pydantic",
 ]
 
 [build-system]

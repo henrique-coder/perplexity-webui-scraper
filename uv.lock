@@ -506,7 +506,7 @@ wheels = [
 
 [[package]]
 name = "perplexity-api"
-version = "0.1.0"
+version = "0.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
@@ -532,9 +532,9 @@ discord-bot = [
 
 [package.metadata]
 requires-dist = [
-    { name = "httpx", specifier = ">=0.28.1" },
-    { name = "orjson", specifier = ">=3.10.18" },
-    { name = "pydantic", specifier = ">=2.11.4" },
+    { name = "httpx" },
+    { name = "orjson" },
+    { name = "pydantic" },
 ]
 
 [package.metadata.requires-dev]
