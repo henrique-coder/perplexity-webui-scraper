@@ -1,5 +1,6 @@
 # Standard modules
 from collections.abc import Generator
+from re import match
 from typing import Any
 
 # Third-party modules
@@ -26,7 +27,7 @@ class StreamResponse(BaseModel):
     answer: str | None
     chunks: list[str]
     last_chunk: str | None
-    search_results: list[str]
+    search_results: list[dict[str, str]]
     raw_data: dict[str, Any]
 
 
@@ -34,7 +35,7 @@ class AskResponse(BaseModel):
     title: str | None
     answer: str | None
     chunks: list[str]
-    search_results: list[str]
+    search_results: list[dict[str, str]]
     raw_data: dict[str, Any]
 
 
@@ -68,13 +69,13 @@ class Perplexity:
         self.reset_response_data()
 
     def reset_response_data(self) -> None:
-        self.title: str | None = None
-        self.answer: str | None = None
-        self.chunks: list[str] = []
-        self.last_chunk: str | None = None
-        self.search_results: list[str] = []
-        self.conversation_uuid: str | None = None
-        self.raw_data: dict[str, Any] = {}
+        self.title = None
+        self.answer = None
+        self.chunks = []
+        self.last_chunk = None
+        self.search_results = []
+        self.conversation_uuid = None
+        self.raw_data = {}
 
     @staticmethod
     def _extract_json_line(line: str | bytes) -> dict[str, Any] | None:
@@ -116,7 +117,7 @@ class Perplexity:
                 "search_focus": search_focus.value,
                 "search_recency_filter": time_range.value,
                 "is_incognito": not save_to_library,
-                "use_schematized_api": True,
+                "use_schematized_api": False,
                 "local_search_enabled": True,
                 "prompt_source": "user",
                 "send_back_text_in_streaming_api": True,
@@ -130,22 +131,40 @@ class Perplexity:
             self.conversation_uuid = data["backend_uuid"]
 
         if "text" in data:
-            text_data = loads(data["text"])
+            json_data = loads(data["text"])
+            answer_data = {}
 
-            if isinstance(text_data, list):
-                for item in text_data:
+            if isinstance(json_data, list):
+                for item in json_data:
                     if item.get("step_type") == "FINAL":
-                        self._update_response_data(data.get("thread_title", ""), {"answer": item["content"]["answer"]})
-                        break
-            elif isinstance(text_data, dict):
-                self._update_response_data(data.get("thread_title", ""), text_data)
+                        content = item.get("content", {})
+                        answer_content = content.get("answer")
 
-    def _update_response_data(self, title: str, answer_data: dict[str, Any]) -> None:
+                        if isinstance(answer_content, str) and match(r"^\{.*\}$", answer_content):
+                            answer_data = loads(answer_content)
+                        else:
+                            answer_data = content
+
+                        self._update_response_data(data.get("thread_title"), answer_data)
+                        break
+            elif isinstance(json_data, dict):
+                self._update_response_data(data.get("thread_title"), json_data)
+
+    def _update_response_data(self, title: str | None, answer_data: dict[str, Any]) -> None:
+        raw_search_results = answer_data.get("web_results", [])
+
+        if not isinstance(raw_search_results, list):
+            raw_search_results = []
+
         self.title = title
         self.answer = answer_data.get("answer")
         self.chunks = answer_data.get("chunks", [])
         self.last_chunk = self.chunks[-1] if self.chunks else None
-        self.search_results = answer_data.get("web_results", [])
+        self.search_results = [
+            {"name": r.get("name", ""), "snippet": r.get("snippet", ""), "url": r.get("url", "")}
+            for r in raw_search_results
+            if isinstance(r, dict)
+        ]
         self.raw_data = answer_data
 
     class AskCall:
