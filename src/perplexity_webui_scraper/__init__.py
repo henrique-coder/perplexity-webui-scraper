@@ -112,8 +112,8 @@ class Perplexity:
                 if coordinates
                 else None,
                 "sources": sources,
-                "model_preference": model.get_identifier(),
-                "mode": model.get_mode(),
+                "model_preference": model._get_identifier(),
+                "mode": model._get_mode(),
                 "search_focus": search_focus.value,
                 "search_recency_filter": time_range.value,
                 "is_incognito": not save_to_library,

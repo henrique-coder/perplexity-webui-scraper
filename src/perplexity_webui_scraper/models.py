@@ -5,11 +5,11 @@ class ModelBase:
     _mode: str
 
     @classmethod
-    def get_identifier(cls) -> str:
+    def _get_identifier(cls) -> str:
         return cls._identifier
 
     @classmethod
-    def get_mode(cls) -> str:
+    def _get_mode(cls) -> str:
         return cls._mode
 
 
