@@ -61,7 +61,7 @@ class Perplexity:
         self,
         query: str,
         attachment_urls: list[str] | None,
-        model: type[ModelBase],
+        model: ModelBase,
         save_to_library: bool,
         search_focus: SearchFocus,
         source_focus: SourceFocus | list[SourceFocus],
@@ -110,13 +110,13 @@ class Perplexity:
             if isinstance(json_data, list):
                 for item in json_data:
                     if item.get("step_type") == "FINAL":
-                        content = item.get("content", {})
-                        answer_content = content.get("answer")
+                        raw_content = item.get("content", {})
+                        answer_content = raw_content.get("answer")
 
                         if isinstance(answer_content, str) and match(r"^\{.*\}$", answer_content):
                             answer_data = loads(answer_content)
                         else:
-                            answer_data = content
+                            answer_data = raw_content
 
                         self._update_response_data(data.get("thread_title"), answer_data)
                         break
