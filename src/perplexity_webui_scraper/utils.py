@@ -1,5 +1,32 @@
 # Standard modules
 from enum import Enum
+from typing import Any
+
+# Third-party modules
+from pydantic import BaseModel, Field
+
+
+class SearchResultItem(BaseModel):
+    title: str
+    snippet: str
+    url: str
+
+
+class StreamResponse(BaseModel):
+    title: str | None = None
+    answer: str | None = None
+    chunks: list[str] = Field(default_factory=list)
+    last_chunk: str | None
+    search_results: list[SearchResultItem] = Field(default_factory=list)
+    raw_data: dict[str, Any] = Field(default_factory=dict)
+
+
+class AskResponse(BaseModel):
+    title: str | None = None
+    answer: str | None = None
+    chunks: list[str] = Field(default_factory=list)
+    search_results: list[SearchResultItem] = Field(default_factory=list)
+    raw_data: dict[str, Any] = Field(default_factory=dict)
 
 
 class SearchFocus(Enum):
