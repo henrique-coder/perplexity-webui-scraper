@@ -1,6 +1,9 @@
 # Standard modules
+from collections.abc import Generator
 from enum import Enum
-from typing import Any
+from re import Match
+from re import compile as re_compile
+from typing import Any, Literal
 
 # Third-party modules
 from pydantic import BaseModel, Field
@@ -74,3 +77,103 @@ class TimeRange(Enum):
     LAST_WEEK = "WEEK"
     LAST_MONTH = "MONTH"
     LAST_YEAR = "YEAR"
+
+
+class AskCall:
+    def __init__(self, parent, json_data: dict[str, Any]) -> None:
+        self._parent = parent
+        self._json_data = json_data
+
+    def run(self) -> AskResponse:
+        """
+        Run the ask request and return the response data
+
+        Returns:
+            AskResponse object containing the response data.
+        """
+
+        self._parent.reset_response_data()
+        self._parent._client.get("https://www.perplexity.ai/search/new", params={"q": self._json_data["query_str"]})
+
+        with self._parent._client.stream(
+            "POST", "https://www.perplexity.ai/rest/sse/perplexity_ask", json=self._json_data
+        ) as response:
+            response.raise_for_status()
+
+            for line in response.iter_lines():
+                data = self._parent._extract_json_line(line)
+
+                if data:
+                    self._parent._process_data(data)
+
+                    if data.get("final"):
+                        break
+
+        return AskResponse(
+            title=self._parent.title,
+            answer=self._parent.answer,
+            chunks=list(self._parent.chunks),
+            search_results=list(self._parent.search_results),
+            raw_data=self._parent.raw_data,
+        )
+
+    def stream(self) -> Generator[StreamResponse]:
+        """
+        Stream response data in real-time
+
+        Yields:
+            StreamResponse object containing the streamed data.
+        """
+
+        self._parent.reset_response_data()
+        self._parent._client.get("https://www.perplexity.ai/search/new", params={"q": self._json_data["query_str"]})
+
+        with self._parent._client.stream(
+            "POST", "https://www.perplexity.ai/rest/sse/perplexity_ask", json=self._json_data
+        ) as response:
+            response.raise_for_status()
+
+            for line in response.iter_lines():
+                data = self._parent._extract_json_line(line)
+
+                if data:
+                    self._parent._process_data(data)
+
+                    yield StreamResponse(
+                        title=self._parent.title,
+                        answer=self._parent.answer,
+                        chunks=list(self._parent.chunks),
+                        last_chunk=self._parent.last_chunk,
+                        search_results=list(self._parent.search_results),
+                        raw_data=data,
+                    )
+
+                    if data.get("final"):
+                        break
+
+
+def format_citations(citation_mode: Literal["markdown", "remove"] | None, text: str, search_results: list) -> str:
+    if citation_mode is None or not text:
+        return text
+
+    def citation_replacer(match: Match[str]) -> str:
+        num = match.group(1)
+
+        if not num.isdigit():
+            return match.group(0)
+
+        idx = int(num) - 1
+
+        if 0 <= idx < len(search_results):
+            url = getattr(search_results[idx], "url", "") or ""
+
+            if citation_mode == "markdown" and url:
+                return f"[{num}]({url})"
+            elif citation_mode == "remove":
+                return ""
+            else:
+                return match.group(0)
+        else:
+            return match.group(0)
+
+    return re_compile(r"\[(\d{1,2})\](?![\d\w])").sub(citation_replacer, text)

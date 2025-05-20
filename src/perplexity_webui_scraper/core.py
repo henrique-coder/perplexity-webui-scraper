@@ -1,7 +1,6 @@
 # Standard modules
-from collections.abc import Generator
 from re import match
-from typing import Any
+from typing import Any, Literal
 
 # Third-party modules
 from httpx import Client, Timeout
@@ -9,7 +8,7 @@ from orjson import loads
 
 # Local modules
 from .models import ModelBase, ModelType
-from .utils import AskResponse, SearchFocus, SearchResultItem, SourceFocus, StreamResponse, TimeRange
+from .utils import AskCall, SearchFocus, SearchResultItem, SourceFocus, TimeRange, format_citations
 
 
 class Perplexity:
@@ -39,6 +38,7 @@ class Perplexity:
         }
         self._cookies = {"__Secure-next-auth.session-token": session_token}
         self._client = Client(headers=self._headers, cookies=self._cookies, timeout=Timeout(1800, read=None))
+        self._citation_formatting = None
         self.reset_response_data()
 
     def reset_response_data(self) -> None:
@@ -99,7 +99,10 @@ class Perplexity:
             "query_str": query,
         }
 
-    def _process_data(self, data: dict[str, Any]) -> None:
+    def _process_data(
+        self,
+        data: dict[str, Any],
+    ) -> None:
         if self.conversation_uuid is None and "backend_uuid" in data:
             self.conversation_uuid = data["backend_uuid"]
 
@@ -123,94 +126,27 @@ class Perplexity:
             elif isinstance(json_data, dict):
                 self._update_response_data(data.get("thread_title"), json_data)
 
-    def _update_response_data(self, title: str | None, answer_data: dict[str, Any]) -> None:
+    def _update_response_data(
+        self,
+        title: str | None,
+        answer_data: dict[str, Any],
+    ) -> None:
         self.title = title
-        self.answer = answer_data.get("answer")
-        self.chunks = answer_data.get("chunks", [])
-        self.last_chunk = self.chunks[-1] if self.chunks else None
         self.search_results = [
             SearchResultItem(title=r.get("name"), snippet=r.get("snippet"), url=r.get("url"))
             for r in answer_data.get("web_results", [])
             if isinstance(r, dict)
         ]
+        self.answer = format_citations(self._citation_formatting, answer_data.get("answer"), self.search_results)
+        self.chunks = answer_data.get("chunks", [])
+        self.last_chunk = self.chunks[-1] if self.chunks else None
         self.raw_data = answer_data
-
-    class AskCall:
-        def __init__(self, parent: "Perplexity", json_data: dict[str, Any]) -> None:
-            self._parent = parent
-            self._json_data = json_data
-
-        def run(self) -> AskResponse:
-            """
-            Run the ask request and return the response data
-
-            Returns:
-                AskResponse object containing the response data.
-            """
-
-            self._parent.reset_response_data()
-            self._parent._client.get("https://www.perplexity.ai/search/new", params={"q": self._json_data["query_str"]})
-
-            with self._parent._client.stream(
-                "POST", "https://www.perplexity.ai/rest/sse/perplexity_ask", json=self._json_data
-            ) as response:
-                response.raise_for_status()
-
-                for line in response.iter_lines():
-                    data = self._parent._extract_json_line(line)
-
-                    if data:
-                        self._parent._process_data(data)
-
-                        if data.get("final"):
-                            break
-
-            return AskResponse(
-                title=self._parent.title,
-                answer=self._parent.answer,
-                chunks=list(self._parent.chunks),
-                search_results=list(self._parent.search_results),
-                raw_data=self._parent.raw_data,
-            )
-
-        def stream(self) -> Generator[StreamResponse]:
-            """
-            Stream response data in real-time
-
-            Yields:
-                StreamResponse object containing the streamed data.
-            """
-
-            self._parent.reset_response_data()
-            self._parent._client.get("https://www.perplexity.ai/search/new", params={"q": self._json_data["query_str"]})
-
-            with self._parent._client.stream(
-                "POST", "https://www.perplexity.ai/rest/sse/perplexity_ask", json=self._json_data
-            ) as response:
-                response.raise_for_status()
-
-                for line in response.iter_lines():
-                    data = self._parent._extract_json_line(line)
-
-                    if data:
-                        self._parent._process_data(data)
-
-                        yield StreamResponse(
-                            title=self._parent.title,
-                            answer=self._parent.answer,
-                            chunks=list(self._parent.chunks),
-                            last_chunk=self._parent.last_chunk,
-                            search_results=list(self._parent.search_results),
-                            raw_data=data,
-                        )
-
-                        if data.get("final"):
-                            break
 
     def ask(
         self,
         query: str,
-        attachment_urls: list[str] | None = None,
+        citation_formatting: Literal["markdown", "remove"] | None = None,
+        # attachment_urls: list[str] | None = None,
         model: type[ModelBase] = ModelType.Pro.Best,
         save_to_library: bool = False,
         search_focus: SearchFocus = SearchFocus.WEB,
@@ -225,7 +161,7 @@ class Perplexity:
 
         Args:
             query: The question or prompt to send.
-            attachment_urls: Optional list of URLs to attach (max 10). Defaults to None.
+            citation_formatting: The formatting for citations in the answer. Can be "markdown" or "remove". Defaults to None.
             model: The model to use for the response. Defaults to ModelType.Pro.Best.
             save_to_library: Whether to save this query to your library. Defaults to False.
             search_focus: Search focus type. Defaults to SearchFocus.WEB.
@@ -239,12 +175,15 @@ class Perplexity:
             AskCall object, which can be used to retrieve the response directly or stream it.
         """
 
-        if attachment_urls and len(attachment_urls) > 10:
-            raise ValueError("Maximum of 10 attachments allowed.")
+        self._citation_formatting = citation_formatting
+
+        # attachment_urls: Optional list of URLs to attach (max 10). Defaults to None.
+        # if attachment_urls and len(attachment_urls) > 10:
+        #     raise ValueError("Maximum of 10 attachments allowed.")
 
         json_data = self._prepare_json_data(
             query,
-            attachment_urls,
+            [],  # attachment_urls,
             model,
             save_to_library,
             search_focus,
@@ -255,4 +194,4 @@ class Perplexity:
             coordinates,
         )
 
-        return Perplexity.AskCall(self, json_data)
+        return AskCall(self, json_data)
