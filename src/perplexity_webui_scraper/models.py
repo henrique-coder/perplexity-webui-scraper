@@ -31,7 +31,7 @@ class ModelType:
             _identifier = "experimental"
             _mode = "copilot"
 
-        class Claude37Sonnet(ModelBase):
+        class Claude40Sonnet(ModelBase):
             """Anthropic's advanced model"""
 
             _identifier = "claude2"
@@ -70,7 +70,7 @@ class ModelType:
                 _identifier = "o4mini"
                 _mode = "copilot"
 
-            class Claude37SonnetThinking(ModelBase):
+            class Claude40SonnetThinking(ModelBase):
                 """Anthropic's reasoning model"""
 
                 _identifier = "claude37sonnetthinking"
