@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "perplexity-webui-scraper"
 version = "0.0.1"
@@ -12,10 +16,6 @@ dependencies = [
     "orjson",
     "pydantic",
 ]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
 
 [dependency-groups]
 discord-bot = [
