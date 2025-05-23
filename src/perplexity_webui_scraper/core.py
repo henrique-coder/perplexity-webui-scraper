@@ -145,7 +145,7 @@ class Perplexity:
     def ask(
         self,
         query: str,
-        citation_mode: CitationMode = CitationMode.DEFAULT,
+        citation_mode: CitationMode = CitationMode.CLEAN,
         # attachment_urls: list[str] | None = None,
         model: ModelBase = ModelType.Pro.Best,
         save_to_library: bool = False,
@@ -161,7 +161,7 @@ class Perplexity:
 
         Args:
             query: The question or prompt to send.
-            citation_mode: The citation mode to use. Defaults to CitationMode.DEFAULT.
+            citation_mode: The citation mode to use. Defaults to CitationMode.CLEAN.
             model: The model to use for the response. Defaults to ModelType.Pro.Best.
             save_to_library: Whether to save this query to your library. Defaults to False.
             search_focus: Search focus type. Defaults to SearchFocus.WEB.
