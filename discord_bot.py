@@ -60,24 +60,23 @@ user_rate_limit = {}
 # Key: Internal identifier
 # Value: Tuple (ModelType object, User-facing name, Description)
 AVAILABLE_MODELS = {
-    "pro_best": (ModelType.Pro.Best, "Best (Auto & Pro)", "Selects the best model for each query"),
-    "pro_sonar": (ModelType.Pro.Sonar, "Sonar (Pro)", "Perplexity's fast model"),
-    "pro_claude37sonnet": (ModelType.Pro.Claude37Sonnet, "Claude 3.7 Sonnet (Pro)", "Anthropic's advanced model"),
-    "pro_gpt41": (ModelType.Pro.GPT41, "GPT-4.1 (Pro)", "OpenAI's advanced model"),
-    "pro_gemini25pro": (ModelType.Pro.Gemini25Pro, "Gemini 2.5 Pro (Pro)", "Google's latest model"),
-    "pro_grok3beta": (ModelType.Pro.Grok3Beta, "Grok 2 (Pro)", "xAI's latest model"),
-    "pro_reasoning_r11776": (ModelType.Pro.Reasoning.R11776, "R1 (Pro & Reasoning)", "Perplexity's unbiased reasoning model"),
-    "pro_reasoning_o4mini": (ModelType.Pro.Reasoning.o4mini, "o4 mini (Pro & Reasoning)", "OpenAI's reasoning model"),
-    "pro_reasoning_claude37sonnetthinking": (
-        ModelType.Pro.Reasoning.Claude37SonnetThinking,
-        "Claude 3.7 Sonnet Thinking (Pro & Reasoning)",
-        "Anthropic's reasoning model",
+    "pro_best": (ModelType.Pro.Best, "Best (Auto & Pro)"),
+    "pro_sonar": (ModelType.Pro.Sonar, "Sonar (Pro)"),
+    "pro_claude40sonnet": (ModelType.Pro.Claude40Sonnet, "Claude 4.0 Sonnet (Pro)"),
+    "pro_gpt41": (ModelType.Pro.GPT41, "GPT-4.1 (Pro)"),
+    "pro_gemini25pro": (ModelType.Pro.Gemini25Pro, "Gemini 2.5 Pro (Pro)"),
+    "pro_grok3beta": (ModelType.Pro.Grok3Beta, "Grok 2 (Pro)"),
+    "pro_reasoning_r11776": (ModelType.Pro.Reasoning.R11776, "R1 (Pro & Reasoning)"),
+    "pro_reasoning_o4mini": (ModelType.Pro.Reasoning.o4mini, "o4 mini (Pro & Reasoning)"),
+    "pro_reasoning_claude40sonnetthinking": (
+        ModelType.Pro.Reasoning.Claude40SonnetThinking,
+        "Claude 4.0 Sonnet Thinking (Pro & Reasoning)",
     ),
-    "deepresearch": (ModelType.DeepResearch, "Deep Research", "In-depth reports on complex topics (very slow)"),
+    "research": (ModelType.Research, "Research"),
 }
 DEFAULT_MODEL_KEY = "pro_best"
 
-model_choices = [discord.OptionChoice(name=name, value=key) for key, (_, name, _) in AVAILABLE_MODELS.items()]
+model_choices = [discord.OptionChoice(name=name, value=key) for key, (_, name) in AVAILABLE_MODELS.items()]
 
 
 async def check_rate_limit(user_id: int) -> bool:
