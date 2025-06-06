@@ -68,11 +68,13 @@ class SourceFocus(Enum):
         WEB: Search the web
         ACADEMIC: Search academic sources
         SOCIAL: Search social media
+        FINANCE: Search SEC filings
     """
 
     WEB = "web"
     ACADEMIC = "scholar"
     SOCIAL = "social"
+    FINANCE = "edgar"
 
 
 class TimeRange(Enum):
