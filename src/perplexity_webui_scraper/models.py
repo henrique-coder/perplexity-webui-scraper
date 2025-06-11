@@ -64,10 +64,10 @@ class ModelType:
                 _identifier = "r1"
                 _mode = "copilot"
 
-            class o4mini(ModelBase):
-                """OpenAI's latest reasoning model"""
+            class o3(ModelBase):
+                """OpenAI's most powerful reasoning model"""
 
-                _identifier = "o4mini"
+                _identifier = "o3"
                 _mode = "copilot"
 
             class Claude40SonnetThinking(ModelBase):
