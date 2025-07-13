@@ -65,9 +65,9 @@ class SourceFocus(Enum):
     Available source focus
 
     Attributes:
-        WEB: Search the web
-        ACADEMIC: Search academic sources
-        SOCIAL: Search social media
+        WEB: Search across the entire internet
+        ACADEMIC: Search academic papers
+        SOCIAL: Discussions and opinions
         FINANCE: Search SEC filings
     """
 
