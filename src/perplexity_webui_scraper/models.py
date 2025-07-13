@@ -17,7 +17,7 @@ class ModelType:
     """Available models"""
 
     class Pro:
-        """3x more sources with powerful models, increased limits, and detailed answers"""
+        """3x more sources with powerful models and increased limits"""
 
         class Best(ModelBase):
             """Selects the best model for each query"""
@@ -43,16 +43,10 @@ class ModelType:
             _identifier = "gpt41"
             _mode = "copilot"
 
-        class Gemini25Pro(ModelBase):
+        class Gemini25Pro0605(ModelBase):
             """Google's latest model"""
 
             _identifier = "gemini2flash"
-            _mode = "copilot"
-
-        class Grok3Beta(ModelBase):
-            """xAI's latest model"""
-
-            _identifier = "grok"
             _mode = "copilot"
 
         class Reasoning:
@@ -64,8 +58,14 @@ class ModelType:
                 _identifier = "r1"
                 _mode = "copilot"
 
+            class Grok4(ModelBase):
+                """xAI's latest, most powerful reasoning model"""
+
+                _identifier = "grok4"
+                _mode = "copilot"
+
             class o3(ModelBase):
-                """OpenAI's most powerful reasoning model"""
+                """OpenAI's reasoning model"""
 
                 _identifier = "o3"
                 _mode = "copilot"
@@ -77,7 +77,7 @@ class ModelType:
                 _mode = "copilot"
 
     class Research(ModelBase):
-        """Advanced analysis on any topic"""
+        """Deep research on any topic (in-depth reports with more sources, charts, and advanced reasoning)"""
 
         _identifier = "pplx_alpha"
         _mode = "copilot"
