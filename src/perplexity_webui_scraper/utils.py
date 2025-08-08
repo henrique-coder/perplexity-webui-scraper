@@ -37,12 +37,12 @@ class CitationMode(Enum):
     Available citation modes
 
     Attributes:
-        DEFAULT: Use default Perplexity citation format (e.g., "`This is a citation[1]`")
-        MARKDOWN: Replace citations with markdown links (e.g., "`This is a citation[1](https://example.com)`")
+        PERPLEXITY: Use default Perplexity citation format (e.g., "`This is a citation[1]`")
+        MARKDOWN: Replace citations with real markdown links (e.g., "`This is a citation[1](https://example.com)`")
         CLEAN: Remove all citations (e.g., "`This is a citation`")
     """
 
-    DEFAULT = "default"
+    PERPLEXITY = "default"
     MARKDOWN = "markdown"
     CLEAN = "clean"
 
@@ -169,28 +169,29 @@ class AskCall:
                         break
 
 
-def format_citations(citation_mode: CitationMode, text: str, search_results: list) -> str:
-    if citation_mode.value == "default" or not text:
-        return text
+def citation_replacer(match: Match[str], citation_mode: CitationMode, search_results: list) -> str:
+    num = match.group(1)
 
-    def citation_replacer(match: Match[str]) -> str:
-        num = match.group(1)
+    if not num.isdigit():
+        return match.group(0)
 
-        if not num.isdigit():
-            return match.group(0)
+    idx = int(num) - 1
 
-        idx = int(num) - 1
+    if 0 <= idx < len(search_results):
+        url = getattr(search_results[idx], "url", "") or ""
 
-        if 0 <= idx < len(search_results):
-            url = getattr(search_results[idx], "url", "") or ""
-
-            if citation_mode.value == "markdown" and url:
-                return f"[{num}]({url})"
-            elif citation_mode.value == "clean":
-                return ""
-            else:
-                return match.group(0)
+        if citation_mode.value == "markdown" and url:
+            return f"[{num}]({url})"
+        elif citation_mode.value == "clean":
+            return ""
         else:
             return match.group(0)
+    else:
+        return match.group(0)
 
-    return re_compile(r"\[(\d{1,2})\](?![\d\w])").sub(citation_replacer, text)
+
+def format_citations(citation_mode: CitationMode, text: str, search_results: list) -> str:
+    if not text or citation_mode.value == "default":
+        return text
+
+    return re_compile(r"\[(\d{1,2})\](?![\d\w])").sub(lambda match: citation_replacer(match, citation_mode, search_results), text)
