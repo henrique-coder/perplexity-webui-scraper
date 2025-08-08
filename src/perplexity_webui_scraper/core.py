@@ -23,11 +23,10 @@ class Perplexity:
         """
 
         self._headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+            "Accept": "text/event-stream",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
             "Referer": "https://www.perplexity.ai/",
             "Origin": "https://www.perplexity.ai",
-            "Accept": "text/event-stream",
-            "Sec-Ch-Ua": '"Google Chrome";v="125", "Chromium";v="125", "Not.A/Brand";v="24"',
             "Sec-Ch-Ua-Mobile": "?0",
             "Sec-Ch-Ua-Platform": '"Windows"',
             "Sec-Fetch-Dest": "empty",
@@ -38,7 +37,7 @@ class Perplexity:
         }
         self._cookies = {"__Secure-next-auth.session-token": session_token}
         self._client = Client(headers=self._headers, cookies=self._cookies, timeout=Timeout(1800, read=None))
-        self._citation_mode = CitationMode.DEFAULT
+        self._citation_mode: CitationMode
         self.reset_response_data()
 
     def reset_response_data(self) -> None:
@@ -162,7 +161,7 @@ class Perplexity:
         Args:
             query: The question or prompt to send.
             citation_mode: The citation mode to use. Defaults to CitationMode.CLEAN.
-            model: The model to use for the response. Defaults to ModelType.Pro.Best.
+            model: The model to use for the response. Defaults to ModelType.Best.
             save_to_library: Whether to save this query to your library. Defaults to False.
             search_focus: Search focus type. Defaults to SearchFocus.WEB.
             source_focus: Source focus type. Defaults to SourceFocus.WEB.
