@@ -147,7 +147,7 @@ class Perplexity:
         query: str,
         citation_mode: CitationMode = CitationMode.CLEAN,
         # attachment_urls: list[str] | None = None,
-        model: ModelBase = ModelType.Pro.Best,
+        model: ModelBase = ModelType.Best,
         save_to_library: bool = False,
         search_focus: SearchFocus = SearchFocus.WEB,
         source_focus: SourceFocus | list[SourceFocus] = SourceFocus.WEB,
