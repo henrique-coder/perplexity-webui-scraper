@@ -3,7 +3,7 @@
 
 include = ["*.py"]
 exclude = [".idea", ".venv", "__pycache__", ".ruff_cache", ".pytest_cache"]
-target-version = "py313"
+target-version = "py310"
 line-length = 130
 indent-width = 4
 preview = true
@@ -33,3 +33,4 @@ indent-style = "space"
 line-ending = "lf"
 docstring-code-format = true
 skip-magic-trailing-comma = false
+
