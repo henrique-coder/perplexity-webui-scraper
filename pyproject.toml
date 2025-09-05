@@ -13,18 +13,18 @@ authors = [
 requires-python = ">=3.10"
 dependencies = [
     "httpx>=0.28.1",
-    "orjson>=3.10.18",
+    "orjson>=3.11.3",
     "pydantic>=2.11.7",
 ]
 
 [dependency-groups]
+lint = [
+    "ruff>=0.12.12",
+]
 dev = [
     "camoufox>=0.4.11",
     "fastapi>=0.116.1",
     "python-dotenv>=1.1.1",
     "rich>=14.1.0",
     "uvicorn>=0.35.0",
-]
-lint = [
-    "ruff>=0.12.8",
 ]
