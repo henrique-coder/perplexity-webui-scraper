@@ -30,7 +30,6 @@ Here's a basic example of how to use the library to ask a question and stream th
 ```python
 from os import getenv
 from dotenv import load_dotenv
-from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
 
@@ -38,7 +37,6 @@ from perplexity_webui_scraper import Perplexity, CitationMode, ModelType, Search
 
 
 load_dotenv()
-console = Console()
 
 client = Perplexity(session_token=getenv("PERPLEXITY_SESSION_TOKEN"))
 
