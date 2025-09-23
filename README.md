@@ -4,10 +4,16 @@ This project provides an unofficial Python client library designed for programma
 
 ## Installation
 
-You can install the library directly from GitHub using pip:
+You can install the library using UV (recommended):
 
 ```bash
-pip install --upgrade git+https://github.com/henrique-coder/perplexity-webui-scraper.git@main
+uv add git+https://github.com/henrique-coder/perplexity-webui-scraper.git@main
+```
+
+Or using pip:
+
+```bash
+pip install git+https://github.com/henrique-coder/perplexity-webui-scraper.git@main
 ```
 
 ## Requirements
@@ -39,15 +45,16 @@ client = Perplexity(session_token=getenv("PERPLEXITY_SESSION_TOKEN"))
 with Live(Panel("", title="Waiting for answer", border_style="white"), refresh_per_second=30, vertical_overflow="visible") as live:
     for chunk in client.ask(
         query="Explain in a simplified and easy-to-understand way what a chatbot is.",
-        citation_mode=CitationMode.MARKDOWN,
-        model=ModelType.Pro.Gemini25Pro,
+        files=None,
+        citation_mode=CitationMode.PERPLEXITY,
+        model=ModelType.Best,
         save_to_library=False,
         search_focus=SearchFocus.WEB,
         source_focus=SourceFocus.WEB,
         time_range=TimeRange.ALL,
         language="en-US",
-        timezone="America/New_York",
-        coordinates=(-0.123, -4.567),
+        timezone=None,
+        coordinates=None,
     ).stream():
         if chunk.last_chunk:
             current_answer = chunk.answer or ""
@@ -55,7 +62,6 @@ with Live(Panel("", title="Waiting for answer", border_style="white"), refresh_p
 
     final_answer = chunk.answer or "No answer received"
     live.update(Panel(final_answer, title="Final answer", border_style="green"))
-
 ```
 
 ## Important Disclaimers and Usage Guidelines
