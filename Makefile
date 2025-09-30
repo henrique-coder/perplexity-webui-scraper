@@ -4,7 +4,7 @@ VENV := .venv
 FIRST_TARGET := $(firstword $(MAKECMDGOALS))
 ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 
-.PHONY: lint format install tests help %
+.PHONY: lint format install help %
 .DEFAULT_GOAL := help
 
 lint:
@@ -17,17 +17,13 @@ format:
 	uv run ruff check --fix .
 
 install:
-	uv sync --upgrade --all-extras --all-groups
-
-tests:
-	uv run pytest -v --xfail-tb
+	uv sync --refresh --all-extras --all-groups
 
 help:
 	@echo "Available commands:"
 	@echo "  lint       - Check code with 'prettier' and 'ruff'"
 	@echo "  format     - Format code with 'prettier' and 'ruff'"
 	@echo "  install    - Install dependencies with 'uv'"
-	@echo "  tests      - Run tests with 'pytest'"
 	@echo "  help       - Show this help message"
 
 %:
@@ -37,4 +33,3 @@ help:
 		@echo "make: *** Unknown target '$@'. Use 'make help' for available targets." >&2; \
 		exit 1; \
 	fi
-
