@@ -34,16 +34,16 @@ class ModelType:
         _identifier = "experimental"
         _mode = "copilot"
 
-    class Claude40Sonnet(ModelBase):
-        """Anthropic's advanced model"""
+    class Claude45Sonnet(ModelBase):
+        """Anthropic's newest advanced model"""
 
-        _identifier = "claude2"
+        _identifier = "claude45sonnet"
         _mode = "copilot"
 
-    class Claude40SonnetThinking(ModelBase):
-        """Anthropic's reasoning model"""
+    class Claude45SonnetThinking(ModelBase):
+        """Anthropic's newest reasoning model"""
 
-        _identifier = "claude37sonnetthinking"
+        _identifier = "claude45sonnetthinking"
         _mode = "copilot"
 
     # class Claude41OpusThinking(ModelBase):
