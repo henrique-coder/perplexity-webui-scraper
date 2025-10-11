@@ -70,12 +70,6 @@ class ModelType:
         _identifier = "gpt5_thinking"
         _mode = "copilot"
 
-    class o3(ModelBase):
-        """OpenAI's reasoning model"""
-
-        _identifier = "o3"
-        _mode = "copilot"
-
     # class o3Pro(ModelBase):
     #    """OpenAI's most powerful reasoning model"""
     #
