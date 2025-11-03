@@ -37,12 +37,12 @@ class CitationMode(Enum):
     Available citation modes
 
     Attributes:
-        PERPLEXITY: Use default Perplexity citation format (e.g., "`This is a citation[1]`")
+        DEFAULT: Use default Perplexity citation format (e.g., "`This is a citation[1]`")
         MARKDOWN: Replace citations with real markdown links (e.g., "`This is a citation[1](https://example.com)`")
         CLEAN: Remove all citations (e.g., "`This is a citation`")
     """
 
-    PERPLEXITY = "default"
+    DEFAULT = "default"
     MARKDOWN = "markdown"
     CLEAN = "clean"
 
@@ -107,15 +107,44 @@ class AskCall:
 
         Returns:
             AskResponse object containing the response data.
+
+        Raises:
+            PermissionError: If session token is invalid (403)
+            ConnectionError: If rate limit is exceeded (429)
         """
 
         self._parent.reset_response_data()
-        self._parent._client.get("https://www.perplexity.ai/search/new", params={"q": self._json_data["query_str"]})
+
+        try:
+            self._parent._client.get("https://www.perplexity.ai/search/new", params={"q": self._json_data["query_str"]})
+        except Exception as e:
+            if hasattr(e, "response") and hasattr(e.response, "status_code"):
+                if e.response.status_code == 403:
+                    raise PermissionError(
+                        "Access forbidden (403). Your session token is invalid or expired. "
+                        "Please obtain a new session token from your browser cookies."
+                    ) from e
+                elif e.response.status_code == 429:
+                    raise ConnectionError("Rate limit exceeded (429). Please wait a moment before trying again.") from e
+
+            raise e
 
         with self._parent._client.stream(
             "POST", "https://www.perplexity.ai/rest/sse/perplexity_ask", json=self._json_data
         ) as response:
-            response.raise_for_status()
+            try:
+                response.raise_for_status()
+            except Exception as e:
+                if hasattr(e, "response") and hasattr(e.response, "status_code"):
+                    if e.response.status_code == 403:
+                        raise PermissionError(
+                            "Access forbidden (403). Your session token is invalid or expired. "
+                            "Please obtain a new session token from your browser cookies."
+                        ) from e
+                    elif e.response.status_code == 429:
+                        raise ConnectionError("Rate limit exceeded (429). Please wait a moment before trying again.") from e
+
+                raise e
 
             for line in response.iter_lines():
                 data = self._parent._extract_json_line(line)
@@ -140,15 +169,44 @@ class AskCall:
 
         Yields:
             StreamResponse object containing the streamed data.
+
+        Raises:
+            PermissionError: If session token is invalid (403)
+            ConnectionError: If rate limit is exceeded (429)
         """
 
         self._parent.reset_response_data()
-        self._parent._client.get("https://www.perplexity.ai/search/new", params={"q": self._json_data["query_str"]})
+
+        try:
+            self._parent._client.get("https://www.perplexity.ai/search/new", params={"q": self._json_data["query_str"]})
+        except Exception as e:
+            if hasattr(e, "response") and hasattr(e.response, "status_code"):
+                if e.response.status_code == 403:
+                    raise PermissionError(
+                        "Access forbidden (403). Your session token is invalid or expired. "
+                        "Please obtain a new session token from your browser cookies."
+                    ) from e
+                elif e.response.status_code == 429:
+                    raise ConnectionError("Rate limit exceeded (429). Please wait a moment before trying again.") from e
+
+            raise e
 
         with self._parent._client.stream(
             "POST", "https://www.perplexity.ai/rest/sse/perplexity_ask", json=self._json_data
         ) as response:
-            response.raise_for_status()
+            try:
+                response.raise_for_status()
+            except Exception as e:
+                if hasattr(e, "response") and hasattr(e.response, "status_code"):
+                    if e.response.status_code == 403:
+                        raise PermissionError(
+                            "Access forbidden (403). Your session token is invalid or expired. "
+                            "Please obtain a new session token from your browser cookies."
+                        ) from e
+                    elif e.response.status_code == 429:
+                        raise ConnectionError("Rate limit exceeded (429). Please wait a moment before trying again.") from e
+
+                raise e
 
             for line in response.iter_lines():
                 data = self._parent._extract_json_line(line)
