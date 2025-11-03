@@ -3,21 +3,20 @@ from importlib.metadata import version
 
 # Local modules
 from .core import Perplexity
-from .models import ModelType
-from .utils import (
-    CitationMode,
-    SearchFocus,
-    SourceFocus,
-    TimeRange,
-)
+from .models import Model, Models
+from .utils import CitationMode, PromptCall, Response, SearchFocus, SearchResultItem, SourceFocus, TimeRange
 
 
-__all__ = [
-    "Perplexity",
-    "ModelType",
+__version__: str = version("perplexity-webui-scraper")
+__all__: list[str] = [
     "CitationMode",
+    "Models",
+    "Perplexity",
+    "PromptCall",
+    "Response",
     "SearchFocus",
+    "SearchResultItem",
     "SourceFocus",
     "TimeRange",
+    "Model",
 ]
-__version__ = version("perplexity-webui-scraper")
