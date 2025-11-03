@@ -1,14 +1,24 @@
-# Perplexity WebUI Scraper
+<div align="center">
 
-This project provides an unofficial Python client library designed for programmatic interaction with Perplexity AI. It enables developers to access Perplexity's features by simulating communications with its web user interface's internal endpoints.
+# 🤖 Perplexity WebUI Scraper
 
-## Installation
+A modern, fully-typed Python wrapper for programmatic interaction with [Perplexity AI](https://www.perplexity.ai).
+
+[![Version](https://img.shields.io/badge/dynamic/toml?url=https://raw.githubusercontent.com/henrique-coder/perplexity-webui-scraper/main/pyproject.toml&query=$.project.version&label=Version&color=orange)](./pyproject.toml)
+[![Python](https://img.shields.io/badge/dynamic/toml?url=https://raw.githubusercontent.com/henrique-coder/perplexity-webui-scraper/main/pyproject.toml&query=$.project.requires-python&label=Python&color=blue)](https://www.python.org/downloads)
+[![License](https://img.shields.io/github/license/henrique-coder/perplexity-webui-scraper?color=green)](./LICENSE)
+
+</div>
+
+---
+
+## 📦 Installation
 
 ```bash
 uv add git+https://github.com/henrique-coder/perplexity-webui-scraper.git --branch main
 ```
 
-## Requirements
+## 📋 Requirements
 
 To effectively use this library, the following are essential:
 
@@ -46,46 +56,55 @@ To effectively use this library, the following are essential:
 - Session tokens may expire - if you get a 403 error, obtain a new token
 - Do not share your session token with others
 
-## Quick Start
+## 🚀 Quick Start
 
-Here's a basic example of how to use the library to ask a question and stream the response:
+Here's a basic example of how to use the library:
 
 ```python
 from os import getenv
+
 from dotenv import load_dotenv
+from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
 
-from perplexity_webui_scraper import Perplexity, CitationMode, ModelType, SearchFocus, SourceFocus, TimeRange
-
+from perplexity_webui_scraper import CitationMode, Models, Perplexity, SearchFocus, SourceFocus, TimeRange
 
 load_dotenv()
 
+console = Console()
 client = Perplexity(session_token=getenv("PERPLEXITY_SESSION_TOKEN"))
 
-with Live(Panel("", title="Waiting for answer", border_style="white"), refresh_per_second=30, vertical_overflow="visible") as live:
-    for chunk in client.ask(
-        query="Explain in a simplified and easy-to-understand way what a chatbot is.",
-        files=None,
-        citation_mode=CitationMode.DEFAULT,
-        model=ModelType.Best,
-        save_to_library=False,
-        search_focus=SearchFocus.WEB,
-        source_focus=SourceFocus.WEB,
-        time_range=TimeRange.ALL,
-        language="en-US",
-        timezone=None,
-        coordinates=None,
-    ).stream():
-        if chunk.last_chunk:
-            current_answer = chunk.answer or ""
-            live.update(Panel(current_answer, title="Receiving tokens", border_style="blue"))
+# Define the query
+query = "Explain in a simplified and easy-to-understand way what a chatbot is."
 
-    final_answer = chunk.answer or "No answer received"
-    live.update(Panel(final_answer, title="Final answer", border_style="green"))
+# Configure the prompt request with all available parameters
+prompt_config = client.prompt(
+    query=query,  # The question to ask
+    files=None,  # Optional: file path(s) to attach (single path or list, max 30 files, 50MB each)
+    citation_mode=CitationMode.DEFAULT,  # Citation format: DEFAULT, MARKDOWN, or CLEAN
+    model=Models.BEST,  # AI model to use (BEST, GPT5, CLAUDE45_SONNET, etc.)
+    save_to_library=False,  # Whether to save this query to your library
+    search_focus=SearchFocus.WEB,  # Search focus: WEB or WRITING
+    source_focus=SourceFocus.WEB,  # Source type(s): WEB, ACADEMIC, SOCIAL, FINANCE (can be a list)
+    time_range=TimeRange.ALL,  # Time filter: ALL, TODAY, LAST_WEEK, LAST_MONTH, LAST_YEAR
+    language="en-US",  # Language code (e.g., "en-US", "pt-BR")
+    timezone=None,  # Timezone code (e.g., "America/New_York", "America/Sao_Paulo")
+    coordinates=None,  # Location coordinates as tuple: (latitude, longitude)
+)
+
+# Blocking mode (waits for complete response)
+response = prompt_config.run()
+console.print(Panel(f"[bold green]Answer:[/bold green] {response.answer}", border_style="green"))
+
+# Streaming mode (real-time updates with live panel)
+with Live(Panel("[bold yellow]Loading...[/bold yellow]", border_style="yellow"), console=console, refresh_per_second=4) as live:
+   for chunk in prompt_config.run(stream=True):
+      if chunk.answer:
+         live.update(Panel(f"[bold green]Answer:[/bold green] {chunk.answer}", border_style="green"))
 ```
 
-## Important Disclaimers and Usage Guidelines
+## ⚠️ Important Disclaimers and Usage Guidelines
 
 Please read the following carefully before using this library:
 
