@@ -1,117 +1,133 @@
 # Standard modules
 from collections.abc import Generator
-from enum import Enum
-from re import Match
-from re import compile as re_compile
+from re import Match, compile
 from typing import Any
 
 # Third-party modules
 from pydantic import BaseModel, Field
 
 
+class _ModeBase(BaseModel):
+    """Base class for mode objects"""
+
+    value: str
+
+    class Config:
+        frozen = True
+
+
+# Type alias for mode values
+ModeValue = _ModeBase
+
+
+class CitationMode:
+    """Citation formatting modes"""
+
+    DEFAULT = _ModeBase(value="default")
+    """Use default Perplexity citation format (e.g., 'This is a citation[1]')"""
+
+    MARKDOWN = _ModeBase(value="markdown")
+    """Replace citations with markdown links (e.g., 'This is a citation[1](https://example.com)')"""
+
+    CLEAN = _ModeBase(value="clean")
+    """Remove all citations (e.g., 'This is a citation')"""
+
+
+class SearchFocus:
+    """Search focus types"""
+
+    WEB = _ModeBase(value="internet")
+    """Search the web"""
+
+    WRITING = _ModeBase(value="writing")
+    """Search for writing"""
+
+
+class SourceFocus:
+    """Source focus types"""
+
+    WEB = _ModeBase(value="web")
+    """Search across the entire internet"""
+
+    ACADEMIC = _ModeBase(value="scholar")
+    """Search academic papers"""
+
+    SOCIAL = _ModeBase(value="social")
+    """Discussions and opinions"""
+
+    FINANCE = _ModeBase(value="edgar")
+    """Search SEC filings"""
+
+
+class TimeRange:
+    """Time range filters"""
+
+    ALL = _ModeBase(value="")
+    """Include sources from all time"""
+
+    TODAY = _ModeBase(value="DAY")
+    """Include sources from today"""
+
+    LAST_WEEK = _ModeBase(value="WEEK")
+    """Include sources from the last week"""
+
+    LAST_MONTH = _ModeBase(value="MONTH")
+    """Include sources from the last month"""
+
+    LAST_YEAR = _ModeBase(value="YEAR")
+    """Include sources from the last year"""
+
+
 class SearchResultItem(BaseModel):
+    """Individual search result item"""
+
     title: str | None = None
     snippet: str | None = None
     url: str | None = None
 
 
-class StreamResponse(BaseModel):
+class Response(BaseModel):
+    """Unified response model for both streaming and complete responses"""
+
     title: str | None = None
     answer: str | None = None
     chunks: list[str] = Field(default_factory=list)
-    last_chunk: str | None
+    last_chunk: str | None = None
     search_results: list[SearchResultItem] = Field(default_factory=list)
+    conversation_uuid: str | None = None
     raw_data: dict[str, Any] = Field(default_factory=dict)
 
 
-class AskResponse(BaseModel):
-    title: str | None = None
-    answer: str | None = None
-    chunks: list[str] = Field(default_factory=list)
-    search_results: list[SearchResultItem] = Field(default_factory=list)
-    raw_data: dict[str, Any] = Field(default_factory=dict)
+class PromptCall:
+    """Configured prompt that can be executed with .ask() method"""
 
-
-class CitationMode(Enum):
-    """
-    Available citation modes
-
-    Attributes:
-        DEFAULT: Use default Perplexity citation format (e.g., "`This is a citation[1]`")
-        MARKDOWN: Replace citations with real markdown links (e.g., "`This is a citation[1](https://example.com)`")
-        CLEAN: Remove all citations (e.g., "`This is a citation`")
-    """
-
-    DEFAULT = "default"
-    MARKDOWN = "markdown"
-    CLEAN = "clean"
-
-
-class SearchFocus(Enum):
-    """
-    Available search focus
-
-    Attributes:
-        WEB: Search the web
-        WRITING: Search for writing
-    """
-
-    WEB = "internet"
-    WRITING = "writing"
-
-
-class SourceFocus(Enum):
-    """
-    Available source focus
-
-    Attributes:
-        WEB: Search across the entire internet
-        ACADEMIC: Search academic papers
-        SOCIAL: Discussions and opinions
-        FINANCE: Search SEC filings
-    """
-
-    WEB = "web"
-    ACADEMIC = "scholar"
-    SOCIAL = "social"
-    FINANCE = "edgar"
-
-
-class TimeRange(Enum):
-    """
-    Available time range
-
-    Attributes:
-        ALL: Include sources from all time
-        TODAY: Include sources from today
-        LAST_WEEK: Include sources from the last week
-        LAST_MONTH: Include sources from the last month
-        LAST_YEAR: Include sources from the last year
-    """
-
-    ALL = None
-    TODAY = "DAY"
-    LAST_WEEK = "WEEK"
-    LAST_MONTH = "MONTH"
-    LAST_YEAR = "YEAR"
-
-
-class AskCall:
     def __init__(self, parent, json_data: dict[str, Any]) -> None:
         self._parent = parent
         self._json_data = json_data
 
-    def run(self) -> AskResponse:
+    def run(self, stream: bool = False) -> Response | Generator[Response, None, None]:
         """
-        Run the ask request and return the response data
+        Execute the prompt request.
+
+        Args:
+            stream: If False (default), blocks until complete and returns full Response.
+                   If True, returns generator yielding Response objects with incremental updates.
 
         Returns:
-            AskResponse object containing the response data.
+            Response object (if stream=False) or Generator[Response] (if stream=True)
 
         Raises:
             PermissionError: If session token is invalid (403)
             ConnectionError: If rate limit is exceeded (429)
         """
+
+        if stream:
+            return self._stream_response()
+        else:
+            return self._complete_response()
+
+    def _complete_response(self) -> Response:
+        """Execute request and block until complete"""
 
         self._parent.reset_response_data()
 
@@ -155,25 +171,18 @@ class AskCall:
                     if data.get("final"):
                         break
 
-        return AskResponse(
+        return Response(
             title=self._parent.title,
             answer=self._parent.answer,
             chunks=list(self._parent.chunks),
+            last_chunk=self._parent.last_chunk if self._parent.chunks else None,
             search_results=list(self._parent.search_results),
+            conversation_uuid=self._parent.conversation_uuid,
             raw_data=self._parent.raw_data,
         )
 
-    def stream(self) -> Generator[StreamResponse]:
-        """
-        Stream response data in real-time
-
-        Yields:
-            StreamResponse object containing the streamed data.
-
-        Raises:
-            PermissionError: If session token is invalid (403)
-            ConnectionError: If rate limit is exceeded (429)
-        """
+    def _stream_response(self) -> Generator[Response, None, None]:
+        """Stream response data in real-time"""
 
         self._parent.reset_response_data()
 
@@ -214,12 +223,13 @@ class AskCall:
                 if data:
                     self._parent._process_data(data)
 
-                    yield StreamResponse(
+                    yield Response(
                         title=self._parent.title,
                         answer=self._parent.answer,
                         chunks=list(self._parent.chunks),
                         last_chunk=self._parent.last_chunk,
                         search_results=list(self._parent.search_results),
+                        conversation_uuid=self._parent.conversation_uuid,
                         raw_data=data,
                     )
 
@@ -227,7 +237,9 @@ class AskCall:
                         break
 
 
-def citation_replacer(match: Match[str], citation_mode: CitationMode, search_results: list) -> str:
+def citation_replacer(match: Match[str], citation_mode: ModeValue, search_results: list[SearchResultItem]) -> str:
+    """Replace citation markers based on mode"""
+
     num = match.group(1)
 
     if not num.isdigit():
@@ -236,20 +248,20 @@ def citation_replacer(match: Match[str], citation_mode: CitationMode, search_res
     idx = int(num) - 1
 
     if 0 <= idx < len(search_results):
-        url = getattr(search_results[idx], "url", "") or ""
+        url = search_results[idx].url or ""
 
         if citation_mode.value == "markdown" and url:
             return f"[{num}]({url})"
         elif citation_mode.value == "clean":
             return ""
-        else:
-            return match.group(0)
-    else:
-        return match.group(0)
+
+    return match.group(0)
 
 
-def format_citations(citation_mode: CitationMode, text: str, search_results: list) -> str:
+def format_citations(citation_mode: ModeValue, text: str | None, search_results: list[SearchResultItem]) -> str | None:
+    """Format citation markers in text based on mode"""
+
     if not text or citation_mode.value == "default":
         return text
 
-    return re_compile(r"\[(\d{1,2})\](?![\d\w])").sub(lambda match: citation_replacer(match, citation_mode, search_results), text)
+    return compile(r"\[(\d{1,2})\](?![\d\w])").sub(lambda match: citation_replacer(match, citation_mode, search_results), text)
