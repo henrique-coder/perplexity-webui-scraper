@@ -4,16 +4,8 @@ This project provides an unofficial Python client library designed for programma
 
 ## Installation
 
-You can install the library using UV (recommended):
-
 ```bash
-uv add git+https://github.com/henrique-coder/perplexity-webui-scraper.git@main
-```
-
-Or using pip:
-
-```bash
-pip install git+https://github.com/henrique-coder/perplexity-webui-scraper.git@main
+uv add git+https://github.com/henrique-coder/perplexity-webui-scraper.git --branch main
 ```
 
 ## Requirements
@@ -22,6 +14,37 @@ To effectively use this library, the following are essential:
 
 - An **active Perplexity Pro subscription**.
 - A **valid `__Secure-next-auth.session-token` cookie**. This token must be obtained from an authenticated Perplexity AI web session and is crucial for the library to authenticate its requests as the user. It's recommended to store this token in an environment variable (e.g., `PERPLEXITY_SESSION_TOKEN`).
+
+### How to Obtain Your Session Token
+
+1. **Open Perplexity AI in your browser** and log in to your account at [https://www.perplexity.ai](https://www.perplexity.ai)
+
+2. **Open Developer Tools:**
+   - **Chrome/Edge:** Press `F12` or `Ctrl+Shift+I` (Windows/Linux) / `Cmd+Option+I` (Mac)
+   - **Firefox:** Press `F12` or `Ctrl+Shift+I` (Windows/Linux) / `Cmd+Option+I` (Mac)
+   - **Safari:** Enable "Develop" menu in Preferences → Advanced, then press `Cmd+Option+I`
+
+3. **Navigate to the Application/Storage tab:**
+   - **Chrome/Edge:** Click on "Application" tab
+   - **Firefox:** Click on "Storage" tab
+   - **Safari:** Click on "Storage" tab
+
+4. **Find your session token:**
+   - Expand "Cookies" in the left sidebar
+   - Click on `https://www.perplexity.ai`
+   - Look for a cookie named `__Secure-next-auth.session-token`
+   - Copy the **Value** of this cookie
+
+5. **Store it securely:**
+   - Create a `.env` file in your project root
+   - Add: `PERPLEXITY_SESSION_TOKEN=your_token_here`
+   - **Never commit this token to version control!**
+
+**⚠️ Important Notes:**
+
+- Your session token is sensitive and should be kept private
+- Session tokens may expire - if you get a 403 error, obtain a new token
+- Do not share your session token with others
 
 ## Quick Start
 
@@ -44,7 +67,7 @@ with Live(Panel("", title="Waiting for answer", border_style="white"), refresh_p
     for chunk in client.ask(
         query="Explain in a simplified and easy-to-understand way what a chatbot is.",
         files=None,
-        citation_mode=CitationMode.PERPLEXITY,
+        citation_mode=CitationMode.DEFAULT,
         model=ModelType.Best,
         save_to_library=False,
         search_focus=SearchFocus.WEB,
