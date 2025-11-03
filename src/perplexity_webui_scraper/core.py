@@ -23,7 +23,13 @@ class Perplexity:
 
         Args:
             session_token: The session token (`__Secure-next-auth.session-token` cookie) to use for authentication.
+
+        Raises:
+            ValueError: If session_token is empty or None
         """
+
+        if not session_token or not session_token.strip():
+            raise ValueError("session_token cannot be empty or None")
 
         self._headers: dict[str, str] = {
             "Accept": "text/event-stream, application/json",
@@ -104,6 +110,7 @@ class Perplexity:
 
                 result.append({
                     "path": file_path,
+                    "name": path_obj.name,
                     "size": file_size,
                     "mimetype": mimetype,
                     "is_image": mimetype.startswith("image/"),
@@ -130,8 +137,6 @@ class Perplexity:
 
             response = self._client.post(
                 "https://www.perplexity.ai/rest/uploads/create_upload_url",
-                headers=self._headers,
-                cookies=self._cookies,
                 json=json_data,
             )
 
@@ -147,7 +152,20 @@ class Perplexity:
 
         except Exception as e:
             if hasattr(e, "response") and hasattr(e.response, "status_code"):
-                raise ValueError(f"Upload failed for '{file_data['path']}': HTTP {e.response.status_code} - {str(e)}") from e
+                status_code = e.response.status_code
+
+                if status_code == 403:
+                    raise ValueError(
+                        f"Upload failed for '{file_data['path']}': Access forbidden (403). "
+                        "Your session token may be invalid or expired. Please obtain a new session token."
+                    ) from e
+                elif status_code == 429:
+                    raise ValueError(
+                        f"Upload failed for '{file_data['path']}': Rate limit exceeded (429). "
+                        "Please wait a moment before trying again."
+                    ) from e
+                else:
+                    raise ValueError(f"Upload failed for '{file_data['path']}': HTTP {status_code} - {str(e)}") from e
             else:
                 raise ValueError(f"Upload failed for '{file_data['path']}': {str(e)}") from e
 
@@ -251,7 +269,7 @@ class Perplexity:
         self,
         query: str,
         files: str | PathLike | list[str | PathLike] | None = None,
-        citation_mode: CitationMode = CitationMode.PERPLEXITY,
+        citation_mode: CitationMode = CitationMode.DEFAULT,
         model: ModelBase = ModelType.Best,
         save_to_library: bool = False,
         search_focus: SearchFocus = SearchFocus.WEB,
@@ -267,7 +285,7 @@ class Perplexity:
         Args:
             query: The question or prompt to send.
             files: File path(s) or URL(s) to attach to the query. Can be a single path/URL or a list. Limited to 30 files maximum, with each file up to 50MB. Defaults to None.
-            citation_mode: The citation mode to use. Defaults to CitationMode.PERPLEXITY.
+            citation_mode: The citation mode to use. Defaults to CitationMode.DEFAULT.
             model: The model to use for the response. Defaults to ModelType.Best.
             save_to_library: Whether to save this query to your library. Defaults to False.
             search_focus: Search focus type. Defaults to SearchFocus.WEB.
