@@ -4,14 +4,24 @@ from os import PathLike
 from pathlib import Path
 from re import match
 from typing import Any
+from uuid import uuid4
 
 # Third-party modules
 from httpx import Client, Timeout
 from orjson import loads
 
 # Local modules
-from .models import ModelBase, ModelType
-from .utils import AskCall, CitationMode, SearchFocus, SearchResultItem, SourceFocus, TimeRange, format_citations
+from .models import Model, Models
+from .utils import (
+    CitationMode,
+    ModeValue,
+    PromptCall,
+    SearchFocus,
+    SearchResultItem,
+    SourceFocus,
+    TimeRange,
+    format_citations,
+)
 
 
 class Perplexity:
@@ -34,7 +44,7 @@ class Perplexity:
         self._headers: dict[str, str] = {
             "Accept": "text/event-stream, application/json",
             "Content-Type": "application/json",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
             "Referer": "https://www.perplexity.ai/",
             "Origin": "https://www.perplexity.ai",
             "Sec-Ch-Ua-Mobile": "?0",
@@ -100,6 +110,7 @@ class Perplexity:
 
                 if file_size > self._max_file_size:
                     size_mb = file_size / (1024 * 1024)
+
                     raise ValueError(f"File '{file_path}' exceeds 50MB limit: {size_mb:.1f}MB")
 
                 if file_size == 0:
@@ -110,12 +121,10 @@ class Perplexity:
 
                 result.append({
                     "path": file_path,
-                    "name": path_obj.name,
                     "size": file_size,
                     "mimetype": mimetype,
                     "is_image": mimetype.startswith("image/"),
                 })
-
             except (FileNotFoundError, PermissionError) as e:
                 raise ValueError(f"Cannot access file '{file_path}': {str(e)}") from e
             except OSError as e:
@@ -127,29 +136,34 @@ class Perplexity:
 
     def upload_file(self, file_data: dict[str, str | int | bool]) -> str:
         try:
+            file_uuid = str(uuid4())
+
             json_data = {
-                "filename": file_data["path"],
-                "content_type": file_data["mimetype"],
-                "source": "default",
-                "file_size": file_data["size"],
-                "force_image": file_data["is_image"],
+                "files": {
+                    file_uuid: {
+                        "filename": file_data["path"],
+                        "content_type": file_data["mimetype"],
+                        "source": "default",
+                        "file_size": file_data["size"],
+                        "force_image": file_data["is_image"],
+                    }
+                }
             }
 
             response = self._client.post(
-                "https://www.perplexity.ai/rest/uploads/create_upload_url",
+                "https://www.perplexity.ai/rest/uploads/batch_create_upload_urls",
                 json=json_data,
             )
 
             response.raise_for_status()
 
             response_data = response.json()
-            upload_url = response_data.get("s3_object_url")
+            upload_url = response_data.get("results", {}).get(file_uuid, {}).get("s3_object_url")
 
             if not upload_url:
                 raise ValueError(f"Upload failed for '{file_data['path']}': No upload URL returned from server")
 
             return upload_url
-
         except Exception as e:
             if hasattr(e, "response") and hasattr(e.response, "status_code"):
                 status_code = e.response.status_code
@@ -173,11 +187,11 @@ class Perplexity:
         self,
         query: str,
         files: str | PathLike | list[str | PathLike] | None,
-        model: ModelBase,
+        model: Model,
         save_to_library: bool,
-        search_focus: SearchFocus,
-        source_focus: SourceFocus | list[SourceFocus],
-        time_range: TimeRange,
+        search_focus: ModeValue,
+        source_focus: ModeValue | list[ModeValue],
+        time_range: ModeValue,
         language: str,
         timezone: str | None,
         coordinates: tuple[float, float] | None,
@@ -193,7 +207,7 @@ class Perplexity:
                 except ValueError as e:
                     raise ValueError(f"File upload error: {str(e)}") from e
 
-        sources = [source_focus.value] if isinstance(source_focus, SourceFocus) else [s.value for s in source_focus]
+        sources = [source_focus.value] if not isinstance(source_focus, list) else [s.value for s in source_focus]
 
         return {
             "params": {
@@ -208,10 +222,10 @@ class Perplexity:
                 if coordinates
                 else None,
                 "sources": sources,
-                "model_preference": model._get_identifier(),
-                "mode": model._get_mode(),
+                "model_preference": model.identifier,
+                "mode": model.mode,
                 "search_focus": search_focus.value,
-                "search_recency_filter": time_range.value,
+                "search_recency_filter": time_range.value if time_range.value else None,
                 "is_incognito": not save_to_library,
                 "use_schematized_api": False,
                 "local_search_enabled": True,
@@ -265,38 +279,47 @@ class Perplexity:
         self.last_chunk = self.chunks[-1] if self.chunks else None
         self.raw_data = answer_data
 
-    def ask(
+    def prompt(
         self,
         query: str,
         files: str | PathLike | list[str | PathLike] | None = None,
-        citation_mode: CitationMode = CitationMode.DEFAULT,
-        model: ModelBase = ModelType.Best,
+        citation_mode: ModeValue = CitationMode.DEFAULT,
+        model: Model = Models.BEST,
         save_to_library: bool = False,
-        search_focus: SearchFocus = SearchFocus.WEB,
-        source_focus: SourceFocus | list[SourceFocus] = SourceFocus.WEB,
-        time_range: TimeRange = TimeRange.ALL,
+        search_focus: ModeValue = SearchFocus.WEB,
+        source_focus: ModeValue | list[ModeValue] = SourceFocus.WEB,
+        time_range: ModeValue = TimeRange.ALL,
         language: str = "en-US",
         timezone: str | None = None,
         coordinates: tuple[float, float] | None = None,
-    ) -> AskCall:
+    ) -> PromptCall:
         """
-        Send a query to Perplexity AI and get a response.
+        Configure a prompt to send to Perplexity AI.
 
         Args:
             query: The question or prompt to send.
-            files: File path(s) or URL(s) to attach to the query. Can be a single path/URL or a list. Limited to 30 files maximum, with each file up to 50MB. Defaults to None.
-            citation_mode: The citation mode to use. Defaults to CitationMode.DEFAULT.
-            model: The model to use for the response. Defaults to ModelType.Best.
+            files: File path(s) to attach. Single path or list. Max 30 files, 50MB each. Defaults to None.
+            citation_mode: Citation format. Use CitationMode.DEFAULT, .MARKDOWN, or .CLEAN. Defaults to CitationMode.DEFAULT.
+            model: AI model to use. Defaults to Models.BEST.
             save_to_library: Whether to save this query to your library. Defaults to False.
-            search_focus: Search focus type. Defaults to SearchFocus.WEB.
-            source_focus: Source focus type. Defaults to SourceFocus.WEB.
-            time_range: Time range for search results. Defaults to TimeRange.ALL.
-            language: Language code. (e.g., "en-US"). Defaults to "en-US".
+            search_focus: Search focus. Use SearchFocus.WEB or .WRITING. Defaults to SearchFocus.WEB.
+            source_focus: Source type(s). Use SourceFocus.WEB, .ACADEMIC, .SOCIAL, or .FINANCE. Defaults to SourceFocus.WEB.
+            time_range: Time filter. Use TimeRange.ALL, .TODAY, .LAST_WEEK, .LAST_MONTH, or .LAST_YEAR. Defaults to TimeRange.ALL.
+            language: Language code (e.g., "en-US"). Defaults to "en-US".
             timezone: Timezone code (e.g., "America/New_York"). Defaults to None.
             coordinates: Location coordinates (latitude, longitude). Defaults to None.
 
         Returns:
-            AskCall object, which can be used to retrieve the response directly or stream it.
+            PromptCall object with .run(stream=False) method.
+
+        Examples:
+            # Blocking mode (waits for complete response)
+            response = client.prompt("What is AI?", citation_mode=CitationMode.MARKDOWN).run()
+            print(response.answer)
+
+            # Streaming mode (real-time updates)
+            for chunk in client.prompt("What is AI?").run(stream=True):
+                print(chunk.answer, end="", flush=True)
         """
 
         self._citation_mode = citation_mode
@@ -314,4 +337,4 @@ class Perplexity:
             coordinates,
         )
 
-        return AskCall(self, json_data)
+        return PromptCall(self, json_data)
