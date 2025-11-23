@@ -1,4 +1,3 @@
-# Standard modules
 from mimetypes import guess_type
 from os import PathLike
 from pathlib import Path
@@ -6,11 +5,9 @@ from re import match
 from typing import Any
 from uuid import uuid4
 
-# Third-party modules
 from httpx import Client, Timeout
 from orjson import loads
 
-# Local modules
 from .models import Model, Models
 from .utils import (
     CitationMode,
@@ -44,7 +41,7 @@ class Perplexity:
         self._headers: dict[str, str] = {
             "Accept": "text/event-stream, application/json",
             "Content-Type": "application/json",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
             "Referer": "https://www.perplexity.ai/",
             "Origin": "https://www.perplexity.ai",
             "Sec-Ch-Ua-Mobile": "?0",
