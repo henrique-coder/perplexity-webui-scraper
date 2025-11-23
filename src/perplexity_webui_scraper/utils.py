@@ -1,9 +1,7 @@
-# Standard modules
 from collections.abc import Generator
 from re import Match, compile
 from typing import Any
 
-# Third-party modules
 from pydantic import BaseModel, Field
 
 

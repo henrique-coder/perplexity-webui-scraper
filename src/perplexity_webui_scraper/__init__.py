@@ -1,7 +1,5 @@
-# Standard modules
 from importlib.metadata import version
 
-# Local modules
 from .core import Perplexity
 from .models import Model, Models
 from .utils import CitationMode, PromptCall, Response, SearchFocus, SearchResultItem, SourceFocus, TimeRange
