@@ -1,7 +1,7 @@
 [project]
 name = "perplexity-webui-scraper"
 version = "0.2.0"
-description = "Perplexity WebUI Scraper"
+description = "An unofficial Python client library for interacting with Perplexity AI through its web interface."
 readme = "README.md"
 authors = [
     { name = "henrique-coder", email = "henriquemoreira10fk@gmail.com" }
@@ -10,19 +10,19 @@ requires-python = ">=3.10"
 dependencies = [
     "httpx>=0.28.1",
     "orjson>=3.11.4",
-    "pydantic>=2.12.4",
+    "pydantic>=2.12.5",
 ]
 
 [dependency-groups]
 dev = [
     "camoufox>=0.4.11",
-    "fastapi>=0.121.3",
+    "fastapi>=0.123.0",
     "python-dotenv>=1.2.1",
     "rich>=14.2.0",
     "uvicorn>=0.38.0",
 ]
 lint = [
-    "ruff>=0.14.6",
+    "ruff>=0.14.7",
 ]
 
 [build-system]
