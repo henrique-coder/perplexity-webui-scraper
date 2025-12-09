@@ -1,18 +1,19 @@
 # IDE
-.idea
-.venv
+.idea/
 
 # Cache
-__pycache__
-.ruff_cache
-.pytest_cache
-node_modules
+.venv/
+__pycache__/
+.ruff_cache/
+.pytest_cache/
+node_modules/
 
 # Directories
-.debug
+.debug/
 
 # Files
 example.py
 
 # Extensions
 *.env
+*.log
