@@ -1,48 +1,58 @@
-from pydantic import BaseModel, Field
+"""AI model definitions for Perplexity WebUI Scraper."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
 
 
-class Model(BaseModel):
-    """AI model configuration"""
+@dataclass(frozen=True, slots=True)
+class Model:
+    """AI model configuration.
 
-    identifier: str = Field(..., description="Model identifier used by API")
-    mode: str = Field(default="copilot", description="Model execution mode")
+    Attributes:
+        identifier: Model identifier used by the API.
+        mode: Model execution mode. Default: "copilot".
+    """
 
-    class Config:
-        frozen = True
+    identifier: str
+    mode: str = "copilot"
 
 
 class Models:
-    """Available AI models with their configurations"""
+    """Available AI models with their configurations.
 
-    LABS = Model(identifier="pplx_beta", mode="copilot")
-    """Create projects from scratch (turn your ideas into completed docs, slides, dashboards, and more)"""
+    All models use the "copilot" mode which enables web search.
+    """
 
-    RESEARCH = Model(identifier="pplx_alpha", mode="copilot")
-    """Deep research on any topic (in-depth reports with more sources, charts, and advanced reasoning)"""
+    LABS = Model(identifier="pplx_beta")
+    """Create projects from scratch (turn your ideas into completed docs, slides, dashboards, and more)."""
 
-    BEST = Model(identifier="pplx_pro", mode="copilot")
-    """Automatically selects the best model based on the query"""
+    RESEARCH = Model(identifier="pplx_alpha")
+    """Deep research on any topic (in-depth reports with more sources, charts, and advanced reasoning)."""
 
-    SONAR = Model(identifier="experimental", mode="copilot")
-    """Perplexity's fast model"""
+    BEST = Model(identifier="pplx_pro")
+    """Automatically selects the best model based on the query. Recommended for most use cases."""
 
-    GPT_51 = Model(identifier="gpt51", mode="copilot")
-    """OpenAI's latest model"""
+    SONAR = Model(identifier="experimental")
+    """Perplexity's fast model. Good for quick queries."""
 
-    GPT_51_THINKING = Model(identifier="gpt51_thinking", mode="copilot")
-    """OpenAI's latest model with reasoning"""
+    GPT_51 = Model(identifier="gpt51")
+    """OpenAI's latest model (GPT-5.1)."""
 
-    CLAUDE_45_SONNET = Model(identifier="claude45sonnet", mode="copilot")
-    """Anthropic's newest advanced model"""
+    GPT_51_THINKING = Model(identifier="gpt51_thinking")
+    """OpenAI's latest model with extended reasoning capabilities."""
 
-    CLAUDE_45_SONNET_THINKING = Model(identifier="claude45sonnetthinking", mode="copilot")
-    """Anthropic's newest advanced model with reasoning"""
+    CLAUDE_45_SONNET = Model(identifier="claude45sonnet")
+    """Anthropic's Claude 4.5 Sonnet model."""
 
-    GEMINI_3_PRO_THINKING = Model(identifier="gemini30pro", mode="copilot")
-    """Google's newest reasoning model"""
+    CLAUDE_45_SONNET_THINKING = Model(identifier="claude45sonnetthinking")
+    """Anthropic's Claude 4.5 Sonnet with extended reasoning capabilities."""
 
-    GROK_41 = Model(identifier="grok41nonreasoning", mode="copilot")
-    """xAI's latest advanced model"""
+    GEMINI_3_PRO_THINKING = Model(identifier="gemini30pro")
+    """Google's Gemini 3.0 Pro with reasoning capabilities."""
 
-    KIMI_K2_THINKING = Model(identifier="kimik2thinking", mode="copilot")
-    """"Moonshot's AI's latest reasoning model (hosted in the US)"""
+    GROK_41 = Model(identifier="grok41nonreasoning")
+    """xAI's Grok 4.1 model."""
+
+    KIMI_K2_THINKING = Model(identifier="kimik2thinking")
+    """Moonshot AI's Kimi K2 reasoning model (hosted in the US)."""

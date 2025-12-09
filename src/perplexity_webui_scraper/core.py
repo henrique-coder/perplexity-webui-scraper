@@ -1,329 +1,402 @@
+"""Core client implementation."""
+
+from __future__ import annotations
+
+from collections.abc import Generator
 from mimetypes import guess_type
 from os import PathLike
 from pathlib import Path
-from re import match
+from re import Match
 from typing import Any
 from uuid import uuid4
 
-from curl_cffi.requests import Session
 from orjson import loads
 
-from .models import Model, Models
-from .utils import (
-    CitationMode,
-    ModeValue,
-    PromptCall,
-    SearchFocus,
-    SearchResultItem,
-    SourceFocus,
-    TimeRange,
-    format_citations,
+from .config import ClientConfig, ConversationConfig
+from .constants import (
+    API_VERSION,
+    CITATION_PATTERN,
+    ENDPOINT_UPLOAD,
+    JSON_OBJECT_PATTERN,
+    PROMPT_SOURCE,
+    SEND_BACK_TEXT,
+    USE_SCHEMATIZED_API,
 )
+from .enums import CitationMode
+from .exceptions import FileUploadError, FileValidationError
+from .http import HTTPClient
+from .limits import MAX_FILE_SIZE, MAX_FILES
+from .models import Model, Models
+from .types import Response, SearchResultItem, _FileInfo
 
 
 class Perplexity:
-    """Client for interacting with Perplexity AI WebUI"""
+    """Perplexity AI client."""
 
-    def __init__(self, session_token: str) -> None:
-        """
-        Initialize the Perplexity client.
+    __slots__ = ("_http",)
 
-        Args:
-            session_token: The session token (`__Secure-next-auth.session-token` cookie) to use for authentication.
-
-        Raises:
-            ValueError: If session_token is empty or None
-        """
-
+    def __init__(self, session_token: str, config: ClientConfig | None = None) -> None:
         if not session_token or not session_token.strip():
-            raise ValueError("session_token cannot be empty or None")
+            raise ValueError("session_token cannot be empty")
 
-        self._headers: dict[str, str] = {
-            "Accept": "text/event-stream, application/json",
-            "Content-Type": "application/json",
-            "Referer": "https://www.perplexity.ai/",
-            "Origin": "https://www.perplexity.ai",
-        }
-        self._cookies: dict[str, str] = {"__Secure-next-auth.session-token": session_token}
-        self._client: Session = Session(headers=self._headers, cookies=self._cookies, timeout=1800, impersonate="chrome")
-        self._citation_mode: CitationMode
-        self.reset_response_data()
+        cfg = config or ClientConfig()
+        self._http = HTTPClient(session_token, timeout=cfg.timeout, impersonate=cfg.impersonate)
 
-        self._max_files: int = 30
-        self._max_file_size: int = 50 * 1024 * 1024
+    def create_conversation(self, config: ConversationConfig | None = None) -> Conversation:
+        """Create a new conversation."""
+        return Conversation(self._http, config or ConversationConfig())
 
-    def reset_response_data(self) -> None:
-        self.title = None
-        self.answer = None
-        self.chunks = []
-        self.last_chunk = None
-        self.search_results = []
-        self.conversation_uuid = None
-        self.raw_data = {}
+    def close(self) -> None:
+        """Close the client."""
+        self._http.close()
 
-    @staticmethod
-    def _extract_json_line(line: str | bytes) -> dict[str, Any] | None:
-        if isinstance(line, bytes):
-            return loads(line[6:]) if line.startswith(b"data: ") else None
+    def __enter__(self) -> Perplexity:
+        return self
+
+    def __exit__(self, *args: Any) -> None:
+        self.close()
+
+
+class Conversation:
+    """A conversation with Perplexity AI."""
+
+    __slots__ = (
+        "_http",
+        "_config",
+        "_citation_mode",
+        "_backend_uuid",
+        "_read_write_token",
+        "_title",
+        "_answer",
+        "_chunks",
+        "_search_results",
+        "_raw_data",
+        "_stream_generator",
+    )
+
+    def __init__(self, http: HTTPClient, config: ConversationConfig) -> None:
+        self._http = http
+        self._config = config
+        self._citation_mode = CitationMode.DEFAULT
+        self._backend_uuid: str | None = None
+        self._read_write_token: str | None = None
+        self._title: str | None = None
+        self._answer: str | None = None
+        self._chunks: list[str] = []
+        self._search_results: list[SearchResultItem] = []
+        self._raw_data: dict[str, Any] = {}
+        self._stream_generator: Generator[Response, None, None] | None = None
+
+    @property
+    def answer(self) -> str | None:
+        """Last response text."""
+        return self._answer
+
+    @property
+    def title(self) -> str | None:
+        """Conversation title."""
+        return self._title
+
+    @property
+    def search_results(self) -> list[SearchResultItem]:
+        """Search results from last response."""
+        return self._search_results
+
+    @property
+    def uuid(self) -> str | None:
+        """Conversation UUID."""
+        return self._backend_uuid
+
+    def __iter__(self) -> Generator[Response, None, None]:
+        if self._stream_generator is not None:
+            yield from self._stream_generator
+            self._stream_generator = None
+
+    def ask(
+        self,
+        query: str,
+        model: Model | None = None,
+        files: list[str | PathLike[str]] | None = None,
+        citation_mode: CitationMode | None = None,
+        stream: bool = False,
+    ) -> Conversation:
+        """Send a message. Returns self for chaining or streaming."""
+        effective_model = model or self._config.model or Models.BEST
+        effective_citation = citation_mode if citation_mode is not None else self._config.citation_mode
+        self._citation_mode = effective_citation
+        self._execute(query, effective_model, files, stream=stream)
+        return self
+
+    def _execute(
+        self,
+        query: str,
+        model: Model,
+        files: list[str | PathLike[str]] | None,
+        stream: bool = False,
+    ) -> None:
+        """Execute a query."""
+        self._reset_response_state()
+
+        # Upload files
+        file_urls: list[str] = []
+        if files:
+            validated = self._validate_files(files)
+            file_urls = [self._upload_file(f) for f in validated]
+
+        payload = self._build_payload(query, model, file_urls)
+        self._http.init_search(query)
+
+        if stream:
+            self._stream_generator = self._stream(payload)
         else:
-            return loads(line[6:]) if line.startswith("data: ") else None
+            self._complete(payload)
 
-    def validate_files(self, files: str | PathLike | list[str | PathLike] | None) -> list[dict[str, str | int | bool]]:
-        if files is None:
-            files = []
-        elif isinstance(files, (str, PathLike)):
-            files = [Path(files).resolve().as_posix()] if files else []
-        elif isinstance(files, list):
-            files = list(
-                dict.fromkeys(Path(item).resolve().as_posix() for item in files if item and isinstance(item, (str, PathLike)))
+    def _reset_response_state(self) -> None:
+        self._title = None
+        self._answer = None
+        self._chunks = []
+        self._search_results = []
+        self._raw_data = {}
+        self._stream_generator = None
+
+    def _validate_files(self, files: list[str | PathLike[str]] | None) -> list[_FileInfo]:
+        if not files:
+            return []
+
+        seen: set[str] = set()
+        file_list: list[Path] = []
+        for item in files:
+            if item and isinstance(item, (str, PathLike)):
+                path = Path(item).resolve()
+                if path.as_posix() not in seen:
+                    seen.add(path.as_posix())
+                    file_list.append(path)
+
+        if len(file_list) > MAX_FILES:
+            raise FileValidationError(
+                str(file_list[0]),
+                f"Too many files: {len(file_list)}. Maximum allowed is {MAX_FILES}.",
             )
-        else:
-            files = []
 
-        if len(files) > self._max_files:
-            raise ValueError(f"Too many files: {len(files)}. Maximum allowed is {self._max_files} files.")
+        result: list[_FileInfo] = []
 
-        result = []
+        for path in file_list:
+            file_path = path.as_posix()
 
-        for file_path in files:
             try:
-                path_obj = Path(file_path)
+                if not path.exists():
+                    raise FileValidationError(file_path, "File not found")
+                if not path.is_file():
+                    raise FileValidationError(file_path, "Path is not a file")
 
-                if not path_obj.exists():
-                    raise FileNotFoundError(f"File not found: {file_path}")
-
-                if not path_obj.is_file():
-                    raise ValueError(f"Path is not a file: {file_path}")
-
-                file_size = path_obj.stat().st_size
-
-                if file_size > self._max_file_size:
-                    size_mb = file_size / (1024 * 1024)
-
-                    raise ValueError(f"File '{file_path}' exceeds 50MB limit: {size_mb:.1f}MB")
-
+                file_size = path.stat().st_size
+                if file_size > MAX_FILE_SIZE:
+                    raise FileValidationError(
+                        file_path,
+                        f"File exceeds 50MB limit: {file_size / (1024 * 1024):.1f}MB",
+                    )
                 if file_size == 0:
-                    raise ValueError(f"File is empty: {file_path}")
+                    raise FileValidationError(file_path, "File is empty")
 
                 mimetype, _ = guess_type(file_path)
                 mimetype = mimetype or "application/octet-stream"
 
-                result.append({
-                    "path": file_path,
-                    "size": file_size,
-                    "mimetype": mimetype,
-                    "is_image": mimetype.startswith("image/"),
-                })
+                result.append(
+                    _FileInfo(
+                        path=file_path,
+                        size=file_size,
+                        mimetype=mimetype,
+                        is_image=mimetype.startswith("image/"),
+                    )
+                )
+            except FileValidationError:
+                raise
             except (FileNotFoundError, PermissionError) as e:
-                raise ValueError(f"Cannot access file '{file_path}': {str(e)}") from e
+                raise FileValidationError(file_path, f"Cannot access file: {e}") from e
             except OSError as e:
-                raise ValueError(f"File system error for '{file_path}': {str(e)}") from e
-            except Exception as e:
-                raise ValueError(f"Unexpected error processing file '{file_path}': {str(e)}") from e
+                raise FileValidationError(file_path, f"File system error: {e}") from e
 
         return result
 
-    def upload_file(self, file_data: dict[str, str | int | bool]) -> str:
-        try:
-            file_uuid = str(uuid4())
+    def _upload_file(self, file_info: _FileInfo) -> str:
+        file_uuid = str(uuid4())
 
-            json_data = {
-                "files": {
-                    file_uuid: {
-                        "filename": file_data["path"],
-                        "content_type": file_data["mimetype"],
-                        "source": "default",
-                        "file_size": file_data["size"],
-                        "force_image": file_data["is_image"],
-                    }
+        json_data = {
+            "files": {
+                file_uuid: {
+                    "filename": file_info.path,
+                    "content_type": file_info.mimetype,
+                    "source": "default",
+                    "file_size": file_info.size,
+                    "force_image": file_info.is_image,
                 }
             }
+        }
 
-            response = self._client.post(
-                "https://www.perplexity.ai/rest/uploads/batch_create_upload_urls",
-                json=json_data,
-            )
-
-            response.raise_for_status()
-
+        try:
+            response = self._http.post(ENDPOINT_UPLOAD, json=json_data)
             response_data = response.json()
             upload_url = response_data.get("results", {}).get(file_uuid, {}).get("s3_object_url")
 
             if not upload_url:
-                raise ValueError(f"Upload failed for '{file_data['path']}': No upload URL returned from server")
+                raise FileUploadError(file_info.path, "No upload URL returned")
 
             return upload_url
+        except FileUploadError:
+            raise
         except Exception as e:
-            if hasattr(e, "response") and hasattr(e.response, "status_code"):
-                status_code = e.response.status_code
+            raise FileUploadError(file_info.path, str(e)) from e
 
-                if status_code == 403:
-                    raise ValueError(
-                        f"Upload failed for '{file_data['path']}': Access forbidden (403). "
-                        "Your session token may be invalid or expired. Please obtain a new session token."
-                    ) from e
-                elif status_code == 429:
-                    raise ValueError(
-                        f"Upload failed for '{file_data['path']}': Rate limit exceeded (429). "
-                        "Please wait a moment before trying again."
-                    ) from e
-                else:
-                    raise ValueError(f"Upload failed for '{file_data['path']}': HTTP {status_code} - {str(e)}") from e
-            else:
-                raise ValueError(f"Upload failed for '{file_data['path']}': {str(e)}") from e
-
-    def _prepare_json_data(
+    def _build_payload(
         self,
         query: str,
-        files: str | PathLike | list[str | PathLike] | None,
         model: Model,
-        save_to_library: bool,
-        search_focus: ModeValue,
-        source_focus: ModeValue | list[ModeValue],
-        time_range: ModeValue,
-        language: str,
-        timezone: str | None,
-        coordinates: tuple[float, float] | None,
+        file_urls: list[str],
     ) -> dict[str, Any]:
-        validated_files = self.validate_files(files)
-        file_urls = []
+        cfg = self._config
 
-        if validated_files:
-            for file_data in validated_files:
-                try:
-                    upload_url = self.upload_file(file_data)
-                    file_urls.append(upload_url)
-                except ValueError as e:
-                    raise ValueError(f"File upload error: {str(e)}") from e
+        sources = [s.value for s in cfg.source_focus] if isinstance(cfg.source_focus, list) else [cfg.source_focus.value]
 
-        sources = [source_focus.value] if not isinstance(source_focus, list) else [s.value for s in source_focus]
+        client_coordinates = None
+        if cfg.coordinates is not None:
+            client_coordinates = {
+                "location_lat": cfg.coordinates.latitude,
+                "location_lng": cfg.coordinates.longitude,
+                "name": "",
+            }
 
-        return {
-            "params": {
-                "attachments": file_urls,
-                "language": language,
-                "timezone": timezone,
-                "client_coordinates": {
-                    "location_lat": coordinates[0],
-                    "location_lng": coordinates[1],
-                    "name": "",
-                }
-                if coordinates
-                else None,
-                "sources": sources,
-                "model_preference": model.identifier,
-                "mode": model.mode,
-                "search_focus": search_focus.value,
-                "search_recency_filter": time_range.value if time_range.value else None,
-                "is_incognito": not save_to_library,
-                "use_schematized_api": False,
-                "local_search_enabled": True,
-                "prompt_source": "user",
-                "send_back_text_in_streaming_api": True,
-                "version": "2.18",
-            },
-            "query_str": query,
+        params: dict[str, Any] = {
+            "attachments": file_urls,
+            "language": cfg.language,
+            "timezone": cfg.timezone,
+            "client_coordinates": client_coordinates,
+            "sources": sources,
+            "model_preference": model.identifier,
+            "mode": model.mode,
+            "search_focus": cfg.search_focus.value,
+            "search_recency_filter": cfg.time_range.value if cfg.time_range.value else None,
+            "is_incognito": not cfg.save_to_library,
+            "use_schematized_api": USE_SCHEMATIZED_API,
+            "local_search_enabled": cfg.coordinates is not None,
+            "prompt_source": PROMPT_SOURCE,
+            "send_back_text_in_streaming_api": SEND_BACK_TEXT,
+            "version": API_VERSION,
         }
 
-    def _process_data(
-        self,
-        data: dict[str, Any],
-    ) -> None:
-        if self.conversation_uuid is None and "backend_uuid" in data:
-            self.conversation_uuid = data["backend_uuid"]
+        if self._backend_uuid is not None:
+            params["last_backend_uuid"] = self._backend_uuid
+            params["query_source"] = "followup"
+            if self._read_write_token:
+                params["read_write_token"] = self._read_write_token
 
-        if "text" in data:
-            json_data = loads(data["text"])
-            answer_data = {}
+        return {"params": params, "query_str": query}
 
-            if isinstance(json_data, list):
-                for item in json_data:
-                    if item.get("step_type") == "FINAL":
-                        raw_content = item.get("content", {})
-                        answer_content = raw_content.get("answer")
+    def _format_citations(self, text: str | None) -> str | None:
+        if not text or self._citation_mode == CitationMode.DEFAULT:
+            return text
 
-                        if isinstance(answer_content, str) and match(r"^\{.*\}$", answer_content):
-                            answer_data = loads(answer_content)
-                        else:
-                            answer_data = raw_content
+        def replacer(m: Match[str]) -> str:
+            num = m.group(1)
+            if not num.isdigit():
+                return m.group(0)
 
-                        self._update_response_data(data.get("thread_title"), answer_data)
-                        break
-            elif isinstance(json_data, dict):
-                self._update_response_data(data.get("thread_title"), json_data)
+            if self._citation_mode == CitationMode.CLEAN:
+                return ""
 
-    def _update_response_data(
-        self,
-        title: str | None,
-        answer_data: dict[str, Any],
-    ) -> None:
-        self.title = title
-        self.search_results = [
-            SearchResultItem(title=r.get("name"), snippet=r.get("snippet"), url=r.get("url"))
-            for r in answer_data.get("web_results", [])
-            if isinstance(r, dict)
-        ]
-        self.answer = format_citations(self._citation_mode, answer_data.get("answer"), self.search_results)
-        self.chunks = answer_data.get("chunks", [])
-        self.last_chunk = self.chunks[-1] if self.chunks else None
-        self.raw_data = answer_data
+            idx = int(num) - 1
+            if 0 <= idx < len(self._search_results):
+                url = self._search_results[idx].url or ""
+                if self._citation_mode == CitationMode.MARKDOWN and url:
+                    return f"[{num}]({url})"
 
-    def prompt(
-        self,
-        query: str,
-        files: str | PathLike | list[str | PathLike] | None = None,
-        citation_mode: ModeValue = CitationMode.DEFAULT,
-        model: Model = Models.BEST,
-        save_to_library: bool = False,
-        search_focus: ModeValue = SearchFocus.WEB,
-        source_focus: ModeValue | list[ModeValue] = SourceFocus.WEB,
-        time_range: ModeValue = TimeRange.ALL,
-        language: str = "en-US",
-        timezone: str | None = None,
-        coordinates: tuple[float, float] | None = None,
-    ) -> PromptCall:
-        """
-        Configure a prompt to send to Perplexity AI.
+            return m.group(0)
 
-        Args:
-            query: The question or prompt to send.
-            files: File path(s) to attach. Single path or list. Max 30 files, 50MB each. Defaults to None.
-            citation_mode: Citation format. Use CitationMode.DEFAULT, .MARKDOWN, or .CLEAN. Defaults to CitationMode.DEFAULT.
-            model: AI model to use. Defaults to Models.BEST.
-            save_to_library: Whether to save this query to your library. Defaults to False.
-            search_focus: Search focus. Use SearchFocus.WEB or .WRITING. Defaults to SearchFocus.WEB.
-            source_focus: Source type(s). Use SourceFocus.WEB, .ACADEMIC, .SOCIAL, or .FINANCE. Defaults to SourceFocus.WEB.
-            time_range: Time filter. Use TimeRange.ALL, .TODAY, .LAST_WEEK, .LAST_MONTH, or .LAST_YEAR. Defaults to TimeRange.ALL.
-            language: Language code (e.g., "en-US"). Defaults to "en-US".
-            timezone: Timezone code (e.g., "America/New_York"). Defaults to None.
-            coordinates: Location coordinates (latitude, longitude). Defaults to None.
+        return CITATION_PATTERN.sub(replacer, text)
 
-        Returns:
-            PromptCall object with .run(stream=False) method.
+    def _parse_line(self, line: str | bytes) -> dict[str, Any] | None:
+        prefix = b"data: " if isinstance(line, bytes) else "data: "
+        if (isinstance(line, bytes) and line.startswith(prefix)) or (isinstance(line, str) and line.startswith(prefix)):
+            return loads(line[6:])
+        return None
 
-        Examples:
-            # Blocking mode (waits for complete response)
-            response = client.prompt("What is AI?", citation_mode=CitationMode.MARKDOWN).run()
-            print(response.answer)
+    def _process_data(self, data: dict[str, Any]) -> None:
+        if self._backend_uuid is None and "backend_uuid" in data:
+            self._backend_uuid = data["backend_uuid"]
 
-            # Streaming mode (real-time updates)
-            for chunk in client.prompt("What is AI?").run(stream=True):
-                print(chunk.answer, end="", flush=True)
-        """
+        if self._read_write_token is None and "read_write_token" in data:
+            self._read_write_token = data["read_write_token"]
 
-        self._citation_mode = citation_mode
+        if "text" not in data:
+            return
 
-        json_data = self._prepare_json_data(
-            query,
-            files,
-            model,
-            save_to_library,
-            search_focus,
-            source_focus,
-            time_range,
-            language,
-            timezone,
-            coordinates,
+        json_data = loads(data["text"])
+        answer_data: dict[str, Any] = {}
+
+        if isinstance(json_data, list):
+            for item in json_data:
+                if item.get("step_type") == "FINAL":
+                    raw_content = item.get("content", {})
+                    answer_content = raw_content.get("answer")
+
+                    if isinstance(answer_content, str) and JSON_OBJECT_PATTERN.match(answer_content):
+                        answer_data = loads(answer_content)
+                    else:
+                        answer_data = raw_content
+
+                    self._update_state(data.get("thread_title"), answer_data)
+                    break
+        elif isinstance(json_data, dict):
+            self._update_state(data.get("thread_title"), json_data)
+
+    def _update_state(self, title: str | None, answer_data: dict[str, Any]) -> None:
+        self._title = title
+
+        web_results = answer_data.get("web_results", [])
+        if web_results:
+            self._search_results = [
+                SearchResultItem(
+                    title=r.get("name"),
+                    snippet=r.get("snippet"),
+                    url=r.get("url"),
+                )
+                for r in web_results
+                if isinstance(r, dict)
+            ]
+
+        answer_text = answer_data.get("answer")
+        if answer_text is not None:
+            self._answer = self._format_citations(answer_text)
+
+        chunks = answer_data.get("chunks", [])
+        if chunks:
+            self._chunks = chunks
+
+        self._raw_data = answer_data
+
+    def _build_response(self) -> Response:
+        return Response(
+            title=self._title,
+            answer=self._answer,
+            chunks=list(self._chunks),
+            last_chunk=self._chunks[-1] if self._chunks else None,
+            search_results=list(self._search_results),
+            conversation_uuid=self._backend_uuid,
+            raw_data=self._raw_data,
         )
 
-        return PromptCall(self, json_data)
+    def _complete(self, payload: dict[str, Any]) -> None:
+        for line in self._http.stream_ask(payload):
+            data = self._parse_line(line)
+            if data:
+                self._process_data(data)
+                if data.get("final"):
+                    break
+
+    def _stream(self, payload: dict[str, Any]) -> Generator[Response, None, None]:
+        for line in self._http.stream_ask(payload):
+            data = self._parse_line(line)
+            if data:
+                self._process_data(data)
+                yield self._build_response()
+                if data.get("final"):
+                    break
