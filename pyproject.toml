@@ -15,11 +15,8 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "camoufox>=0.4.11",
-    "fastapi>=0.124.0",
     "python-dotenv>=1.2.1",
     "rich>=14.2.0",
-    "uvicorn>=0.38.0",
 ]
 lint = [
     "ruff>=0.14.8",
