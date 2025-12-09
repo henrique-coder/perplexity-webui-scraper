@@ -61,19 +61,15 @@ To effectively use this library, the following are essential:
 Here's a basic example of how to use the library:
 
 ```python
-from os import getenv
-
-from dotenv import load_dotenv
 from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
 
 from perplexity_webui_scraper import CitationMode, Models, Perplexity, SearchFocus, SourceFocus, TimeRange
 
-load_dotenv()
 
 console = Console()
-client = Perplexity(session_token=getenv("PERPLEXITY_SESSION_TOKEN"))
+client = Perplexity(session_token="PERPLEXITY_SESSION_TOKEN")
 
 # Define the query
 query = "Explain in a simplified and easy-to-understand way what a chatbot is."
