@@ -5,7 +5,7 @@ from re import match
 from typing import Any
 from uuid import uuid4
 
-from httpx import Client, Timeout
+from curl_cffi.requests import Session
 from orjson import loads
 
 from .models import Model, Models
@@ -41,19 +41,11 @@ class Perplexity:
         self._headers: dict[str, str] = {
             "Accept": "text/event-stream, application/json",
             "Content-Type": "application/json",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
             "Referer": "https://www.perplexity.ai/",
             "Origin": "https://www.perplexity.ai",
-            "Sec-Ch-Ua-Mobile": "?0",
-            "Sec-Ch-Ua-Platform": '"Windows"',
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-origin",
-            "DNT": "1",
-            "TE": "trailers",
         }
         self._cookies: dict[str, str] = {"__Secure-next-auth.session-token": session_token}
-        self._client: Client = Client(headers=self._headers, cookies=self._cookies, timeout=Timeout(1800, read=None))
+        self._client: Session = Session(headers=self._headers, cookies=self._cookies, timeout=1800, impersonate="chrome")
         self._citation_mode: CitationMode
         self.reset_response_data()
 

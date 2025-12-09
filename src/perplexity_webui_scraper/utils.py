@@ -143,23 +143,27 @@ class PromptCall:
 
             raise e
 
-        with self._parent._client.stream(
-            "POST", "https://www.perplexity.ai/rest/sse/perplexity_ask", json=self._json_data
-        ) as response:
-            try:
-                response.raise_for_status()
-            except Exception as e:
-                if hasattr(e, "response") and hasattr(e.response, "status_code"):
-                    if e.response.status_code == 403:
-                        raise PermissionError(
-                            "Access forbidden (403). Your session token is invalid or expired. "
-                            "Please obtain a new session token from your browser cookies."
-                        ) from e
-                    elif e.response.status_code == 429:
-                        raise ConnectionError("Rate limit exceeded (429). Please wait a moment before trying again.") from e
+        response = self._parent._client.post(
+            "https://www.perplexity.ai/rest/sse/perplexity_ask",
+            json=self._json_data,
+            stream=True,
+        )
 
-                raise e
+        try:
+            response.raise_for_status()
+        except Exception as e:
+            if hasattr(e, "response") and hasattr(e.response, "status_code"):
+                if e.response.status_code == 403:
+                    raise PermissionError(
+                        "Access forbidden (403). Your session token is invalid or expired. "
+                        "Please obtain a new session token from your browser cookies."
+                    ) from e
+                elif e.response.status_code == 429:
+                    raise ConnectionError("Rate limit exceeded (429). Please wait a moment before trying again.") from e
 
+            raise e
+
+        try:
             for line in response.iter_lines():
                 data = self._parent._extract_json_line(line)
 
@@ -168,6 +172,8 @@ class PromptCall:
 
                     if data.get("final"):
                         break
+        finally:
+            response.close()
 
         return Response(
             title=self._parent.title,
@@ -198,23 +204,27 @@ class PromptCall:
 
             raise e
 
-        with self._parent._client.stream(
-            "POST", "https://www.perplexity.ai/rest/sse/perplexity_ask", json=self._json_data
-        ) as response:
-            try:
-                response.raise_for_status()
-            except Exception as e:
-                if hasattr(e, "response") and hasattr(e.response, "status_code"):
-                    if e.response.status_code == 403:
-                        raise PermissionError(
-                            "Access forbidden (403). Your session token is invalid or expired. "
-                            "Please obtain a new session token from your browser cookies."
-                        ) from e
-                    elif e.response.status_code == 429:
-                        raise ConnectionError("Rate limit exceeded (429). Please wait a moment before trying again.") from e
+        response = self._parent._client.post(
+            "https://www.perplexity.ai/rest/sse/perplexity_ask",
+            json=self._json_data,
+            stream=True,
+        )
 
-                raise e
+        try:
+            response.raise_for_status()
+        except Exception as e:
+            if hasattr(e, "response") and hasattr(e.response, "status_code"):
+                if e.response.status_code == 403:
+                    raise PermissionError(
+                        "Access forbidden (403). Your session token is invalid or expired. "
+                        "Please obtain a new session token from your browser cookies."
+                    ) from e
+                elif e.response.status_code == 429:
+                    raise ConnectionError("Rate limit exceeded (429). Please wait a moment before trying again.") from e
 
+            raise e
+
+        try:
             for line in response.iter_lines():
                 data = self._parent._extract_json_line(line)
 
@@ -233,6 +243,8 @@ class PromptCall:
 
                     if data.get("final"):
                         break
+        finally:
+            response.close()
 
 
 def citation_replacer(match: Match[str], citation_mode: ModeValue, search_results: list[SearchResultItem]) -> str:
