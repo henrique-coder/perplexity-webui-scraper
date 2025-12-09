@@ -8,11 +8,11 @@ ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 .DEFAULT_GOAL := help
 
 lint:
-	uv run npx prettier --check "**/*.{html,css,js,md,json,yaml}"
+	npx prettier --check "**/*.{html,css,js,md,json,yaml}"
 	uv run ruff check .
 
 format:
-	uv run npx prettier --write "**/*.{html,css,js,md,json,yaml}"
+	npx prettier --write "**/*.{html,css,js,md,json,yaml}"
 	uv run ruff format .
 	uv run ruff check --fix .
 
@@ -24,10 +24,10 @@ tests:
 
 help:
 	@echo "Available commands:"
-	@echo "  lint       - Check code with 'prettier' and 'ruff'"
-	@echo "  format     - Format code with 'prettier' and 'ruff'"
-	@echo "  install    - Install dependencies with 'uv'"
-	@echo "  tests      - Run tests with 'pytest'"
+	@echo "  lint       - Lint code"
+	@echo "  format     - Format code"
+	@echo "  install    - Install and upgrade dependencies"
+	@echo "  tests      - Run tests"
 	@echo "  help       - Show this help message"
 
 %:
