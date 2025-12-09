@@ -13,6 +13,7 @@ node_modules/
 
 # Files
 example.py
+publish.sh
 
 # Extensions
 *.env
