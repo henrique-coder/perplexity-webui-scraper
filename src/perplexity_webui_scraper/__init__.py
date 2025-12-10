@@ -1,4 +1,4 @@
-"""Unofficial Python client for Perplexity AI."""
+"""Python scraper to extract AI responses from Perplexity's web interface."""
 
 from importlib.metadata import version
 
@@ -17,30 +17,23 @@ from .types import Coordinates, Response, SearchResultItem
 
 
 __version__: str = version("perplexity-webui-scraper")
-
 __all__: list[str] = [
-    # Main client
-    "Perplexity",
-    "Conversation",
-    # Configuration
-    "ConversationConfig",
-    "ClientConfig",
-    "Coordinates",
-    # Enums
-    "CitationMode",
-    "SearchFocus",
-    "SourceFocus",
-    "TimeRange",
-    # Models
-    "Model",
-    "Models",
-    # Response types
-    "Response",
-    "SearchResultItem",
-    # Exceptions
     "AuthenticationError",
+    "CitationMode",
+    "ClientConfig",
+    "Conversation",
+    "ConversationConfig",
+    "Coordinates",
     "FileUploadError",
     "FileValidationError",
+    "Model",
+    "Models",
+    "Perplexity",
     "PerplexityError",
     "RateLimitError",
+    "Response",
+    "SearchFocus",
+    "SearchResultItem",
+    "SourceFocus",
+    "TimeRange",
 ]

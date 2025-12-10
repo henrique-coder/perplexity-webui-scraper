@@ -6,11 +6,11 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from .enums import CitationMode, SearchFocus, SourceFocus, TimeRange
-from .types import Coordinates
 
 
 if TYPE_CHECKING:
     from .models import Model
+    from .types import Coordinates
 
 
 @dataclass(slots=True)

@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
 from mimetypes import guess_type
 from os import PathLike
 from pathlib import Path
-from re import Match
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from orjson import loads
+
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+    from re import Match
 
 from .config import ClientConfig, ConversationConfig
 from .constants import (
@@ -61,17 +64,17 @@ class Conversation:
     """A conversation with Perplexity AI."""
 
     __slots__ = (
-        "_http",
-        "_config",
-        "_citation_mode",
-        "_backend_uuid",
-        "_read_write_token",
-        "_title",
         "_answer",
+        "_backend_uuid",
         "_chunks",
-        "_search_results",
+        "_citation_mode",
+        "_config",
+        "_http",
         "_raw_data",
+        "_read_write_token",
+        "_search_results",
         "_stream_generator",
+        "_title",
     )
 
     def __init__(self, http: HTTPClient, config: ConversationConfig) -> None:
@@ -255,7 +258,9 @@ class Conversation:
     ) -> dict[str, Any]:
         cfg = self._config
 
-        sources = [s.value for s in cfg.source_focus] if isinstance(cfg.source_focus, list) else [cfg.source_focus.value]
+        sources = (
+            [s.value for s in cfg.source_focus] if isinstance(cfg.source_focus, list) else [cfg.source_focus.value]
+        )
 
         client_coordinates = None
         if cfg.coordinates is not None:

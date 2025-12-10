@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from curl_cffi.requests import Response as CurlResponse
+
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
 from curl_cffi.requests import Session
 
 from .constants import (
@@ -72,9 +76,9 @@ class HTTPClient:
         elif status_code == 429:
             raise RateLimitError() from error
         elif status_code is not None:
-            raise PerplexityError(f"{context}HTTP {status_code}: {str(error)}", status_code=status_code) from error
+            raise PerplexityError(f"{context}HTTP {status_code}: {error!s}", status_code=status_code) from error
         else:
-            raise PerplexityError(f"{context}{str(error)}") from error
+            raise PerplexityError(f"{context}{error!s}") from error
 
     def get(self, endpoint: str, params: dict[str, Any] | None = None) -> CurlResponse:
         """Make a GET request.
