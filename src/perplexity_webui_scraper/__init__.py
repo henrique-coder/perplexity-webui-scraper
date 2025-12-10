@@ -1,4 +1,4 @@
-"""Python scraper to extract AI responses from Perplexity's web interface."""
+"""Extract AI responses from Perplexity's web interface."""
 
 from importlib.metadata import version
 

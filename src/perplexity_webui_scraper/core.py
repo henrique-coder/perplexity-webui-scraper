@@ -34,11 +34,21 @@ from .types import Response, SearchResultItem, _FileInfo
 
 
 class Perplexity:
-    """Perplexity AI client."""
+    """Web scraper for Perplexity AI conversations."""
 
     __slots__ = ("_http",)
 
     def __init__(self, session_token: str, config: ClientConfig | None = None) -> None:
+        """Initialize web scraper with session token.
+
+        Args:
+            session_token: Perplexity session cookie (__Secure-next-auth.session-token).
+            config: Optional HTTP client configuration.
+
+        Raises:
+            ValueError: If session_token is empty or whitespace.
+        """
+
         if not session_token or not session_token.strip():
             raise ValueError("session_token cannot be empty")
 
@@ -61,7 +71,7 @@ class Perplexity:
 
 
 class Conversation:
-    """A conversation with Perplexity AI."""
+    """Manage a Perplexity conversation with query and follow-up support."""
 
     __slots__ = (
         "_answer",
@@ -123,7 +133,7 @@ class Conversation:
         citation_mode: CitationMode | None = None,
         stream: bool = False,
     ) -> Conversation:
-        """Send a message. Returns self for chaining or streaming."""
+        """Ask a question. Returns self for method chaining or streaming iteration."""
         effective_model = model or self._config.model or Models.BEST
         effective_citation = citation_mode if citation_mode is not None else self._config.citation_mode
         self._citation_mode = effective_citation

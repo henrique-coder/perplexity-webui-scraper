@@ -2,7 +2,7 @@
 
 # Perplexity WebUI Scraper
 
-Unofficial Python client for [Perplexity AI](https://www.perplexity.ai).
+Python scraper to extract AI responses from [Perplexity's](https://www.perplexity.ai) web interface.
 
 [![PyPI](https://img.shields.io/pypi/v/perplexity-webui-scraper?color=blue)](https://pypi.org/project/perplexity-webui-scraper)
 [![Python](https://img.shields.io/pypi/pyversions/perplexity-webui-scraper)](https://pypi.org/project/perplexity-webui-scraper)
