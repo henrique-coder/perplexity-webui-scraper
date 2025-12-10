@@ -69,6 +69,7 @@ select = [
     "T20",    # flake8-print: detect leftover print() statements
     "TCH",    # flake8-type-checking: optimize TYPE_CHECKING imports
     "PL",     # Pylint: broad set of code quality checks
+    "D205",   # 1 blank line required between docstring and code
 ]
 ignore = [
     "PLR0912",   # Too many branches (complex validation logic is acceptable)
