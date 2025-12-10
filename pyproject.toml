@@ -1,12 +1,27 @@
 [project]
 name = "perplexity-webui-scraper"
 version = "0.3.2"
-description = "An unofficial Python client library for interacting with Perplexity AI through its web interface."
+description = "Python scraper to extract AI responses from Perplexity's web interface."
+authors = [{ name = "henrique-coder", email = "henriquemoreira10fk@gmail.com" }]
+license = "MIT"
 readme = "README.md"
-authors = [
-    { name = "henrique-coder", email = "henriquemoreira10fk@gmail.com" }
-]
 requires-python = ">=3.10"
+keywords = ["perplexity", "ai", "scraper", "webui", "api", "client"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
 dependencies = [
     "curl-cffi>=0.13.0",
     "orjson>=3.11.5",
@@ -21,6 +36,66 @@ dev = [
 lint = [
     "ruff>=0.14.8",
 ]
+tests = [
+    "pytest>=9.0.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/henrique-coder/perplexity-webui-scraper"
+Documentation = "https://github.com/henrique-coder/perplexity-webui-scraper#readme"
+Repository = "https://github.com/henrique-coder/perplexity-webui-scraper.git"
+Issues = "https://github.com/henrique-coder/perplexity-webui-scraper/issues"
+Changelog = "https://github.com/henrique-coder/perplexity-webui-scraper/releases"
+
+[tool.ruff]
+line-length = 120
+indent-width = 4
+
+[tool.ruff.lint]
+select = [
+    "F",      # Pyflakes: unused imports/variables, undefined names
+    "E",      # pycodestyle errors: basic PEP 8 style violations
+    "W",      # pycodestyle warnings: whitespace issues, blank lines
+    "I",      # isort: import sorting and organization
+    "UP",     # pyupgrade: upgrade syntax for newer Python versions
+    "B",      # flake8-bugbear: common bugs and design problems
+    "SIM",    # flake8-simplify: simplify complex code patterns
+    "C4",     # flake8-comprehensions: better list/dict/set comprehensions
+    "PIE",    # flake8-pie: misc. lints (unnecessary pass, duplicate keys)
+    "RUF",    # Ruff-specific: modern Python best practices
+    "PERF",   # Perflint: performance anti-patterns
+    "FURB",   # refurb: modernize legacy Python idioms
+    "PTH",    # flake8-use-pathlib: prefer pathlib over os.path
+    "T20",    # flake8-print: detect leftover print() statements
+    "TCH",    # flake8-type-checking: optimize TYPE_CHECKING imports
+    "PL",     # Pylint: broad set of code quality checks
+]
+ignore = [
+    "PLR0912",   # Too many branches (complex validation logic is acceptable)
+    "PLR0913",   # Too many arguments in function definition (common in APIs)
+    "PLR2004",   # Magic value used in comparison (too strict for general use)
+]
+fixable = ["ALL"]            # Allow auto-fix for all enabled rules
+dummy-variable-rgx = "^_$"   # Only underscore is considered a dummy variable
+
+[tool.ruff.lint.isort]
+known-first-party = ["perplexity_webui_scraper"]
+lines-after-imports = 2             # PEP 8: two blank lines after imports
+force-sort-within-sections = true   # Alphabetical order within each section
+split-on-trailing-comma = true      # Trailing comma triggers multi-line format
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"   # Google-style docstrings (Args, Returns, Raises)
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"   # Docstrings must use triple double quotes
+
+[tool.ruff.format]
+quote-style = "double"              # Strings use double quotes (PEP 8 preference)
+indent-style = "space"              # Spaces over tabs (PEP 8)
+line-ending = "lf"                  # Unix-style line endings
+docstring-code-format = true        # Format code examples inside docstrings
+skip-magic-trailing-comma = false   # Preserve trailing commas as formatting hints
 
 [build-system]
 requires = ["uv_build"]
