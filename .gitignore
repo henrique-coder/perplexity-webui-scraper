@@ -1,20 +1,25 @@
-# IDE
+# ─ ─── Folders ─── ─ #
 .idea/
-
-# Cache
+.vscode/
 .venv/
-__pycache__/
-.ruff_cache/
-.pytest_cache/
 node_modules/
-
-# Directories
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+build/
+*.egg-info/
 .debug/
 
-# Files
-example.py
+# ─ ─── Files ─── ─ #
+example*.py
 publish.sh
 
-# Extensions
+# ─ ─── Extensions ─── ─ #
 *.env
 *.log
+*.tmp
+*.bak
+.DS_Store
+thumbs.db
