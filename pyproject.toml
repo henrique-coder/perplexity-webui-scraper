@@ -23,18 +23,21 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "curl-cffi>=0.13.0",
+    "curl-cffi>=0.14.0",
     "orjson>=3.11.5",
     "pydantic>=2.12.5",
 ]
 
 [dependency-groups]
 dev = [
+    "beautifulsoup4>=4.14.3",
+    "jsbeautifier>=1.15.4",
+    "lxml>=6.0.2",
     "python-dotenv>=1.2.1",
     "rich>=14.2.0",
 ]
 lint = [
-    "ruff>=0.14.8",
+    "ruff>=0.14.9",
 ]
 tests = [
     "pytest>=9.0.2",
