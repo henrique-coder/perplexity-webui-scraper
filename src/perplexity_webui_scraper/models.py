@@ -24,35 +24,44 @@ class Models:
     All models use the "copilot" mode which enables web search.
     """
 
-    LABS = Model(identifier="pplx_beta")
-    """Create projects from scratch (turn your ideas into completed docs, slides, dashboards, and more)."""
-
     RESEARCH = Model(identifier="pplx_alpha")
-    """Deep research on any topic (in-depth reports with more sources, charts, and advanced reasoning)."""
+    """Research - Fast and thorough for routine research"""
 
-    BEST = Model(identifier="pplx_pro")
-    """Automatically selects the best model based on the query. Recommended for most use cases."""
+    LABS = Model(identifier="pplx_beta")
+    """Labs - Multi-step tasks with advanced troubleshooting"""
+
+    BEST = Model(identifier="pplx_pro_upgraded")
+    """Best - Automatically selects the most responsive model based on the query"""
 
     SONAR = Model(identifier="experimental")
-    """Perplexity's fast model. Good for quick queries."""
+    """Sonar - Perplexity's fast model"""
 
-    GPT_51 = Model(identifier="gpt51")
-    """OpenAI's latest model (GPT-5.1)."""
+    GPT_52 = Model(identifier="gpt52")
+    """GPT-5.2 - OpenAI's latest model"""
 
-    GPT_51_THINKING = Model(identifier="gpt51_thinking")
-    """OpenAI's latest model with extended reasoning capabilities."""
+    GPT_52_THINKING = Model(identifier="gpt52_thinking")
+    """GPT-5.2 Thinking - OpenAI's latest model with thinking"""
 
-    CLAUDE_45_SONNET = Model(identifier="claude45sonnet")
-    """Anthropic's Claude 4.5 Sonnet model."""
+    CLAUDE_45_OPUS = Model(identifier="claude45opus")
+    """Claude Opus 4.5 - Anthropic's Opus reasoning model"""
 
-    CLAUDE_45_SONNET_THINKING = Model(identifier="claude45sonnetthinking")
-    """Anthropic's Claude 4.5 Sonnet with extended reasoning capabilities."""
+    CLAUDE_45_OPUS_THINKING = Model(identifier="claude45opusthinking")
+    """Claude Opus 4.5 Thinking - Anthropic's Opus reasoning model with thinking"""
 
     GEMINI_3_PRO_THINKING = Model(identifier="gemini30pro")
-    """Google's Gemini 3.0 Pro with reasoning capabilities."""
+    """Gemini 3 Pro - Google's newest reasoning model"""
 
     GROK_41 = Model(identifier="grok41nonreasoning")
-    """xAI's Grok 4.1 model."""
+    """Grok 4.1 - xAI's latest advanced model"""
+
+    GROK_41_THINKING = Model(identifier="grok41reasoning")
+    """Grok 4.1 Thinking - xAI's latest reasoning model"""
 
     KIMI_K2_THINKING = Model(identifier="kimik2thinking")
-    """Moonshot AI's Kimi K2 reasoning model (hosted in the US)."""
+    """Kimi K2 Thinking - Moonshot AI's latest reasoning model"""
+
+    CLAUDE_45_SONNET = Model(identifier="claude45sonnet")
+    """Claude Sonnet 4.5 - Anthropic's newest advanced model"""
+
+    CLAUDE_45_SONNET_THINKING = Model(identifier="claude45sonnetthinking")
+    """Claude Sonnet 4.5 Thinking - Anthropic's newest reasoning model"""
