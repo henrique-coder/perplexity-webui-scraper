@@ -101,6 +101,9 @@ line-ending = "lf"                  # Unix-style line endings
 docstring-code-format = true        # Format code examples inside docstrings
 skip-magic-trailing-comma = false   # Preserve trailing commas as formatting hints
 
+[project.scripts]
+get-perplexity-session-token = "perplexity_webui_scraper.cli.get_perplexity_session_token:get_token"
+
 [build-system]
 requires = ["uv_build"]
 build-backend = "uv_build"
