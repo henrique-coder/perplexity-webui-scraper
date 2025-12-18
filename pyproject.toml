@@ -37,7 +37,7 @@ dev = [
     "rich>=14.2.0",
 ]
 lint = [
-    "ruff>=0.14.9",
+    "ruff>=0.14.10",
 ]
 tests = [
     "pytest>=9.0.2",
