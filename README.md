@@ -114,25 +114,32 @@ conversation.ask("Latest AI research", files=["paper.pdf"])
 
 ### `Conversation.ask(query, model?, files?, citation_mode?, stream?)`
 
-| Parameter       | Type           | Default       | Description         |
-| --------------- | -------------- | ------------- | ------------------- |
-| `query`         | `str`          | —             | Question (required) |
-| `model`         | `Model`        | `Models.BEST` | AI model            |
-| `files`         | `list[str]`    | `None`        | File paths          |
-| `citation_mode` | `CitationMode` | `CLEAN`       | Citation format     |
-| `stream`        | `bool`         | `False`       | Enable streaming    |
+| Parameter       | Type                    | Default       | Description         |
+| --------------- | ----------------------- | ------------- | ------------------- |
+| `query`         | `str`                   | -             | Question (required) |
+| `model`         | `Model`                 | `Models.BEST` | AI model            |
+| `files`         | `list[str \| PathLike]` | `None`        | File paths          |
+| `citation_mode` | `CitationMode`          | `CLEAN`       | Citation format     |
+| `stream`        | `bool`                  | `False`       | Enable streaming    |
 
 ### Models
 
-| Model                          | Description       |
-| ------------------------------ | ----------------- |
-| `Models.BEST`                  | Auto-select best  |
-| `Models.RESEARCH`              | Deep research     |
-| `Models.SONAR`                 | Fast queries      |
-| `Models.GPT_51`                | OpenAI GPT-5.1    |
-| `Models.CLAUDE_45_SONNET`      | Claude 4.5 Sonnet |
-| `Models.GEMINI_3_PRO_THINKING` | Gemini 3.0 Pro    |
-| `Models.GROK_41`               | xAI Grok 4.1      |
+| Model                              | Description                                                               |
+| ---------------------------------- | ------------------------------------------------------------------------- |
+| `Models.RESEARCH`                  | Research - Fast and thorough for routine research                         |
+| `Models.LABS`                      | Labs - Multi-step tasks with advanced troubleshooting                     |
+| `Models.BEST`                      | Best - Automatically selects the most responsive model based on the query |
+| `Models.SONAR`                     | Sonar - Perplexity's fast model                                           |
+| `Models.GPT_52`                    | GPT-5.2 - OpenAI's latest model                                           |
+| `Models.GPT_52_THINKING`           | GPT-5.2 Thinking - OpenAI's latest model with thinking                    |
+| `Models.CLAUDE_45_OPUS`            | Claude Opus 4.5 - Anthropic's Opus reasoning model                        |
+| `Models.CLAUDE_45_OPUS_THINKING`   | Claude Opus 4.5 Thinking - Anthropic's Opus reasoning model with thinking |
+| `Models.GEMINI_3_PRO_THINKING`     | Gemini 3 Pro - Google's newest reasoning model                            |
+| `Models.GROK_41`                   | Grok 4.1 - xAI's latest advanced model                                    |
+| `Models.GROK_41_THINKING`          | Grok 4.1 Thinking - xAI's latest reasoning model                          |
+| `Models.KIMI_K2_THINKING`          | Kimi K2 Thinking - Moonshot AI's latest reasoning model                   |
+| `Models.CLAUDE_45_SONNET`          | Claude Sonnet 4.5 - Anthropic's newest advanced model                     |
+| `Models.CLAUDE_45_SONNET_THINKING` | Claude Sonnet 4.5 Thinking - Anthropic's newest reasoning model           |
 
 ### CitationMode
 
