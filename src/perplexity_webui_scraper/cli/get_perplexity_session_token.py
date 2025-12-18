@@ -1,6 +1,4 @@
-"""
-CLI utility for secure Perplexity authentication and session extraction.
-"""
+"""CLI utility for secure Perplexity authentication and session extraction."""
 
 from __future__ import annotations
 
@@ -140,6 +138,7 @@ def _display_and_save_token(token: str) -> None:
     console.print(f"\n[bold white]Your session token:[/bold white]\n[green]{token}[/green]\n")
 
     prompt_text = f"Save token to [bold yellow].env[/bold yellow] file ({ENV_KEY})?"
+
     if Confirm.ask(prompt_text, default=True, console=console):
         if update_env(token):
             console.print("[dim]Token saved to .env successfully.[/dim]")
@@ -206,8 +205,8 @@ def get_token() -> NoReturn:
             exit(0)
         except KeyboardInterrupt:
             exit(0)
-        except Exception as e:
-            console.print(f"\n[bold red]⛔ Error:[/bold red] {e}")
+        except Exception as error:
+            console.print(f"\n[bold red]⛔ Error:[/bold red] {error}")
             console.input("[dim]Press ENTER to exit...[/dim]")
 
             exit(1)
