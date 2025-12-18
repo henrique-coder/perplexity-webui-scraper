@@ -32,5 +32,5 @@ class ConversationConfig:
 class ClientConfig:
     """HTTP client settings."""
 
-    timeout: int = 1800
+    timeout: int = 3600
     impersonate: str = "chrome"
