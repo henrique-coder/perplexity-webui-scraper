@@ -129,7 +129,7 @@ class Conversation:
         self,
         query: str,
         model: Model | None = None,
-        files: list[str | PathLike[str]] | None = None,
+        files: list[str | PathLike] | None = None,
         citation_mode: CitationMode | None = None,
         stream: bool = False,
     ) -> Conversation:
@@ -144,7 +144,7 @@ class Conversation:
         self,
         query: str,
         model: Model,
-        files: list[str | PathLike[str]] | None,
+        files: list[str | PathLike] | None,
         stream: bool = False,
     ) -> None:
         """Execute a query."""
@@ -172,15 +172,17 @@ class Conversation:
         self._raw_data = {}
         self._stream_generator = None
 
-    def _validate_files(self, files: list[str | PathLike[str]] | None) -> list[_FileInfo]:
+    def _validate_files(self, files: list[str | PathLike] | None) -> list[_FileInfo]:
         if not files:
             return []
 
         seen: set[str] = set()
         file_list: list[Path] = []
+
         for item in files:
             if item and isinstance(item, (str, PathLike)):
                 path = Path(item).resolve()
+
                 if path.as_posix() not in seen:
                     seen.add(path.as_posix())
                     file_list.append(path)
