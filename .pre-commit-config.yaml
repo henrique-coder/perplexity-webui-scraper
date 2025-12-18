@@ -1,0 +1,18 @@
+default_install_hook_types: [pre-commit, pre-push]
+
+repos:
+  - repo: local
+    hooks:
+      - id: just-format
+        name: Format (Just)
+        entry: just format
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: just-lint
+        name: Lint (Just)
+        entry: just lint
+        language: system
+        pass_filenames: false
+        always_run: true
