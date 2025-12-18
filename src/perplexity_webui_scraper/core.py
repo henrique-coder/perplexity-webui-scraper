@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-from orjson import loads
+from orjson import JSONDecodeError, loads
 
 
 if TYPE_CHECKING:
@@ -341,10 +341,25 @@ class Conversation:
         if self._read_write_token is None and "read_write_token" in data:
             self._read_write_token = data["read_write_token"]
 
-        if "text" not in data:
-            return
+        if "blocks" in data:
+            for block in data["blocks"]:
+                if block.get("intended_usage") == "web_results":
+                    diff = block.get("diff_block", {})
 
-        json_data = loads(data["text"])
+                    for patch in diff.get("patches", []):
+                        if patch.get("op") == "replace" and patch.get("path") == "/web_results":
+                            pass
+
+        if "text" not in data and "blocks" not in data:
+            return None
+
+        try:
+            json_data = loads(data["text"])
+        except KeyError as e:
+            raise ValueError("Missing 'text' field in data") from e
+        except JSONDecodeError as e:
+            raise ValueError("Invalid JSON in 'text' field") from e
+
         answer_data: dict[str, Any] = {}
 
         if isinstance(json_data, list):
@@ -359,9 +374,12 @@ class Conversation:
                         answer_data = raw_content
 
                     self._update_state(data.get("thread_title"), answer_data)
+
                     break
         elif isinstance(json_data, dict):
             self._update_state(data.get("thread_title"), json_data)
+        else:
+            raise ValueError("Unexpected JSON structure in 'text' field")
 
     def _update_state(self, title: str | None, answer_data: dict[str, Any]) -> None:
         self._title = title
