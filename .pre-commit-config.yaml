@@ -4,14 +4,14 @@ repos:
   - repo: local
     hooks:
       - id: just-format
-        name: Format (Just)
+        name: Format code (Just)
         entry: just format
         language: system
         pass_filenames: false
         always_run: true
 
       - id: just-lint
-        name: Lint (Just)
+        name: Lint code (Just)
         entry: just lint
         language: system
         pass_filenames: false
