@@ -57,10 +57,12 @@ class Perplexity:
 
     def create_conversation(self, config: ConversationConfig | None = None) -> Conversation:
         """Create a new conversation."""
+
         return Conversation(self._http, config or ConversationConfig())
 
     def close(self) -> None:
         """Close the client."""
+
         self._http.close()
 
     def __enter__(self) -> Perplexity:
@@ -103,26 +105,31 @@ class Conversation:
     @property
     def answer(self) -> str | None:
         """Last response text."""
+
         return self._answer
 
     @property
     def title(self) -> str | None:
         """Conversation title."""
+
         return self._title
 
     @property
     def search_results(self) -> list[SearchResultItem]:
         """Search results from last response."""
+
         return self._search_results
 
     @property
     def uuid(self) -> str | None:
         """Conversation UUID."""
+
         return self._backend_uuid
 
     def __iter__(self) -> Generator[Response, None, None]:
         if self._stream_generator is not None:
             yield from self._stream_generator
+
             self._stream_generator = None
 
     def ask(
@@ -134,10 +141,12 @@ class Conversation:
         stream: bool = False,
     ) -> Conversation:
         """Ask a question. Returns self for method chaining or streaming iteration."""
+
         effective_model = model or self._config.model or Models.BEST
         effective_citation = citation_mode if citation_mode is not None else self._config.citation_mode
         self._citation_mode = effective_citation
         self._execute(query, effective_model, files, stream=stream)
+
         return self
 
     def _execute(
@@ -148,10 +157,12 @@ class Conversation:
         stream: bool = False,
     ) -> None:
         """Execute a query."""
+
         self._reset_response_state()
 
         # Upload files
         file_urls: list[str] = []
+
         if files:
             validated = self._validate_files(files)
             file_urls = [self._upload_file(f) for f in validated]
@@ -205,11 +216,13 @@ class Conversation:
                     raise FileValidationError(file_path, "Path is not a file")
 
                 file_size = path.stat().st_size
+
                 if file_size > MAX_FILE_SIZE:
                     raise FileValidationError(
                         file_path,
                         f"File exceeds 50MB limit: {file_size / (1024 * 1024):.1f}MB",
                     )
+
                 if file_size == 0:
                     raise FileValidationError(file_path, "File is empty")
 
@@ -226,10 +239,10 @@ class Conversation:
                 )
             except FileValidationError:
                 raise
-            except (FileNotFoundError, PermissionError) as e:
-                raise FileValidationError(file_path, f"Cannot access file: {e}") from e
-            except OSError as e:
-                raise FileValidationError(file_path, f"File system error: {e}") from e
+            except (FileNotFoundError, PermissionError) as error:
+                raise FileValidationError(file_path, f"Cannot access file: {error}") from error
+            except OSError as error:
+                raise FileValidationError(file_path, f"File system error: {error}") from error
 
         return result
 
@@ -257,8 +270,8 @@ class Conversation:
                 raise FileUploadError(file_info.path, "No upload URL returned")
 
             return upload_url
-        except FileUploadError:
-            raise
+        except FileUploadError as error:
+            raise error
         except Exception as e:
             raise FileUploadError(file_info.path, str(e)) from e
 
@@ -303,6 +316,7 @@ class Conversation:
         if self._backend_uuid is not None:
             params["last_backend_uuid"] = self._backend_uuid
             params["query_source"] = "followup"
+
             if self._read_write_token:
                 params["read_write_token"] = self._read_write_token
 
@@ -314,6 +328,7 @@ class Conversation:
 
         def replacer(m: Match[str]) -> str:
             num = m.group(1)
+
             if not num.isdigit():
                 return m.group(0)
 
@@ -321,8 +336,10 @@ class Conversation:
                 return ""
 
             idx = int(num) - 1
+
             if 0 <= idx < len(self._search_results):
                 url = self._search_results[idx].url or ""
+
                 if self._citation_mode == CitationMode.MARKDOWN and url:
                     return f"[{num}]({url})"
 
@@ -332,8 +349,10 @@ class Conversation:
 
     def _parse_line(self, line: str | bytes) -> dict[str, Any] | None:
         prefix = b"data: " if isinstance(line, bytes) else "data: "
+
         if (isinstance(line, bytes) and line.startswith(prefix)) or (isinstance(line, str) and line.startswith(prefix)):
             return loads(line[6:])
+
         return None
 
     def _process_data(self, data: dict[str, Any]) -> None:
@@ -387,6 +406,7 @@ class Conversation:
         self._title = title
 
         web_results = answer_data.get("web_results", [])
+
         if web_results:
             self._search_results = [
                 SearchResultItem(
@@ -399,10 +419,12 @@ class Conversation:
             ]
 
         answer_text = answer_data.get("answer")
+
         if answer_text is not None:
             self._answer = self._format_citations(answer_text)
 
         chunks = answer_data.get("chunks", [])
+
         if chunks:
             self._chunks = chunks
 
@@ -422,16 +444,21 @@ class Conversation:
     def _complete(self, payload: dict[str, Any]) -> None:
         for line in self._http.stream_ask(payload):
             data = self._parse_line(line)
+
             if data:
                 self._process_data(data)
+
                 if data.get("final"):
                     break
 
     def _stream(self, payload: dict[str, Any]) -> Generator[Response, None, None]:
         for line in self._http.stream_ask(payload):
             data = self._parse_line(line)
+
             if data:
                 self._process_data(data)
+
                 yield self._build_response()
+
                 if data.get("final"):
                     break
