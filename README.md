@@ -134,7 +134,9 @@ conversation.ask("Latest AI research", files=["paper.pdf"])
 | `Models.GPT_52_THINKING`           | GPT-5.2 Thinking - OpenAI's latest model with thinking                    |
 | `Models.CLAUDE_45_OPUS`            | Claude Opus 4.5 - Anthropic's Opus reasoning model                        |
 | `Models.CLAUDE_45_OPUS_THINKING`   | Claude Opus 4.5 Thinking - Anthropic's Opus reasoning model with thinking |
-| `Models.GEMINI_3_PRO_THINKING`     | Gemini 3 Pro - Google's newest reasoning model                            |
+| `Models.GEMINI_3_PRO`              | Gemini 3 Pro - Google's newest reasoning model                            |
+| `Models.GEMINI_3_FLASH`            | Gemini 3 Flash - Google's fast reasoning model                            |
+| `Models.GEMINI_3_FLASH_THINKING`   | Gemini 3 Flash Thinking - Google's fast reasoning model with thinking     |
 | `Models.GROK_41`                   | Grok 4.1 - xAI's latest advanced model                                    |
 | `Models.GROK_41_THINKING`          | Grok 4.1 Thinking - xAI's latest reasoning model                          |
 | `Models.KIMI_K2_THINKING`          | Kimi K2 Thinking - Moonshot AI's latest reasoning model                   |
