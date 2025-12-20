@@ -48,8 +48,13 @@ class Models:
     CLAUDE_45_OPUS_THINKING = Model(identifier="claude45opusthinking")
     """Claude Opus 4.5 Thinking - Anthropic's Opus reasoning model with thinking"""
 
-    GEMINI_3_PRO_THINKING = Model(identifier="gemini30pro")
+    GEMINI_3_PRO = Model(identifier="gemini30pro")
     """Gemini 3 Pro - Google's newest reasoning model"""
+
+    GEMINI_3_FLASH = Model(identifier="gemini30flash")
+    """Gemini 3 Flash - Google's fast reasoning model"""
+
+    GEMINI_3_FLASH_THINKING = Model(identifier="gemini30flash_high")
 
     GROK_41 = Model(identifier="grok41nonreasoning")
     """Grok 4.1 - xAI's latest advanced model"""
