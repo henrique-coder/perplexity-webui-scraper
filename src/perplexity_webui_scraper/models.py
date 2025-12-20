@@ -55,6 +55,7 @@ class Models:
     """Gemini 3 Flash - Google's fast reasoning model"""
 
     GEMINI_3_FLASH_THINKING = Model(identifier="gemini30flash_high")
+    """Gemini 3 Flash Thinking - Google's fast reasoning model with enhanced thinking"""
 
     GROK_41 = Model(identifier="grok41nonreasoning")
     """Grok 4.1 - xAI's latest advanced model"""
