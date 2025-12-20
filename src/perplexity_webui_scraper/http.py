@@ -46,6 +46,7 @@ class HTTPClient:
             "Origin": API_BASE_URL,
         }
         cookies: dict[str, str] = {SESSION_COOKIE_NAME: session_token}
+
         self._session: Session = Session(
             headers=headers,
             cookies=cookies,
@@ -101,6 +102,7 @@ class HTTPClient:
         try:
             response = self._session.get(url, params=params)
             response.raise_for_status()
+
             return response
         except Exception as e:
             self._handle_error(e, f"GET {endpoint}: ")
@@ -132,6 +134,7 @@ class HTTPClient:
         try:
             response = self._session.post(url, json=json, stream=stream)
             response.raise_for_status()
+
             return response
         except Exception as e:
             self._handle_error(e, f"POST {endpoint}: ")
