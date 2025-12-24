@@ -11,6 +11,9 @@ from .exceptions import (
     FileValidationError,
     PerplexityError,
     RateLimitError,
+    ResearchClarifyingQuestionsError,
+    ResponseParsingError,
+    StreamingError,
 )
 from .models import Model, Models
 from .types import Coordinates, Response, SearchResultItem
@@ -31,9 +34,12 @@ __all__: list[str] = [
     "Perplexity",
     "PerplexityError",
     "RateLimitError",
+    "ResearchClarifyingQuestionsError",
     "Response",
+    "ResponseParsingError",
     "SearchFocus",
     "SearchResultItem",
     "SourceFocus",
+    "StreamingError",
     "TimeRange",
 ]
