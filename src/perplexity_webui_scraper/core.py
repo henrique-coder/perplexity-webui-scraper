@@ -26,7 +26,7 @@ from .constants import (
     USE_SCHEMATIZED_API,
 )
 from .enums import CitationMode
-from .exceptions import FileUploadError, FileValidationError
+from .exceptions import FileUploadError, FileValidationError, ResearchClarifyingQuestionsError, ResponseParsingError
 from .http import HTTPClient
 from .limits import MAX_FILE_SIZE, MAX_FILES
 from .models import Model, Models
@@ -356,11 +356,16 @@ class Conversation:
         return None
 
     def _process_data(self, data: dict[str, Any]) -> None:
+        """Process SSE data chunk and update conversation state."""
+
         if self._backend_uuid is None and "backend_uuid" in data:
             self._backend_uuid = data["backend_uuid"]
 
         if self._read_write_token is None and "read_write_token" in data:
             self._read_write_token = data["read_write_token"]
+
+        if self._title is None and "thread_title" in data:
+            self._title = data["thread_title"]
 
         if "blocks" in data:
             for block in data["blocks"]:
@@ -385,7 +390,15 @@ class Conversation:
 
         if isinstance(json_data, list):
             for item in json_data:
-                if item.get("step_type") == "FINAL":
+                step_type = item.get("step_type")
+
+                # Handle Research mode clarifying questions
+                if step_type == "RESEARCH_CLARIFYING_QUESTIONS":
+                    questions = self._extract_clarifying_questions(item)
+
+                    raise ResearchClarifyingQuestionsError(questions)
+
+                if step_type == "FINAL":
                     raw_content = item.get("content", {})
                     answer_content = raw_content.get("answer")
 
@@ -400,7 +413,39 @@ class Conversation:
         elif isinstance(json_data, dict):
             self._update_state(data.get("thread_title"), json_data)
         else:
-            raise ValueError("Unexpected JSON structure in 'text' field")
+            raise ResponseParsingError(
+                "Unexpected JSON structure in 'text' field",
+                raw_data=str(json_data),
+            )
+
+    def _extract_clarifying_questions(self, item: dict[str, Any]) -> list[str]:
+        """Extract clarifying questions from a RESEARCH_CLARIFYING_QUESTIONS step."""
+
+        questions: list[str] = []
+        content = item.get("content", {})
+
+        # Try different possible structures for questions
+        if isinstance(content, dict):
+            if "questions" in content:
+                raw_questions = content["questions"]
+
+                if isinstance(raw_questions, list):
+                    questions = [str(q) for q in raw_questions if q]
+            elif "clarifying_questions" in content:
+                raw_questions = content["clarifying_questions"]
+
+                if isinstance(raw_questions, list):
+                    questions = [str(q) for q in raw_questions if q]
+            elif not questions:
+                for value in content.values():
+                    if isinstance(value, str) and "?" in value:
+                        questions.append(value)
+        elif isinstance(content, list):
+            questions = [str(q) for q in content if q]
+        elif isinstance(content, str):
+            questions = [content]
+
+        return questions
 
     def _update_state(self, title: str | None, answer_data: dict[str, Any]) -> None:
         self._title = title
