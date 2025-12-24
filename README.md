@@ -15,7 +15,8 @@ Python scraper to extract AI responses from [Perplexity's](https://www.perplexit
 ## Installation
 
 ```bash
-uv pip install perplexity-webui-scraper
+uv pip install perplexity-webui-scraper  # from PyPI (stable)
+uv pip install git+https://github.com/henrique-coder/perplexity-webui-scraper.git@dev  # from GitHub (development)
 ```
 
 ## Requirements
