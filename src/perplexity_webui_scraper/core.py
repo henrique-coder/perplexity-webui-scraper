@@ -426,7 +426,7 @@ class Conversation:
         chunks = answer_data.get("chunks", [])
 
         if chunks:
-            self._chunks = chunks
+            self._chunks = [self._format_citations(chunk) for chunk in chunks]
 
         self._raw_data = answer_data
 
