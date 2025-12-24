@@ -176,6 +176,40 @@ get-perplexity-session-token
 
 Interactive tool to automatically obtain your Perplexity session token via email authentication. The token can be automatically saved to your `.env` file for immediate use.
 
+## Exceptions
+
+The library provides specific exception types for better error handling:
+
+| Exception                          | Description                                                  |
+| ---------------------------------- | ------------------------------------------------------------ |
+| `PerplexityError`                  | Base exception for all library errors                        |
+| `AuthenticationError`              | Session token is invalid or expired (HTTP 403)               |
+| `RateLimitError`                   | Rate limit exceeded (HTTP 429)                               |
+| `FileUploadError`                  | File upload failed                                           |
+| `FileValidationError`              | File validation failed (size, type, etc.)                    |
+| `ResearchClarifyingQuestionsError` | Research mode is asking clarifying questions (not supported) |
+| `ResponseParsingError`             | API response could not be parsed                             |
+| `StreamingError`                   | Error during streaming response                              |
+
+### Handling Research Mode Clarifying Questions
+
+When using Research mode (`Models.RESEARCH`), the API may ask clarifying questions before providing an answer. Since programmatic interaction is not supported, the library raises a `ResearchClarifyingQuestionsError` with the questions:
+
+```python
+from perplexity_webui_scraper import (
+    Perplexity,
+    ResearchClarifyingQuestionsError,
+)
+
+try:
+    conversation.ask("Research this topic", model=Models.RESEARCH)
+except ResearchClarifyingQuestionsError as e:
+    print("The AI needs clarification:")
+    for question in e.questions:
+        print(f"  - {question}")
+    # Consider rephrasing your query to be more specific
+```
+
 ## Disclaimer
 
 This is an **unofficial** library. It uses internal APIs that may change without notice. Use at your own risk. Not for production use.
