@@ -48,3 +48,43 @@ class FileValidationError(PerplexityError):
     def __init__(self, file_path: str, reason: str) -> None:
         self.file_path = file_path
         super().__init__(f"File validation failed for '{file_path}': {reason}")
+
+
+class ResearchClarifyingQuestionsError(PerplexityError):
+    """Raised when Research mode requires clarifying questions.
+
+    This library does not support programmatic interaction with clarifying questions.
+    Consider rephrasing your query to be more specific.
+
+    Attributes:
+        questions: List of clarifying questions from the API.
+    """
+
+    def __init__(self, questions: list[str]) -> None:
+        self.questions = questions
+        questions_text = "\n".join(f"  - {q}" for q in questions) if questions else "  (no questions provided)"
+
+        super().__init__(
+            f"Research mode is asking clarifying questions:\n{questions_text}\n\n"
+            "Programmatic interaction with clarifying questions is not supported. "
+            "Please rephrase your query to be more specific."
+        )
+
+
+class ResponseParsingError(PerplexityError):
+    """Raised when the API response cannot be parsed.
+
+    Attributes:
+        raw_data: The raw data that failed to parse.
+    """
+
+    def __init__(self, message: str, raw_data: str | None = None) -> None:
+        self.raw_data = raw_data
+        super().__init__(f"Failed to parse API response: {message}")
+
+
+class StreamingError(PerplexityError):
+    """Raised when an error occurs during streaming."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(f"Streaming error: {message}")
