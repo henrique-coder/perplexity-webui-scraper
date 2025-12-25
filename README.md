@@ -166,16 +166,6 @@ conversation.ask("Latest AI research", files=["paper.pdf"])
 | `timezone`        | `None`        | Timezone           |
 | `coordinates`     | `None`        | Location (lat/lng) |
 
-## CLI Tools
-
-### Session Token Generator
-
-```bash
-get-perplexity-session-token
-```
-
-Interactive tool to automatically obtain your Perplexity session token via email authentication. The token can be automatically saved to your `.env` file for immediate use.
-
 ## Exceptions
 
 The library provides specific exception types for better error handling:
@@ -203,15 +193,76 @@ from perplexity_webui_scraper import (
 
 try:
     conversation.ask("Research this topic", model=Models.RESEARCH)
-except ResearchClarifyingQuestionsError as e:
+except ResearchClarifyingQuestionsError as error:
     print("The AI needs clarification:")
-    for question in e.questions:
+    for question in error.questions:
         print(f"  - {question}")
     # Consider rephrasing your query to be more specific
 ```
 
+## MCP Server (Model Context Protocol)
+
+The library includes an MCP server that allows AI assistants (like Claude) to search using Perplexity AI directly.
+
+### Installation
+
+```bash
+uv pip install perplexity-webui-scraper[mcp]
+```
+
+### Running the Server
+
+```bash
+# Set your session token
+export PERPLEXITY_SESSION_TOKEN="your_token_here"  # For Linux/Mac
+set PERPLEXITY_SESSION_TOKEN="your_token_here"  # For Windows
+
+# Run with FastMCP
+uv run fastmcp run src/perplexity_webui_scraper/mcp/server.py
+
+# Or test with the dev inspector
+uv run fastmcp dev src/perplexity_webui_scraper/mcp/server.py
+```
+
+### Claude Desktop Configuration
+
+Add to `~/.config/claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "perplexity": {
+      "command": "uv",
+      "args": [
+        "run",
+        "fastmcp",
+        "run",
+        "path/to/perplexity_webui_scraper/mcp/server.py"
+      ],
+      "env": {
+        "PERPLEXITY_SESSION_TOKEN": "your_token_here"
+      }
+    }
+  }
+}
+```
+
+### Available Tool
+
+| Tool             | Description                                                                 |
+| ---------------- | --------------------------------------------------------------------------- |
+| `perplexity_ask` | Ask questions and get AI-generated answers with real-time data from the web |
+
+**Parameters:**
+
+| Parameter      | Type  | Default  | Description                                                   |
+| -------------- | ----- | -------- | ------------------------------------------------------------- |
+| `query`        | `str` | -        | Question to ask (required)                                    |
+| `model`        | `str` | `"best"` | AI model (`best`, `research`, `gpt52`, `claude_sonnet`, etc.) |
+| `source_focus` | `str` | `"web"`  | Source type (`web`, `academic`, `social`, `finance`, `all`)   |
+
 ## Disclaimer
 
-This is an **unofficial** library. It uses internal APIs that may change without notice. Use at your own risk. Not for production use.
+This is an **unofficial** library. It uses internal APIs that may change without notice. Use at your own risk.
 
 By using this library, you agree to Perplexity AI's Terms of Service.

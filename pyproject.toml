@@ -45,6 +45,11 @@ tests = [
     "pytest>=9.0.2",
 ]
 
+[project.optional-dependencies]
+mcp = [
+    "fastmcp>=2.14.1",
+]
+
 [project.urls]
 Homepage = "https://github.com/henrique-coder/perplexity-webui-scraper"
 Documentation = "https://github.com/henrique-coder/perplexity-webui-scraper#readme"
@@ -105,6 +110,7 @@ skip-magic-trailing-comma = false   # Preserve trailing commas as formatting hin
 
 [project.scripts]
 get-perplexity-session-token = "perplexity_webui_scraper.cli.get_perplexity_session_token:get_token"
+perplexity-webui-scraper-mcp = "perplexity_webui_scraper.mcp:run_server"
 
 [build-system]
 requires = ["uv_build"]
