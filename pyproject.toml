@@ -5,7 +5,7 @@ description = "Python scraper to extract AI responses from Perplexity's web inte
 authors = [{ name = "henrique-coder", email = "henriquemoreira10fk@gmail.com" }]
 license = "MIT"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.15"
 keywords = ["perplexity", "ai", "scraper", "webui", "api", "client"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -24,8 +24,10 @@ classifiers = [
 ]
 dependencies = [
     "curl-cffi>=0.14.0",
+    "loguru>=0.7.3",
     "orjson>=3.11.5",
     "pydantic>=2.12.5",
+    "tenacity>=9.1.2",
 ]
 
 [dependency-groups]

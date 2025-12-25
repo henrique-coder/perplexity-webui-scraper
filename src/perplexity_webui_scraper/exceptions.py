@@ -3,6 +3,19 @@
 from __future__ import annotations
 
 
+__all__: list[str] = [
+    "AuthenticationError",
+    "CloudflareBlockError",
+    "FileUploadError",
+    "FileValidationError",
+    "PerplexityError",
+    "RateLimitError",
+    "ResearchClarifyingQuestionsError",
+    "ResponseParsingError",
+    "StreamingError",
+]
+
+
 class PerplexityError(Exception):
     """Base exception for all Perplexity-related errors."""
 
@@ -34,6 +47,25 @@ class RateLimitError(PerplexityError):
         )
 
 
+class CloudflareBlockError(PerplexityError):
+    """
+    Raised when Cloudflare blocks the request with a challenge page.
+
+    This typically means the request triggered Cloudflare's bot detection.
+    The client will automatically retry with fingerprint rotation, but if
+    this exception is raised, all retry attempts have failed.
+    """
+
+    def __init__(self, message: str | None = None) -> None:
+        super().__init__(
+            message
+            or "Cloudflare challenge detected. The request was blocked by Cloudflare's "
+            "bot protection. Try waiting a few minutes before retrying, or obtain a "
+            "fresh session token.",
+            status_code=403,
+        )
+
+
 class FileUploadError(PerplexityError):
     """Raised when file upload fails."""
 
@@ -51,7 +83,8 @@ class FileValidationError(PerplexityError):
 
 
 class ResearchClarifyingQuestionsError(PerplexityError):
-    """Raised when Research mode requires clarifying questions.
+    """
+    Raised when Research mode requires clarifying questions.
 
     This library does not support programmatic interaction with clarifying questions.
     Consider rephrasing your query to be more specific.
@@ -72,7 +105,8 @@ class ResearchClarifyingQuestionsError(PerplexityError):
 
 
 class ResponseParsingError(PerplexityError):
-    """Raised when the API response cannot be parsed.
+    """
+    Raised when the API response cannot be parsed.
 
     Attributes:
         raw_data: The raw data that failed to parse.

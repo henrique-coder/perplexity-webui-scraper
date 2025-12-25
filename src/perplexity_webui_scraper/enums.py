@@ -6,7 +6,8 @@ from enum import Enum
 
 
 class CitationMode(str, Enum):
-    """Citation formatting modes for response text.
+    """
+    Citation formatting modes for response text.
 
     Controls how citation markers (e.g., [1], [2]) are formatted in the response.
     """
@@ -22,7 +23,8 @@ class CitationMode(str, Enum):
 
 
 class SearchFocus(str, Enum):
-    """Search focus types that control the type of search performed.
+    """
+    Search focus types that control the type of search performed.
 
     Determines whether to search the web or focus on writing tasks.
     """
@@ -35,7 +37,8 @@ class SearchFocus(str, Enum):
 
 
 class SourceFocus(str, Enum):
-    """Source focus types that control which sources to prioritize.
+    """
+    Source focus types that control which sources to prioritize.
 
     Can be combined (e.g., [SourceFocus.WEB, SourceFocus.ACADEMIC]) for multi-source searches.
     """
@@ -54,7 +57,8 @@ class SourceFocus(str, Enum):
 
 
 class TimeRange(str, Enum):
-    """Time range filters for search results.
+    """
+    Time range filters for search results.
 
     Controls how recent the sources should be.
     """
@@ -73,3 +77,29 @@ class TimeRange(str, Enum):
 
     LAST_YEAR = "YEAR"
     """Include sources from the last 365 days."""
+
+
+class LogLevel(str, Enum):
+    """
+    Logging level configuration.
+
+    Controls the verbosity of logging output. DISABLED is the default.
+    """
+
+    DISABLED = "DISABLED"
+    """Completely disable all logging output. This is the default."""
+
+    DEBUG = "DEBUG"
+    """Show all messages including internal debug information."""
+
+    INFO = "INFO"
+    """Show informational messages, warnings, and errors."""
+
+    WARNING = "WARNING"
+    """Show only warnings and errors."""
+
+    ERROR = "ERROR"
+    """Show only error messages."""
+
+    CRITICAL = "CRITICAL"
+    """Show only critical/fatal errors."""

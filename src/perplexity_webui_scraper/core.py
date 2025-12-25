@@ -29,8 +29,12 @@ from .enums import CitationMode
 from .exceptions import FileUploadError, FileValidationError, ResearchClarifyingQuestionsError, ResponseParsingError
 from .http import HTTPClient
 from .limits import MAX_FILE_SIZE, MAX_FILES
+from .logging import configure_logging, get_logger, log_conversation_created, log_query_sent
 from .models import Model, Models
 from .types import Response, SearchResultItem, _FileInfo
+
+
+logger = get_logger(__name__)
 
 
 class Perplexity:
@@ -39,7 +43,8 @@ class Perplexity:
     __slots__ = ("_http",)
 
     def __init__(self, session_token: str, config: ClientConfig | None = None) -> None:
-        """Initialize web scraper with session token.
+        """
+        Initialize web scraper with session token.
 
         Args:
             session_token: Perplexity session cookie (__Secure-next-auth.session-token).
@@ -53,17 +58,71 @@ class Perplexity:
             raise ValueError("session_token cannot be empty")
 
         cfg = config or ClientConfig()
-        self._http = HTTPClient(session_token, timeout=cfg.timeout, impersonate=cfg.impersonate)
+
+        # Configure logging based on config
+        configure_logging(level=cfg.logging_level, log_file=cfg.log_file)
+
+        logger.info(
+            "Perplexity client initializing | "
+            f"session_token_length={len(session_token)} "
+            f"logging_level={cfg.logging_level.value} "
+            f"log_file={cfg.log_file}"
+        )
+        logger.debug(
+            "Client configuration | "
+            f"timeout={cfg.timeout}s "
+            f"impersonate={cfg.impersonate} "
+            f"max_retries={cfg.max_retries} "
+            f"retry_base_delay={cfg.retry_base_delay}s "
+            f"retry_max_delay={cfg.retry_max_delay}s "
+            f"retry_jitter={cfg.retry_jitter} "
+            f"requests_per_second={cfg.requests_per_second} "
+            f"rotate_fingerprint={cfg.rotate_fingerprint}"
+        )
+
+        self._http = HTTPClient(
+            session_token,
+            timeout=cfg.timeout,
+            impersonate=cfg.impersonate,
+            max_retries=cfg.max_retries,
+            retry_base_delay=cfg.retry_base_delay,
+            retry_max_delay=cfg.retry_max_delay,
+            retry_jitter=cfg.retry_jitter,
+            requests_per_second=cfg.requests_per_second,
+            rotate_fingerprint=cfg.rotate_fingerprint,
+        )
+
+        logger.info("Perplexity client initialized successfully")
 
     def create_conversation(self, config: ConversationConfig | None = None) -> Conversation:
         """Create a new conversation."""
 
-        return Conversation(self._http, config or ConversationConfig())
+        cfg = config or ConversationConfig()
+        logger.debug(
+            "Creating conversation | "
+            f"model={cfg.model} "
+            f"citation_mode={cfg.citation_mode} "
+            f"save_to_library={cfg.save_to_library} "
+            f"search_focus={cfg.search_focus} "
+            f"language={cfg.language}"
+        )
+
+        conversation = Conversation(self._http, cfg)
+
+        log_conversation_created(
+            f"model={cfg.model}, citation_mode={cfg.citation_mode}, "
+            f"search_focus={cfg.search_focus}, language={cfg.language}"
+        )
+        logger.info("Conversation created successfully")
+
+        return conversation
 
     def close(self) -> None:
         """Close the client."""
 
+        logger.debug("Closing Perplexity client")
         self._http.close()
+        logger.info("Perplexity client closed")
 
     def __enter__(self) -> Perplexity:
         return self
@@ -90,6 +149,13 @@ class Conversation:
     )
 
     def __init__(self, http: HTTPClient, config: ConversationConfig) -> None:
+        logger.debug(
+            "Conversation.__init__ | "
+            f"model={config.model} "
+            f"citation_mode={config.citation_mode} "
+            f"save_to_library={config.save_to_library} "
+            f"search_focus={config.search_focus}"
+        )
         self._http = http
         self._config = config
         self._citation_mode = CitationMode.DEFAULT
@@ -101,6 +167,7 @@ class Conversation:
         self._search_results: list[SearchResultItem] = []
         self._raw_data: dict[str, Any] = {}
         self._stream_generator: Generator[Response, None, None] | None = None
+        logger.debug("Conversation initialized with empty state")
 
     @property
     def answer(self) -> str | None:
@@ -142,10 +209,28 @@ class Conversation:
     ) -> Conversation:
         """Ask a question. Returns self for method chaining or streaming iteration."""
 
+        logger.info(
+            "Conversation.ask called | "
+            f"query_length={len(query)} "
+            f"query_preview={query[:100]}{'...' if len(query) > 100 else ''} "
+            f"model={model} "
+            f"files_count={len(files) if files else 0} "
+            f"citation_mode={citation_mode} "
+            f"stream={stream}"
+        )
+
         effective_model = model or self._config.model or Models.BEST
         effective_citation = citation_mode if citation_mode is not None else self._config.citation_mode
         self._citation_mode = effective_citation
+
+        logger.debug(
+            f"Effective parameters | effective_model={effective_model} effective_citation={effective_citation}"
+        )
+
+        log_query_sent(query, str(effective_model), bool(files))
         self._execute(query, effective_model, files, stream=stream)
+
+        logger.debug("Query execution completed")
 
         return self
 
@@ -158,22 +243,49 @@ class Conversation:
     ) -> None:
         """Execute a query."""
 
+        logger.debug(
+            f"Executing query | "
+            f"query_length={len(query)} "
+            f"model={model} "
+            f"files_count={len(files) if files else 0} "
+            f"stream={stream} "
+            f"is_followup={self._backend_uuid is not None}"
+        )
+
         self._reset_response_state()
+        logger.debug("Response state reset")
 
         # Upload files
         file_urls: list[str] = []
 
         if files:
+            logger.debug(f"Validating {len(files)} files")
             validated = self._validate_files(files)
+            logger.debug(f"Validated {len(validated)} files, uploading...")
             file_urls = [self._upload_file(f) for f in validated]
+            logger.debug(f"Uploaded {len(file_urls)} files successfully")
 
         payload = self._build_payload(query, model, file_urls)
+        logger.debug(
+            f"Payload built | payload_keys={list(payload.keys())} params_keys={list(payload.get('params', {}).keys())}"
+        )
+
+        logger.debug("Initializing search session")
         self._http.init_search(query)
 
         if stream:
+            logger.debug("Starting streaming mode")
             self._stream_generator = self._stream(payload)
         else:
+            logger.debug("Starting complete mode (non-streaming)")
             self._complete(payload)
+            logger.debug(
+                f"Query completed | "
+                f"title={self._title} "
+                f"answer_length={len(self._answer) if self._answer else 0} "
+                f"chunks_count={len(self._chunks)} "
+                f"search_results_count={len(self._search_results)}"
+            )
 
     def _reset_response_state(self) -> None:
         self._title = None
@@ -237,8 +349,8 @@ class Conversation:
                         is_image=mimetype.startswith("image/"),
                     )
                 )
-            except FileValidationError:
-                raise
+            except FileValidationError as error:
+                raise error
             except (FileNotFoundError, PermissionError) as error:
                 raise FileValidationError(file_path, f"Cannot access file: {error}") from error
             except OSError as error:
