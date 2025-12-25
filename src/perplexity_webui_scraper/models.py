@@ -1,4 +1,6 @@
-"""AI model definitions for Perplexity WebUI Scraper."""
+"""
+AI model definitions for Perplexity WebUI Scraper.
+"""
 
 from __future__ import annotations
 
@@ -27,49 +29,81 @@ class Models:
     """
 
     RESEARCH = Model(identifier="pplx_alpha")
-    """Research - Fast and thorough for routine research"""
+    """
+    Research - Fast and thorough for routine research.
+    """
 
     LABS = Model(identifier="pplx_beta")
-    """Labs - Multi-step tasks with advanced troubleshooting"""
+    """
+    Labs - Multi-step tasks with advanced troubleshooting.
+    """
 
     BEST = Model(identifier="pplx_pro_upgraded")
-    """Best - Automatically selects the most responsive model based on the query"""
+    """
+    Best - Automatically selects the most responsive model based on the query.
+    """
 
     SONAR = Model(identifier="experimental")
-    """Sonar - Perplexity's fast model"""
+    """
+    Sonar - Perplexity's fast model.
+    """
 
     GPT_52 = Model(identifier="gpt52")
-    """GPT-5.2 - OpenAI's latest model"""
+    """
+    GPT-5.2 - OpenAI's latest model.
+    """
 
     GPT_52_THINKING = Model(identifier="gpt52_thinking")
-    """GPT-5.2 Thinking - OpenAI's latest model with thinking"""
+    """
+    GPT-5.2 Thinking - OpenAI's latest model with thinking.
+    """
 
     CLAUDE_45_OPUS = Model(identifier="claude45opus")
-    """Claude Opus 4.5 - Anthropic's Opus reasoning model"""
+    """
+    Claude Opus 4.5 - Anthropic's Opus reasoning model.
+    """
 
     CLAUDE_45_OPUS_THINKING = Model(identifier="claude45opusthinking")
-    """Claude Opus 4.5 Thinking - Anthropic's Opus reasoning model with thinking"""
+    """
+    Claude Opus 4.5 Thinking - Anthropic's Opus reasoning model with thinking.
+    """
 
     GEMINI_3_PRO = Model(identifier="gemini30pro")
-    """Gemini 3 Pro - Google's newest reasoning model"""
+    """
+    Gemini 3 Pro - Google's newest reasoning model.
+    """
 
     GEMINI_3_FLASH = Model(identifier="gemini30flash")
-    """Gemini 3 Flash - Google's fast reasoning model"""
+    """
+    Gemini 3 Flash - Google's fast reasoning model.
+    """
 
     GEMINI_3_FLASH_THINKING = Model(identifier="gemini30flash_high")
-    """Gemini 3 Flash Thinking - Google's fast reasoning model with enhanced thinking"""
+    """
+    Gemini 3 Flash Thinking - Google's fast reasoning model with enhanced thinking.
+    """
 
     GROK_41 = Model(identifier="grok41nonreasoning")
-    """Grok 4.1 - xAI's latest advanced model"""
+    """
+    Grok 4.1 - xAI's latest advanced model.
+    """
 
     GROK_41_THINKING = Model(identifier="grok41reasoning")
-    """Grok 4.1 Thinking - xAI's latest reasoning model"""
+    """
+    Grok 4.1 Thinking - xAI's latest reasoning model.
+    """
 
     KIMI_K2_THINKING = Model(identifier="kimik2thinking")
-    """Kimi K2 Thinking - Moonshot AI's latest reasoning model"""
+    """
+    Kimi K2 Thinking - Moonshot AI's latest reasoning model.
+    """
 
     CLAUDE_45_SONNET = Model(identifier="claude45sonnet")
-    """Claude Sonnet 4.5 - Anthropic's newest advanced model"""
+    """
+    Claude Sonnet 4.5 - Anthropic's newest advanced model.
+    """
 
     CLAUDE_45_SONNET_THINKING = Model(identifier="claude45sonnetthinking")
-    """Claude Sonnet 4.5 Thinking - Anthropic's newest reasoning model"""
+    """
+    Claude Sonnet 4.5 Thinking - Anthropic's newest reasoning model.
+    """

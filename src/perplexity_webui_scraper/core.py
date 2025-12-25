@@ -1,4 +1,6 @@
-"""Core client implementation."""
+"""
+Core client implementation.
+"""
 
 from __future__ import annotations
 

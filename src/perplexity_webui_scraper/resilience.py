@@ -84,7 +84,9 @@ class RateLimiter:
     _lock: Lock = field(default_factory=Lock, init=False)
 
     def acquire(self) -> None:
-        """Wait until a request can be made within rate limits."""
+        """
+        Wait until a request can be made within rate limits.
+        """
 
         with self._lock:
             now = time.monotonic()

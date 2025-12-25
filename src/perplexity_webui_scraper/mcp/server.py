@@ -1,4 +1,6 @@
-"""MCP server implementation using FastMCP."""
+"""
+MCP server implementation using FastMCP.
+"""
 
 from __future__ import annotations
 
@@ -153,7 +155,9 @@ def perplexity_ask(
 
 
 def main() -> None:
-    """Run the MCP server."""
+    """
+    Run the MCP server.
+    """
 
     mcp.run()
 

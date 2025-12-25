@@ -120,7 +120,9 @@ def log_request(
     headers: dict[str, str] | None = None,
     body_size: int | None = None,
 ) -> None:
-    """Log an outgoing HTTP request with full details."""
+    """
+    Log an outgoing HTTP request with full details.
+    """
 
     logger.debug(
         "HTTP request initiated | method={method} url={url} params={params} "
@@ -142,7 +144,9 @@ def log_response(
     content_length: int | None = None,
     headers: dict[str, str] | None = None,
 ) -> None:
-    """Log an HTTP response with full details."""
+    """
+    Log an HTTP response with full details.
+    """
 
     level = "DEBUG" if status_code < 400 else "WARNING"
     logger.log(
@@ -163,7 +167,9 @@ def log_retry(
     exception: BaseException | None,
     wait_seconds: float,
 ) -> None:
-    """Log a retry attempt."""
+    """
+    Log a retry attempt.
+    """
 
     logger.warning(
         "Retry attempt | attempt={attempt}/{max_attempts} exception={exception_type}: {exception_msg} "
@@ -177,7 +183,9 @@ def log_retry(
 
 
 def log_cloudflare_detected(status_code: int, markers_found: list[str]) -> None:
-    """Log Cloudflare challenge detection."""
+    """
+    Log Cloudflare challenge detection.
+    """
 
     logger.warning(
         "Cloudflare challenge detected | status_code={status_code} markers={markers}",
@@ -187,7 +195,9 @@ def log_cloudflare_detected(status_code: int, markers_found: list[str]) -> None:
 
 
 def log_fingerprint_rotation(old_profile: str, new_profile: str) -> None:
-    """Log browser fingerprint rotation."""
+    """
+    Log browser fingerprint rotation.
+    """
 
     logger.info(
         "Browser fingerprint rotated | old_profile={old} new_profile={new}",
@@ -197,7 +207,9 @@ def log_fingerprint_rotation(old_profile: str, new_profile: str) -> None:
 
 
 def log_rate_limit(wait_seconds: float) -> None:
-    """Log rate limiting wait."""
+    """
+    Log rate limiting wait.
+    """
 
     logger.debug(
         "Rate limiter throttling | wait_seconds={wait_seconds:.3f}",
@@ -206,7 +218,9 @@ def log_rate_limit(wait_seconds: float) -> None:
 
 
 def log_session_created(impersonate: str, timeout: int) -> None:
-    """Log HTTP session creation."""
+    """
+    Log HTTP session creation.
+    """
 
     logger.info(
         "HTTP session created | browser_profile={profile} timeout={timeout}s",
@@ -216,7 +230,9 @@ def log_session_created(impersonate: str, timeout: int) -> None:
 
 
 def log_conversation_created(config_summary: str) -> None:
-    """Log conversation creation."""
+    """
+    Log conversation creation.
+    """
 
     logger.info(
         "Conversation created | config={config}",
@@ -225,7 +241,9 @@ def log_conversation_created(config_summary: str) -> None:
 
 
 def log_query_sent(query: str, model: str, has_files: bool) -> None:
-    """Log a query being sent."""
+    """
+    Log a query being sent.
+    """
 
     logger.info(
         "Query sent | model={model} has_files={has_files} query_preview={query_preview}",
@@ -236,7 +254,9 @@ def log_query_sent(query: str, model: str, has_files: bool) -> None:
 
 
 def log_stream_chunk(chunk_size: int, is_final: bool) -> None:
-    """Log a streaming chunk received."""
+    """
+    Log a streaming chunk received.
+    """
 
     logger.debug(
         "Stream chunk received | size={size} is_final={is_final}",
@@ -246,7 +266,9 @@ def log_stream_chunk(chunk_size: int, is_final: bool) -> None:
 
 
 def log_error(error: Exception, context: str = "") -> None:
-    """Log an error with full traceback."""
+    """
+    Log an error with full traceback.
+    """
 
     logger.exception(
         "Error occurred | context={context} error_type={error_type} message={message}",

@@ -1,4 +1,6 @@
-"""HTTP client wrapper for Perplexity API requests."""
+"""
+HTTP client wrapper for Perplexity API requests.
+"""
 
 from __future__ import annotations
 

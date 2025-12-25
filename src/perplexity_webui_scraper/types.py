@@ -1,4 +1,6 @@
-"""Response types and data models."""
+"""
+Response types and data models.
+"""
 
 from __future__ import annotations
 
@@ -8,7 +10,9 @@ from typing import Any
 
 @dataclass(frozen=True, slots=True)
 class Coordinates:
-    """Geographic coordinates (lat/lng)."""
+    """
+    Geographic coordinates (lat/lng).
+    """
 
     latitude: float
     longitude: float
@@ -16,7 +20,9 @@ class Coordinates:
 
 @dataclass(frozen=True, slots=True)
 class SearchResultItem:
-    """A single search result."""
+    """
+    A single search result.
+    """
 
     title: str | None = None
     snippet: str | None = None
@@ -25,7 +31,9 @@ class SearchResultItem:
 
 @dataclass(slots=True)
 class Response:
-    """Response from Perplexity AI."""
+    """
+    Response from Perplexity AI.
+    """
 
     title: str | None = None
     answer: str | None = None
@@ -38,7 +46,9 @@ class Response:
 
 @dataclass(frozen=True, slots=True)
 class _FileInfo:
-    """Internal file info for uploads."""
+    """
+    Internal file info for uploads.
+    """
 
     path: str
     size: int

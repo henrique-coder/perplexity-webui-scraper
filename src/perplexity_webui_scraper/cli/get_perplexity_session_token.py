@@ -1,4 +1,6 @@
-"""CLI utility for secure Perplexity authentication and session extraction."""
+"""
+CLI utility for secure Perplexity authentication and session extraction.
+"""
 
 from __future__ import annotations
 
@@ -57,7 +59,9 @@ def update_env(token: str) -> bool:
 
 
 def _initialize_session() -> tuple[Session, str]:
-    """Initialize session and obtain CSRF token."""
+    """
+    Initialize session and obtain CSRF token.
+    """
 
     session = Session(impersonate="chrome", headers={"Referer": BASE_URL, "Origin": BASE_URL})
 
@@ -73,7 +77,9 @@ def _initialize_session() -> tuple[Session, str]:
 
 
 def _request_verification_code(session: Session, csrf: str, email: str) -> None:
-    """Send verification code to user's email."""
+    """
+    Send verification code to user's email.
+    """
 
     with console.status("[bold green]Sending verification code...", spinner="dots"):
         r = session.post(
@@ -92,7 +98,9 @@ def _request_verification_code(session: Session, csrf: str, email: str) -> None:
 
 
 def _validate_and_get_redirect_url(session: Session, email: str, user_input: str) -> str:
-    """Validate user input (OTP or magic link) and return redirect URL."""
+    """
+    Validate user input (OTP or magic link) and return redirect URL.
+    """
 
     with console.status("[bold green]Validating...", spinner="dots"):
         if user_input.startswith("http"):
@@ -120,7 +128,9 @@ def _validate_and_get_redirect_url(session: Session, email: str, user_input: str
 
 
 def _extract_session_token(session: Session, redirect_url: str) -> str:
-    """Extract session token from cookies after authentication."""
+    """
+    Extract session token from cookies after authentication.
+    """
 
     session.get(redirect_url)
     token = session.cookies.get("__Secure-next-auth.session-token")
@@ -132,7 +142,9 @@ def _extract_session_token(session: Session, redirect_url: str) -> str:
 
 
 def _display_and_save_token(token: str) -> None:
-    """Display token and optionally save to .env file."""
+    """
+    Display token and optionally save to .env file.
+    """
 
     console.print("\n[bold green]✅ Token generated successfully![/bold green]")
     console.print(f"\n[bold white]Your session token:[/bold white]\n[green]{token}[/green]\n")
@@ -147,7 +159,9 @@ def _display_and_save_token(token: str) -> None:
 
 
 def _show_header() -> None:
-    """Display welcome header."""
+    """
+    Display welcome header.
+    """
 
     console.print(
         Panel(
@@ -161,7 +175,9 @@ def _show_header() -> None:
 
 
 def _show_exit_message() -> None:
-    """Display security note and wait for user to exit."""
+    """
+    Display security note and wait for user to exit.
+    """
 
     console.print("\n[bold yellow]⚠️ Security Note:[/bold yellow]")
     console.print("Press [bold white]ENTER[/bold white] to clear screen and exit.")

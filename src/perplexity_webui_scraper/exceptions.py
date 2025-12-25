@@ -1,4 +1,6 @@
-"""Custom exceptions for Perplexity WebUI Scraper."""
+"""
+Custom exceptions for Perplexity WebUI Scraper.
+"""
 
 from __future__ import annotations
 

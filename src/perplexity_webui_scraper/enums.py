@@ -1,4 +1,6 @@
-"""Enums for Perplexity WebUI Scraper configuration options."""
+"""
+Enums for Perplexity WebUI Scraper configuration options.
+"""
 
 from __future__ import annotations
 
@@ -13,13 +15,19 @@ class CitationMode(str, Enum):
     """
 
     DEFAULT = "default"
-    """Keep original Perplexity citation format (e.g., 'This is a citation[1]')."""
+    """
+    Keep original Perplexity citation format (e.g., 'This is a citation[1]').
+    """
 
     MARKDOWN = "markdown"
-    """Convert citations to markdown links (e.g., 'This is a citation[1](https://example.com)')."""
+    """
+    Convert citations to markdown links (e.g., 'This is a citation[1](https://example.com)').
+    """
 
     CLEAN = "clean"
-    """Remove all citation markers (e.g., 'This is a citation')."""
+    """
+    Remove all citation markers (e.g., 'This is a citation').
+    """
 
 
 class SearchFocus(str, Enum):
@@ -30,10 +38,14 @@ class SearchFocus(str, Enum):
     """
 
     WEB = "internet"
-    """Search the web for information. Best for factual queries and research."""
+    """
+    Search the web for information. Best for factual queries and research.
+    """
 
     WRITING = "writing"
-    """Focus on writing tasks. Best for creative writing, editing, and text generation."""
+    """
+    Focus on writing tasks. Best for creative writing, editing, and text generation.
+    """
 
 
 class SourceFocus(str, Enum):
@@ -44,16 +56,24 @@ class SourceFocus(str, Enum):
     """
 
     WEB = "web"
-    """Search across the entire internet. General web search."""
+    """
+    Search across the entire internet. General web search.
+    """
 
     ACADEMIC = "scholar"
-    """Search academic papers and scholarly articles (Google Scholar, etc.)."""
+    """
+    Search academic papers and scholarly articles (Google Scholar, etc.).
+    """
 
     SOCIAL = "social"
-    """Search social media for discussions and opinions (Reddit, Twitter, etc.)."""
+    """
+    Search social media for discussions and opinions (Reddit, Twitter, etc.).
+    """
 
     FINANCE = "edgar"
-    """Search SEC EDGAR filings for financial and corporate documents."""
+    """
+    Search SEC EDGAR filings for financial and corporate documents.
+    """
 
 
 class TimeRange(str, Enum):
@@ -64,19 +84,29 @@ class TimeRange(str, Enum):
     """
 
     ALL = ""
-    """Include sources from all time. No time restriction."""
+    """
+    Include sources from all time. No time restriction.
+    """
 
     TODAY = "DAY"
-    """Include only sources from today (last 24 hours)."""
+    """
+    Include only sources from today (last 24 hours).
+    """
 
     LAST_WEEK = "WEEK"
-    """Include sources from the last 7 days."""
+    """
+    Include sources from the last 7 days.
+    """
 
     LAST_MONTH = "MONTH"
-    """Include sources from the last 30 days."""
+    """
+    Include sources from the last 30 days.
+    """
 
     LAST_YEAR = "YEAR"
-    """Include sources from the last 365 days."""
+    """
+    Include sources from the last 365 days.
+    """
 
 
 class LogLevel(str, Enum):
@@ -87,19 +117,31 @@ class LogLevel(str, Enum):
     """
 
     DISABLED = "DISABLED"
-    """Completely disable all logging output. This is the default."""
+    """
+    Completely disable all logging output. This is the default.
+    """
 
     DEBUG = "DEBUG"
-    """Show all messages including internal debug information."""
+    """
+    Show all messages including internal debug information.
+    """
 
     INFO = "INFO"
-    """Show informational messages, warnings, and errors."""
+    """
+    Show informational messages, warnings, and errors.
+    """
 
     WARNING = "WARNING"
-    """Show only warnings and errors."""
+    """
+    Show only warnings and errors.
+    """
 
     ERROR = "ERROR"
-    """Show only error messages."""
+    """
+    Show only error messages.
+    """
 
     CRITICAL = "CRITICAL"
-    """Show only critical/fatal errors."""
+    """
+    Show only critical/fatal errors.
+    """

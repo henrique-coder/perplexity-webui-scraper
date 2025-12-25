@@ -1,4 +1,6 @@
-"""Configuration classes."""
+"""
+Configuration classes.
+"""
 
 from __future__ import annotations
 
@@ -17,7 +19,9 @@ if TYPE_CHECKING:
 
 @dataclass(slots=True)
 class ConversationConfig:
-    """Default settings for a conversation. Can be overridden per message."""
+    """
+    Default settings for a conversation. Can be overridden per message.
+    """
 
     model: Model | None = None
     citation_mode: CitationMode = CitationMode.CLEAN
