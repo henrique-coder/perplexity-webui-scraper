@@ -5,7 +5,7 @@ description = "Python scraper to extract AI responses from Perplexity's web inte
 authors = [{ name = "henrique-coder", email = "henriquemoreira10fk@gmail.com" }]
 license = "MIT"
 readme = "README.md"
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.10"
 keywords = ["perplexity", "ai", "scraper", "webui", "api", "client"]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -35,11 +35,13 @@ dev = [
     "beautifulsoup4>=4.14.3",
     "jsbeautifier>=1.15.4",
     "lxml>=6.0.2",
+    "prek>=0.2.24",
     "python-dotenv>=1.2.1",
     "rich>=14.2.0",
 ]
 lint = [
     "ruff>=0.14.10",
+    "ty>=0.0.7",
 ]
 tests = [
     "pytest>=9.0.2",

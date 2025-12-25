@@ -460,9 +460,10 @@ class Conversation:
         return CITATION_PATTERN.sub(replacer, text)
 
     def _parse_line(self, line: str | bytes) -> dict[str, Any] | None:
-        prefix = b"data: " if isinstance(line, bytes) else "data: "
+        if isinstance(line, bytes) and line.startswith(b"data: "):
+            return loads(line[6:])
 
-        if (isinstance(line, bytes) and line.startswith(prefix)) or (isinstance(line, str) and line.startswith(prefix)):
+        if isinstance(line, str) and line.startswith("data: "):
             return loads(line[6:])
 
         return None
@@ -583,7 +584,8 @@ class Conversation:
         chunks = answer_data.get("chunks", [])
 
         if chunks:
-            self._chunks = [self._format_citations(chunk) for chunk in chunks]
+            formatted = [self._format_citations(chunk) for chunk in chunks if chunk is not None]
+            self._chunks = [c for c in formatted if c is not None]
 
         self._raw_data = answer_data
 

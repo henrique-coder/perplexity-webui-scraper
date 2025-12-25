@@ -7,7 +7,8 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class Model:
-    """AI model configuration.
+    """
+    AI model configuration.
 
     Attributes:
         identifier: Model identifier used by the API.
@@ -19,7 +20,8 @@ class Model:
 
 
 class Models:
-    """Available AI models with their configurations.
+    """
+    Available AI models with their configurations.
 
     All models use the "copilot" mode which enables web search.
     """

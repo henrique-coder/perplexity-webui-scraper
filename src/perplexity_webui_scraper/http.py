@@ -177,7 +177,9 @@ class HTTPClient:
             logger.debug(f"Browser fingerprint rotated successfully | new_profile={new_profile}")
 
     def _on_retry(self, retry_state: RetryCallState) -> None:
-        """Callback executed before each retry attempt."""
+        """
+        Callback executed before each retry attempt.
+        """
 
         attempt = retry_state.attempt_number
         exception = retry_state.outcome.exception() if retry_state.outcome else None
@@ -257,7 +259,7 @@ class HTTPClient:
             logger.debug(f"Error has response | status_code={status_code}")
 
             # Check for Cloudflare before handling as regular 403
-            if is_cloudflare_status(status_code):
+            if status_code is not None and is_cloudflare_status(status_code):
                 logger.debug(f"Checking if error is Cloudflare challenge | status_code={status_code}")
 
                 try:
@@ -431,6 +433,7 @@ class HTTPClient:
                 response.raise_for_status()
 
                 logger.debug(f"POST request successful | endpoint={endpoint}")
+
                 return response
             except Exception as error:
                 elapsed_ms = (monotonic() - request_start) * 1000

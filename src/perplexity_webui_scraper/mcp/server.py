@@ -45,7 +45,6 @@ MODEL_MAP = {
     "kimi_thinking": Models.KIMI_K2_THINKING,
 }
 
-# Available model names for type hints
 ModelName = Literal[
     "best",
     "research",
@@ -81,7 +80,9 @@ _client: Perplexity | None = None
 
 
 def _get_client() -> Perplexity:
-    """Get or create Perplexity client."""
+    """
+    Get or create Perplexity client.
+    """
 
     global _client  # noqa: PLW0603
     if _client is None:
@@ -108,35 +109,15 @@ def perplexity_ask(
 
     Returns up-to-date information from web sources. Use for factual queries, research,
     current events, news, library versions, documentation, or any question requiring
+    the latest information.
 
     Args:
-        query: The search query or question to ask Perplexity AI.
-        model: AI model to use. Options:
-            - "best": Automatically selects optimal model (default)
-            - "research": Fast and thorough for routine research
-            - "labs": Multi-step tasks with advanced troubleshooting
-            - "sonar": Perplexity's fast built-in model
-            - "gpt52": OpenAI's GPT-5.2
-            - "gpt52_thinking": GPT-5.2 with reasoning
-            - "claude_opus": Anthropic's Claude Opus 4.5
-            - "claude_opus_thinking": Claude Opus with reasoning
-            - "claude_sonnet": Anthropic's Claude Sonnet 4.5
-            - "claude_sonnet_thinking": Claude Sonnet with reasoning
-            - "gemini_pro": Google's Gemini 3 Pro
-            - "gemini_flash": Google's Gemini 3 Flash
-            - "gemini_flash_thinking": Gemini Flash with reasoning
-            - "grok": xAI's Grok 4.1
-            - "grok_thinking": Grok with reasoning
-            - "kimi_thinking": Moonshot's Kimi K2 with reasoning
-        source_focus: Type of sources to prioritize:
-            - "web": General web search (default)
-            - "academic": Scholarly articles and papers
-            - "social": Social media (Reddit, Twitter)
-            - "finance": SEC EDGAR financial filings
-            - "all": Combine web, academic, and social sources
+        query: The question to ask.
+        model: AI model to use.
+        source_focus: Type of sources to prioritize (web, academic, social, finance, all).
 
     Returns:
-        AI-generated answer with inline citations [1][2] and a Citations section.
+        AI-generated answer with inline citations and a Citations section.
     """
 
     client = _get_client()
@@ -168,7 +149,7 @@ def perplexity_ask(
 
         return "".join(response_parts)
     except Exception as error:
-        return f"Error searching Perplexity: {error!s}"
+        return f"Error: {error!s}"
 
 
 def main() -> None:

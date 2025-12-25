@@ -160,7 +160,7 @@ def log_response(
 def log_retry(
     attempt: int,
     max_attempts: int,
-    exception: Exception,
+    exception: BaseException | None,
     wait_seconds: float,
 ) -> None:
     """Log a retry attempt."""
@@ -170,8 +170,8 @@ def log_retry(
         "wait_seconds={wait_seconds:.2f}",
         attempt=attempt,
         max_attempts=max_attempts,
-        exception_type=type(exception).__name__,
-        exception_msg=str(exception),
+        exception_type=type(exception).__name__ if exception else "None",
+        exception_msg=str(exception) if exception else "None",
         wait_seconds=wait_seconds,
     )
 
