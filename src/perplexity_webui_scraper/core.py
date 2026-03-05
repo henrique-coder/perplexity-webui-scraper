@@ -63,6 +63,7 @@ class Perplexity:
             retry_jitter=cfg.retry_jitter,
             requests_per_second=cfg.requests_per_second,
             rotate_fingerprint=cfg.rotate_fingerprint,
+            max_init_query_length=cfg.max_init_query_length,
         )
 
         logger.info("Perplexity client initialized")

@@ -30,6 +30,7 @@ class HTTPClient:
 
     __slots__ = (
         "_impersonate",
+        "_max_init_query_length",
         "_rate_limiter",
         "_retry_config",
         "_rotate_fingerprint",
@@ -49,11 +50,13 @@ class HTTPClient:
         retry_jitter: float = 0.5,
         requests_per_second: float = 0.5,
         rotate_fingerprint: bool = True,
+        max_init_query_length: int = 2000,
     ) -> None:
         self._session_token = session_token
         self._timeout = timeout
         self._impersonate = impersonate
         self._rotate_fingerprint = rotate_fingerprint
+        self._max_init_query_length = max_init_query_length
 
         self._retry_config = RetryConfig(
             max_retries=max_retries,
@@ -219,7 +222,16 @@ class HTTPClient:
             response.close()
 
     def init_search(self, query: str) -> None:
-        """Initialize a search session (required before prompts)."""
+        """Initialize a search session (required before prompts).
+
+        The query is sent as a GET parameter. Very long queries can exceed
+        server URI limits (HTTP 414). When ``max_init_query_length`` is set
+        (default 2000), the query is truncated to stay within safe limits.
+        Set to ``0`` to disable truncation.
+        """
+
+        if self._max_init_query_length and len(query) > self._max_init_query_length:
+            query = query[: self._max_init_query_length]
 
         self.get(ENDPOINT_SEARCH_INIT, params={"q": query})
 

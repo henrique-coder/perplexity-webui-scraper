@@ -44,5 +44,6 @@ class ClientConfig(BaseModel):
     retry_jitter: float = 0.5
     requests_per_second: float = 0.5
     rotate_fingerprint: bool = True
+    max_init_query_length: int = 2000
     logging_level: LogLevel = LogLevel.DISABLED
     log_file: str | PathLike[str] | None = None
