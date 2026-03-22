@@ -34,16 +34,14 @@ You can set global parameters or pass specific configurations for individual rou
 
 ```python
 from perplexity_webui_scraper import (
-    CitationMode,
     ConversationConfig,
     Coordinates,
-    SourceFocus,
 )
 
 config = ConversationConfig(
     model="deep-research",
-    citation_mode=CitationMode.MARKDOWN,
-    source_focus=[SourceFocus.WEB, SourceFocus.ACADEMIC],
+    citation_mode="markdown",
+    source_focus=["web", "academic"],
     language="en-US",
     coordinates=Coordinates(latitude=12.3456, longitude=-98.7654),
 )

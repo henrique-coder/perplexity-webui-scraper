@@ -11,6 +11,7 @@ This library allows you to interact with Perplexity programmatically, start conv
 - File attachments (Documents and Images)
 - Asynchronous streaming capabilities
 - MCP (Model Context Protocol) Server support out-of-the-box
+- OpenAI-compatible REST API server (drop-in replacement for any OpenAI client)
 
 ## Disclaimer
 

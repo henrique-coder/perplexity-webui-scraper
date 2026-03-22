@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from os import PathLike
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -14,6 +14,14 @@ from pydantic import BaseModel, ConfigDict
 #   - tuple[bytes, str]             → (data, filename)         — mimetype guessed from filename
 #   - tuple[bytes, str, str]        → (data, filename, mimetype)
 FileInput = str | PathLike[str] | bytes | tuple[bytes, str] | tuple[bytes, str, str]
+
+
+# Type aliases for intuitive string arguments
+CitationMode = Literal["default", "markdown", "clean"]
+SearchFocus = Literal["web", "writing"]
+SourceFocus = Literal["web", "academic", "social", "finance", "all"]
+TimeRange = Literal["all", "day", "week", "month", "year"]
+LogLevel = Literal["disabled", "debug", "info", "warning", "error", "critical"]
 
 
 class Coordinates(BaseModel):
