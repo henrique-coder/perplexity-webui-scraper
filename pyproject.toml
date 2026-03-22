@@ -1,6 +1,6 @@
 [project]
 name = "perplexity-webui-scraper"
-version = "0.6.3"
+version = "0.6.4"
 description = "Python scraper to extract AI responses from Perplexity's web interface."
 authors = [{ name = "Henrique Moreira", email = "github@henriquecoder.com" }]
 license = "MIT"
@@ -35,11 +35,11 @@ dev = [
 ]
 docs = [
     "mkdocs>=1.6.1",
-    "mkdocs-material>=9.7.5",
+    "mkdocs-material>=9.7.6",
 ]
 lint = [
-    "ruff>=0.15.6",
-    "ty>=0.0.23",
+    "ruff>=0.15.7",
+    "ty>=0.0.24",
 ]
 
 [project.optional-dependencies]

@@ -73,20 +73,10 @@ def _ask(query: str, model_id: str, source_focus: SourceFocusName = "web") -> st
         )
 
         conversation.ask(query)
-        answer = conversation.answer or "No answer received"
-
-        response_parts = [answer]
-
-        if conversation.search_results:
-            response_parts.append("\n\nCitations:")
-
-            for i, result in enumerate(conversation.search_results, 1):
-                url = result.url or ""
-                response_parts.append(f"\n[{i}]: {url}")
-
-        return "".join(response_parts)
     except Exception as error:
         return f"Error: {error!s}"
+    else:
+        return conversation.answer or "No answer received"
 
 
 def _create_tool_function(model_id: str) -> None:

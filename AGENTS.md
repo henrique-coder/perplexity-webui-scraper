@@ -100,12 +100,12 @@ Always check the `Justfile` in the root directory and use it.
 
 ### Source of Truth for Versions
 
-The project no longer considers `pyproject.toml` as the manual source of truth for version bumps.
-Releases are exclusively driven by **`CHANGELOG.md`**.
+Releases are strictly driven by both **`CHANGELOG.md`** and **`pyproject.toml`**.
 
 1. **Keep a Changelog Format:** `CHANGELOG.md` adheres to the Keep a Changelog format.
 2. **Version Bumps:** Adding a new `## [X.Y.Z] - YYYY-MM-DD` header at the top of the changelog triggers the CI/CD pipeline.
-3. **`publish.yml`**:
+3. **`pyproject.toml` Update:** The `version` key in `pyproject.toml` must be manually updated to match the new version in `CHANGELOG.md`.
+4. **`publish.yml`**:
    - Triggers on modifying `CHANGELOG.md` in the `prod` branch.
    - Validates that the versions in `CHANGELOG.md` and `pyproject.toml` match.
    - Publishes the build to PyPI using `uv build` and `uv publish`.
