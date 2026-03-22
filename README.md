@@ -20,27 +20,42 @@ Python scraper to extract AI responses from [Perplexity's](https://www.perplexit
 
 ## What is this?
 
-This library allows you to interact with Perplexity programmatically, start conversations, upload files, and stream responses back, all using the same web interface endpoints used by the browser, but powered by Python.
+This library lets you interact with Perplexity AI programmatically using the same web endpoints as the browser — no official API key required. It supports conversations, file uploads, streaming, an MCP server for AI agents, and a drop-in OpenAI-compatible REST API.
 
-- **Requirements:** A Perplexity Pro or Max account, and your browser's Session Token.
-- **Key Features:** Full latest model support (GPT-5.4, Opus 4.6, Deep Research), file attachments, asynchronous streaming, and an out-of-the-box MCP Server for AI agents.
+- **Requirements:** A Perplexity Pro or Max account and your browser session token.
+- **Key Features:** Full model support (GPT-5.4, Opus 4.6, Deep Research…), file attachments, streaming, MCP Server, OpenAI-compatible API.
+
+## Installation
+
+```bash
+# Core library only
+uv add perplexity-webui-scraper
+
+# Interactive session token generator (adds rich)
+uv add "perplexity-webui-scraper[cli]"
+
+# MCP Server for AI agents (adds fastmcp)
+uv add "perplexity-webui-scraper[mcp]"
+
+# OpenAI-compatible API server (adds fastapi + uvicorn + typer)
+uv add "perplexity-webui-scraper[api]"
+
+# Everything at once
+uv add "perplexity-webui-scraper[cli,mcp,api]"
+```
 
 ## Quick Start
 
-### 1. Install
+### 1. Get your session token
 
 ```bash
-# Minimal installation (core library only)
-uv add perplexity-webui-scraper
-
-# With interactive session token fetcher (`rich` dependency)
-uv add perplexity-webui-scraper[cli]
-
-# With MCP Server support (`fastmcp` dependency)
-uv add perplexity-webui-scraper[mcp]
+# Interactive CLI wizard — walks you through email auth
+uv run get-perplexity-session-token
 ```
 
-### 2. Basic Example
+Or retrieve `__Secure-next-auth.session-token` manually from your browser cookies on `perplexity.ai`.
+
+### 2. Basic usage
 
 ```python
 from perplexity_webui_scraper import Perplexity
@@ -50,7 +65,127 @@ conversation = client.create_conversation()
 
 conversation.ask("What is quantum computing?")
 print(conversation.answer)
+
+# Follow-ups preserve context automatically
+conversation.ask("Explain it simpler")
+print(conversation.answer)
 ```
+
+### 3. Streaming
+
+```python
+for chunk in conversation.ask("Explain AI", stream=True):
+    if chunk.last_chunk:
+        print(chunk.last_chunk, end="", flush=True)
+```
+
+### 4. Choose a model
+
+```python
+from perplexity_webui_scraper import ConversationConfig
+
+conversation = client.create_conversation(ConversationConfig(model="gpt-5.4-thinking"))
+conversation.ask("Solve this step by step: ...")
+print(conversation.answer)
+```
+
+## Available CLIs
+
+| Command                        | Extra | Description                                               |
+| ------------------------------ | ----- | --------------------------------------------------------- |
+| `get-perplexity-session-token` | `cli` | Interactive email auth wizard to generate a session token |
+| `perplexity-webui-scraper-mcp` | `mcp` | Start the MCP server (used via MCP config, not directly)  |
+| `perplexity-webui-scraper-api` | `api` | Start the OpenAI-compatible REST API server               |
+
+## OpenAI-Compatible API
+
+Run a local server that accepts OpenAI-formatted requests and forwards them to Perplexity. Works as a **drop-in replacement** for any OpenAI client — authentication is done per-request via `Authorization: Bearer`, exactly like the real API.
+
+```bash
+# Start the server (no token needed at startup)
+perplexity-webui-scraper-api
+
+# Custom host and port
+perplexity-webui-scraper-api --host 0.0.0.0 --port 8080
+
+# Development mode with auto-reload
+perplexity-webui-scraper-api --reload
+```
+
+### CLI options
+
+| Option        | Short | Default     | Description              |
+| ------------- | ----- | ----------- | ------------------------ |
+| `--host`      | `-H`  | `127.0.0.1` | Bind address             |
+| `--port`      | `-p`  | `8000`      | Port to listen on        |
+| `--reload`    |       | `False`     | Enable auto-reload (dev) |
+| `--log-level` |       | `info`      | Uvicorn log level        |
+
+### Authentication
+
+Pass your Perplexity session token as the API key in every request — exactly like the OpenAI API:
+
+```bash
+# curl
+curl http://localhost:8000/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "best", "messages": [{"role": "user", "content": "Hello!"}]}'
+
+# Streaming
+curl -N http://localhost:8000/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "gemini-3-flash", "messages": [{"role": "user", "content": "Hello!"}], "stream": true}'
+```
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8000/v1",
+    api_key="YOUR_SESSION_TOKEN",  # sent as Authorization: Bearer automatically
+)
+
+response = client.chat.completions.create(
+    model="gpt-5.4",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+print(response.choices[0].message.content)
+```
+
+### API endpoints
+
+| Method | Path                   | Description                                 |
+| ------ | ---------------------- | ------------------------------------------- |
+| `GET`  | `/v1/models`           | List all available models                   |
+| `POST` | `/v1/chat/completions` | Chat completion (streaming + non-streaming) |
+| `GET`  | `/docs`                | Interactive Swagger UI                      |
+| `GET`  | `/redoc`               | ReDoc documentation                         |
+
+> Fields not supported by Perplexity (e.g. `temperature`, `top_p`) are accepted for client compatibility but silently ignored.
+
+## MCP Server
+
+Expose every Perplexity model as a separate tool for AI agents (Claude Desktop, Antigravity, etc.):
+
+```json
+{
+  "mcpServers": {
+    "perplexity-webui-scraper": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "perplexity-webui-scraper[mcp]@latest",
+        "perplexity-webui-scraper-mcp"
+      ],
+      "env": { "PERPLEXITY_SESSION_TOKEN": "your_token_here" }
+    }
+  }
+}
+```
+
+See the [full MCP documentation](https://henrique-coder.github.io/perplexity-webui-scraper/mcp-server/) for all tools and configuration details.
 
 ## Disclaimer
 

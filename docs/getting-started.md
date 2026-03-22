@@ -33,6 +33,21 @@ uvx --from "perplexity-webui-scraper[mcp]@git+https://github.com/henrique-coder/
 uv --directory /path/to/perplexity-webui-scraper run perplexity-webui-scraper-mcp
 ```
 
+### As API Server (OpenAI-compatible)
+
+```bash
+# Install with api extra
+uv add "perplexity-webui-scraper[api]"
+
+# Start the server — no token needed at startup
+perplexity-webui-scraper-api
+
+# Custom host and port
+perplexity-webui-scraper-api --host 0.0.0.0 --port 8080
+```
+
+Authentication is done per-request via `Authorization: Bearer <session_token>`, exactly like the OpenAI API.
+
 ## Requirements
 
 - **Perplexity Pro or Max account**

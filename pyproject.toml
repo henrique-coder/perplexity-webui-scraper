@@ -3,7 +3,6 @@ name = "perplexity-webui-scraper"
 version = "0.6.4"
 description = "Python scraper to extract AI responses from Perplexity's web interface."
 authors = [{ name = "Henrique Moreira", email = "github@henriquecoder.com" }]
-license = "MIT"
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
 keywords = ["perplexity", "ai", "scraper", "webui", "api", "client"]
@@ -26,7 +25,7 @@ dependencies = [
     "curl-cffi>=0.14.0",
     "loguru>=0.7.3",
     "orjson>=3.11.7",
-    "pydantic>=2.12.5",
+    "pydantic>=2.12.5"
 ]
 
 [dependency-groups]
@@ -45,6 +44,11 @@ lint = [
 [project.optional-dependencies]
 cli = [
     "rich>=14.3.3",
+]
+api = [
+    "fastapi>=0.135.1",
+    "uvicorn[standard]>=0.42.0",
+    "typer>=0.24.1",
 ]
 mcp = [
     "fastmcp>=3.1.0",
@@ -144,6 +148,7 @@ index-out-of-bounds           = "warn"
 
 [project.scripts]
 get-perplexity-session-token = "perplexity_webui_scraper.cli.get_perplexity_session_token:get_token"
+perplexity-webui-scraper-api = "perplexity_webui_scraper.api.cli:app"
 perplexity-webui-scraper-mcp = "perplexity_webui_scraper.mcp:run_server"
 
 [build-system]

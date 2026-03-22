@@ -9,11 +9,11 @@ from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
-from .enums import LogLevel
-
 
 if TYPE_CHECKING:
     from loguru import Logger
+
+    from .types import LogLevel
 
 
 logger.remove()
@@ -21,7 +21,7 @@ _logging_configured: bool = False
 
 
 def configure_logging(
-    level: LogLevel | str = LogLevel.DISABLED,
+    level: LogLevel = "disabled",
     log_file: str | PathLike[str] | None = None,
 ) -> None:
     """Configure logging for the library."""
@@ -29,7 +29,7 @@ def configure_logging(
     global _logging_configured  # noqa: PLW0603
 
     logger.remove()
-    level_str = level.value if isinstance(level, LogLevel) else str(level).upper()
+    level_str = level.upper()
 
     if level_str == "DISABLED":
         logger.disable("perplexity_webui_scraper")

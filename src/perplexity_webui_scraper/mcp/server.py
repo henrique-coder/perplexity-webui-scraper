@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 from os import environ
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from fastmcp import FastMCP
 
 from perplexity_webui_scraper.config import ClientConfig, ConversationConfig
 from perplexity_webui_scraper.core import Perplexity
-from perplexity_webui_scraper.enums import CitationMode, SearchFocus, SourceFocus
 from perplexity_webui_scraper.models import MODELS
 
+
+if TYPE_CHECKING:
+    from perplexity_webui_scraper.types import SourceFocus
 
 mcp = FastMCP(
     "perplexity-webui-scraper",
@@ -23,11 +25,11 @@ mcp = FastMCP(
 )
 
 SOURCE_FOCUS_MAP: dict[str, list[SourceFocus]] = {
-    "web": [SourceFocus.WEB],
-    "academic": [SourceFocus.ACADEMIC],
-    "social": [SourceFocus.SOCIAL],
-    "finance": [SourceFocus.FINANCE],
-    "all": [SourceFocus.WEB, SourceFocus.ACADEMIC, SourceFocus.SOCIAL],
+    "web": ["web"],
+    "academic": ["academic"],
+    "social": ["social"],
+    "finance": ["finance"],
+    "all": ["web", "academic", "social"],
 }
 
 SourceFocusName = Literal["web", "academic", "social", "finance", "all"]
@@ -60,14 +62,14 @@ def _ask(query: str, model_id: str, source_focus: SourceFocusName = "web") -> st
     """Execute a query with a specific model."""
 
     client = _get_client()
-    sources = SOURCE_FOCUS_MAP.get(source_focus, [SourceFocus.WEB])
+    sources = SOURCE_FOCUS_MAP.get(source_focus, ["web"])
 
     try:
         conversation = client.create_conversation(
             ConversationConfig(
                 model=model_id,
-                citation_mode=CitationMode.DEFAULT,
-                search_focus=SearchFocus.WEB,
+                citation_mode="default",
+                search_focus="web",
                 source_focus=sources,
             )
         )

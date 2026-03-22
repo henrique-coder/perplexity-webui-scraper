@@ -30,12 +30,11 @@ from .constants import (
     SEND_BACK_TEXT,
     USE_SCHEMATIZED_API,
 )
-from .enums import CitationMode
 from .exceptions import FileUploadError, FileValidationError, ResearchClarifyingQuestionsError, ResponseParsingError
 from .http import HTTPClient
 from .logging import configure_logging, get_logger
 from .models import Model, _resolve_model
-from .types import FileInput, Response, SearchResultItem, _FileInfo
+from .types import CitationMode, FileInput, Response, SearchResultItem, _FileInfo
 
 
 logger = get_logger(__name__)
@@ -109,7 +108,7 @@ class Conversation:
     def __init__(self, http: HTTPClient, config: ConversationConfig) -> None:
         self._http = http
         self._config = config
-        self._citation_mode = CitationMode.DEFAULT
+        self._citation_mode: CitationMode = "default"
         self._backend_uuid: str | None = None
         self._read_write_token: str | None = None
         self._title: str | None = None
@@ -400,9 +399,27 @@ class Conversation:
     ) -> dict[str, Any]:
         cfg = self._config
 
-        sources = (
-            [s.value for s in cfg.source_focus] if isinstance(cfg.source_focus, list) else [cfg.source_focus.value]
-        )
+        _source_map = {
+            "web": "web",
+            "academic": "scholar",
+            "social": "social",
+            "finance": "edgar",
+            "all": "web",
+        }
+        _search_map = {
+            "web": "internet",
+            "writing": "writing",
+        }
+        _time_map = {
+            "all": "",
+            "day": "DAY",
+            "week": "WEEK",
+            "month": "MONTH",
+            "year": "YEAR",
+        }
+
+        raw_sources = cfg.source_focus if isinstance(cfg.source_focus, list) else [cfg.source_focus]
+        sources = [_source_map.get(s, "web") for s in raw_sources]
 
         client_coordinates = None
         if cfg.coordinates is not None:
@@ -420,8 +437,8 @@ class Conversation:
             "sources": sources,
             "model_preference": model.identifier,
             "mode": model.mode,
-            "search_focus": cfg.search_focus.value,
-            "search_recency_filter": cfg.time_range.value or None,
+            "search_focus": _search_map.get(cfg.search_focus, "internet"),
+            "search_recency_filter": _time_map.get(cfg.time_range, "") or None,
             "is_incognito": not cfg.save_to_library,
             "use_schematized_api": USE_SCHEMATIZED_API,
             "local_search_enabled": cfg.coordinates is not None,
@@ -440,7 +457,7 @@ class Conversation:
         return {"params": params, "query_str": query}
 
     def _format_citations(self, text: str | None) -> str | None:
-        if not text or self._citation_mode == CitationMode.DEFAULT:
+        if not text or self._citation_mode == "default":
             return text
 
         def replacer(m: Match[str]) -> str:
@@ -449,7 +466,7 @@ class Conversation:
             if not num.isdigit():
                 return m.group(0)
 
-            if self._citation_mode == CitationMode.CLEAN:
+            if self._citation_mode == "clean":
                 return ""
 
             idx = int(num) - 1
@@ -457,7 +474,7 @@ class Conversation:
             if 0 <= idx < len(self._search_results):
                 url = self._search_results[idx].url or ""
 
-                if self._citation_mode == CitationMode.MARKDOWN and url:
+                if self._citation_mode == "markdown" and url:
                     return f"[{num}]({url})"
 
             return m.group(0)

@@ -4,7 +4,6 @@ from importlib import metadata
 
 from .config import ClientConfig, ConversationConfig
 from .core import Conversation, Perplexity
-from .enums import CitationMode, LogLevel, SearchFocus, SourceFocus, TimeRange
 from .exceptions import (
     AuthenticationError,
     FileUploadError,
@@ -17,7 +16,17 @@ from .exceptions import (
     StreamingError,
 )
 from .models import MODELS, Model
-from .types import Coordinates, FileInput, Response, SearchResultItem
+from .types import (
+    CitationMode,
+    Coordinates,
+    FileInput,
+    LogLevel,
+    Response,
+    SearchFocus,
+    SearchResultItem,
+    SourceFocus,
+    TimeRange,
+)
 
 
 ConversationConfig.model_rebuild()

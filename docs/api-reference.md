@@ -4,24 +4,35 @@
 
 Main client — create once and reuse across multiple conversations.
 
-| Parameter       | Type           | Description                  |
-| --------------- | -------------- | ---------------------------- |
-| `session_token` | `str`          | Browser cookie value         |
-| `config`        | `ClientConfig` | Timeout, retry, TLS settings |
+| Parameter       | Type           | Description                                               |
+| --------------- | -------------- | --------------------------------------------------------- |
+| `session_token` | `str`          | Browser cookie value (`__Secure-next-auth.session-token`) |
+| `config`        | `ClientConfig` | Timeout, retry, TLS, and logging settings                 |
 
 ```python
-from perplexity_webui_scraper import ClientConfig, LogLevel, Perplexity
+from perplexity_webui_scraper import ClientConfig, Perplexity
 
 client = Perplexity(
     session_token="YOUR_TOKEN",
     config=ClientConfig(
         timeout=7200,
         max_retries=3,
-        logging_level=LogLevel.DEBUG,
+        logging_level="debug",
         log_file=".debug/perplexity.log",
     ),
 )
 ```
+
+### Methods
+
+| Method                         | Returns        | Description               |
+| ------------------------------ | -------------- | ------------------------- |
+| `create_conversation(config?)` | `Conversation` | Create a new conversation |
+| `close()`                      | `None`         | Close the HTTP session    |
+
+Supports context manager (`with` statement) — closes automatically on exit.
+
+---
 
 ## `client.create_conversation(config?)`
 
@@ -33,26 +44,30 @@ from perplexity_webui_scraper import ConversationConfig
 conversation = client.create_conversation(ConversationConfig(model="gpt-5.4"))
 ```
 
+---
+
 ## `Conversation.ask(query, model?, files?, citation_mode?, stream?)`
 
-| Parameter       | Type             | Default  | Description                 |
-| --------------- | ---------------- | -------- | --------------------------- | ---------------------------- |
-| `query`         | `str`            | required | The question to ask         |
-| `model`         | `str             | None`    | `"best"`                    | Model ID string              |
-| `files`         | `list[FileInput] | None`    | `None`                      | File attachments             |
-| `citation_mode` | `CitationMode    | None`    | `None`                      | Override conversation config |
-| `stream`        | `bool`           | `False`  | Yield chunks as they arrive |
+| Parameter       | Type                      | Default           | Description                  |
+| --------------- | ------------------------- | ----------------- | ---------------------------- |
+| `query`         | `str`                     | _(required)_      | The question to ask          |
+| `model`         | `str \| None`             | `None` → `"best"` | Model ID string              |
+| `files`         | `list[FileInput] \| None` | `None`            | File attachments             |
+| `citation_mode` | `str \| None`             | `None`            | Override conversation config |
+| `stream`        | `bool`                    | `False`           | Yield chunks as they arrive  |
 
-Returns `self` (the `Conversation`) for method chaining or iteration when streaming.
+Returns `self` (the `Conversation`) for method chaining or streaming iteration.
 
 ### Conversation Properties
 
-| Property         | Type                     | Description                      |
-| ---------------- | ------------------------ | -------------------------------- | --------------------------------- |
-| `answer`         | `str                     | None`                            | Full response text                |
-| `title`          | `str                     | None`                            | Auto-generated conversation title |
-| `search_results` | `list[SearchResultItem]` | Source URLs used in the response |
-| `uuid`           | `str                     | None`                            | Conversation backend UUID         |
+| Property         | Type                     | Description                       |
+| ---------------- | ------------------------ | --------------------------------- |
+| `answer`         | `str \| None`            | Full response text                |
+| `title`          | `str \| None`            | Auto-generated conversation title |
+| `search_results` | `list[SearchResultItem]` | Source URLs used in the response  |
+| `uuid`           | `str \| None`            | Conversation backend UUID         |
+
+---
 
 ## Models
 
@@ -63,26 +78,26 @@ ConversationConfig(model="gpt-5.4-thinking")
 conversation.ask("...", model="gemini-3.1-pro")
 ```
 
-| Model ID                         | Name                       | Description                                                        | Min. Tier |
-| -------------------------------- | -------------------------- | ------------------------------------------------------------------ | --------- |
-| `"best"`                         | Pro                        | Automatically selects the most responsive model based on the query | pro       |
-| `"deep-research"`                | Deep research              | Fast and thorough for routine research                             | pro       |
-| `"sonar"`                        | Sonar                      | Perplexity's latest model                                          | pro       |
-| `"gemini-3-flash"`               | Gemini 3 Flash             | Google's fast model                                                | pro       |
-| `"gemini-3-flash-thinking"`      | Gemini 3 Flash Thinking    | Google's fast model with thinking                                  | pro       |
-| `"gemini-3.1-pro"`               | Gemini 3.1 Pro             | Google's latest model                                              | pro       |
-| `"gemini-3.1-pro-thinking"`      | Gemini 3.1 Pro Thinking    | Google's latest model with thinking                                | pro       |
-| `"gpt-5.4"`                      | GPT-5.4                    | OpenAI's latest model                                              | pro       |
-| `"gpt-5.4-thinking"`             | GPT-5.4 Thinking           | OpenAI's latest model with thinking                                | pro       |
-| `"claude-sonnet-4.6"`            | Claude Sonnet 4.6          | Anthropic's fast model                                             | pro       |
-| `"claude-sonnet-4.6-thinking"`   | Claude Sonnet 4.6 Thinking | Anthropic's newest reasoning model                                 | pro       |
-| `"claude-opus-4.6"`              | Claude Opus 4.6            | Anthropic's most advanced model                                    | max       |
-| `"claude-opus-4.6-thinking"`     | Claude Opus 4.6 Thinking   | Anthropic's Opus reasoning model with thinking                     | max       |
-| `"grok-4.1"`                     | Grok 4.1                   | xAI's latest model                                                 | pro       |
-| `"grok-4.1-thinking"`            | Grok 4.1 Thinking          | xAI's latest model with thinking                                   | pro       |
-| `"nv-nemotron-3-super-thinking"` | Nemotron 3 Super Thinking  | NVIDIA's Nemotron 3 Super 120B model with thinking                 | pro       |
+| Model ID                         | Name                       | Description                                        | Min. Tier |
+| -------------------------------- | -------------------------- | -------------------------------------------------- | --------- |
+| `"best"`                         | Pro                        | Automatically selects the most responsive model    | pro       |
+| `"deep-research"`                | Deep research              | Fast and thorough for routine research             | pro       |
+| `"sonar"`                        | Sonar                      | Perplexity's latest model                          | pro       |
+| `"gemini-3-flash"`               | Gemini 3 Flash             | Google's fast model                                | pro       |
+| `"gemini-3-flash-thinking"`      | Gemini 3 Flash Thinking    | Google's fast model with thinking                  | pro       |
+| `"gemini-3.1-pro"`               | Gemini 3.1 Pro             | Google's latest model                              | pro       |
+| `"gemini-3.1-pro-thinking"`      | Gemini 3.1 Pro Thinking    | Google's latest model with thinking                | pro       |
+| `"gpt-5.4"`                      | GPT-5.4                    | OpenAI's latest model                              | pro       |
+| `"gpt-5.4-thinking"`             | GPT-5.4 Thinking           | OpenAI's latest model with thinking                | pro       |
+| `"claude-sonnet-4.6"`            | Claude Sonnet 4.6          | Anthropic's fast model                             | pro       |
+| `"claude-sonnet-4.6-thinking"`   | Claude Sonnet 4.6 Thinking | Anthropic's newest reasoning model                 | pro       |
+| `"claude-opus-4.6"`              | Claude Opus 4.6            | Anthropic's most advanced model                    | max       |
+| `"claude-opus-4.6-thinking"`     | Claude Opus 4.6 Thinking   | Anthropic's Opus reasoning model with thinking     | max       |
+| `"grok-4.1"`                     | Grok 4.1                   | xAI's latest model                                 | pro       |
+| `"grok-4.1-thinking"`            | Grok 4.1 Thinking          | xAI's latest model with thinking                   | pro       |
+| `"nv-nemotron-3-super-thinking"` | Nemotron 3 Super Thinking  | NVIDIA's Nemotron 3 Super 120B model with thinking | pro       |
 
-You can also inspect available models programmatically using the package dictionary:
+Inspect models programmatically:
 
 ```python
 from perplexity_webui_scraper import MODELS
@@ -91,84 +106,101 @@ for model_id, model in MODELS.items():
     print(f"{model_id!r:35} → {model.name} [{model.subscription_tier}]")
 ```
 
-## `CitationMode`
+---
 
-| Mode       | Output format  | Description               |
-| ---------- | -------------- | ------------------------- |
-| `DEFAULT`  | `text[1]`      | Keep original markers     |
-| `MARKDOWN` | `text[1](url)` | Convert to markdown links |
-| `CLEAN`    | `text`         | Remove all citations      |
+## `citation_mode`
+
+Controls how `[1]`-style citation markers are formatted in response text.
+
+| Mode         | Output format  | Description               |
+| ------------ | -------------- | ------------------------- |
+| `"default"`  | `text[1]`      | Keep original markers     |
+| `"markdown"` | `text[1](url)` | Convert to markdown links |
+| `"clean"`    | `text`         | Remove all citations      |
+
+```python
+from perplexity_webui_scraper import ConversationConfig
+
+config = ConversationConfig(citation_mode="markdown")
+```
+
+---
 
 ## Configurations
 
 ### `ConversationConfig`
 
-| Parameter         | Type           | Default            | Description                             |
-| ----------------- | -------------- | ------------------ | --------------------------------------- | ------------------------------------------ |
-| `model`           | `str           | None`              | `None` (`"best"`)                       | Model ID string                            |
-| `citation_mode`   | `CitationMode` | `CLEAN`            | Citation format                         |
-| `save_to_library` | `bool`         | `False`            | Save conversation to Perplexity library |
-| `search_focus`    | `SearchFocus`  | `WEB`              | Search type (`WEB` or `WRITING`)        |
-| `source_focus`    | `SourceFocus   | list[SourceFocus]` | `WEB`                                   | Source types to prioritize                 |
-| `time_range`      | `TimeRange`    | `ALL`              | Recency filter for results              |
-| `language`        | `str`          | `"en-US"`          | Language for the response               |
-| `timezone`        | `str           | None`              | `None`                                  | IANA timezone (e.g. `"America/Sao_Paulo"`) |
-| `coordinates`     | `Coordinates   | None`              | `None`                                  | Geographic location (lat/lng)              |
+| Parameter         | Type                                             | Default           | Description                                |
+| ----------------- | ------------------------------------------------ | ----------------- | ------------------------------------------ |
+| `model`           | `str \| None`                                    | `None` (`"best"`) | Model ID string                            |
+| `citation_mode`   | `Literal["default", "markdown", "clean"]`        | `"clean"`         | Citation format                            |
+| `save_to_library` | `bool`                                           | `False`           | Save conversation to Perplexity library    |
+| `search_focus`    | `Literal["web", "writing"]`                      | `"web"`           | Search type                                |
+| `source_focus`    | `str \| list[str]`                               | `"web"`           | Source types (web, academic, social, etc.) |
+| `time_range`      | `Literal["all", "day", "week", "month", "year"]` | `"all"`           | Recency filter for results                 |
+| `language`        | `str`                                            | `"en-US"`         | Language for the response                  |
+| `timezone`        | `str \| None`                                    | `None`            | IANA timezone (e.g. `"America/Sao_Paulo"`) |
+| `coordinates`     | `Coordinates \| None`                            | `None`            | Geographic location (lat/lng)              |
 
 ### `ClientConfig`
 
-| Parameter               | Type       | Default    | Description                                 |
-| ----------------------- | ---------- | ---------- | ------------------------------------------- | ------ | ------------------------------------ |
-| `timeout`               | `int`      | `3600`     | Request timeout in seconds                  |
-| `impersonate`           | `str`      | `"chrome"` | Browser fingerprint to impersonate          |
-| `max_retries`           | `int`      | `3`        | Maximum retry attempts on transient errors  |
-| `retry_base_delay`      | `float`    | `1.0`      | Initial backoff delay in seconds            |
-| `retry_max_delay`       | `float`    | `60.0`     | Maximum backoff delay in seconds            |
-| `retry_jitter`          | `float`    | `0.5`      | Jitter factor for retry delay randomization |
-| `requests_per_second`   | `float`    | `0.5`      | Rate limit (requests per second)            |
-| `rotate_fingerprint`    | `bool`     | `True`     | Rotate browser fingerprint on each retry    |
-| `max_init_query_length` | `int`      | `2000`     | Truncate init query to avoid HTTP 414       |
-| `logging_level`         | `LogLevel` | `DISABLED` | Log verbosity                               |
-| `log_file`              | `str       | PathLike   | None`                                       | `None` | Write logs to file instead of stderr |
+| Parameter               | Type                      | Default      | Description                                 |
+| ----------------------- | ------------------------- | ------------ | ------------------------------------------- |
+| `timeout`               | `int`                     | `3600`       | Request timeout in seconds                  |
+| `impersonate`           | `str`                     | `"chrome"`   | Browser fingerprint to impersonate          |
+| `max_retries`           | `int`                     | `3`          | Maximum retry attempts on transient errors  |
+| `retry_base_delay`      | `float`                   | `1.0`        | Initial backoff delay in seconds            |
+| `retry_max_delay`       | `float`                   | `60.0`       | Maximum backoff delay in seconds            |
+| `retry_jitter`          | `float`                   | `0.5`        | Jitter factor for retry delay randomization |
+| `requests_per_second`   | `float`                   | `0.5`        | Rate limit (requests per second)            |
+| `rotate_fingerprint`    | `bool`                    | `True`       | Rotate browser fingerprint on each retry    |
+| `max_init_query_length` | `int`                     | `2000`       | Truncate init query to avoid HTTP 414       |
+| `logging_level`         | `str`                     | `"disabled"` | Log verbosity (`disabled`, `debug`, etc.)   |
+| `log_file`              | `str \| PathLike \| None` | `None`       | Write logs to file instead of stderr        |
 
-## Enums
+---
 
-### `SourceFocus`
+## Parameter Values
 
-| Value      | Targets                                |
-| ---------- | -------------------------------------- |
-| `WEB`      | General web search                     |
-| `ACADEMIC` | Academic papers and scholarly articles |
-| `SOCIAL`   | Social media (Reddit, Twitter, etc.)   |
-| `FINANCE`  | SEC EDGAR filings                      |
+### `source_focus`
 
-### `SearchFocus`
+| Value        | Targets                                |
+| ------------ | -------------------------------------- |
+| `"web"`      | General web search                     |
+| `"academic"` | Academic papers and scholarly articles |
+| `"social"`   | Social media (Reddit, Twitter, etc.)   |
+| `"finance"`  | SEC EDGAR filings                      |
+| `"all"`      | Web, Academic, and Social blended      |
 
-| Value     | Description          |
-| --------- | -------------------- |
-| `WEB`     | Search the web       |
-| `WRITING` | Writing-focused mode |
+### `search_focus`
 
-### `TimeRange`
+| Value       | Description          |
+| ----------- | -------------------- |
+| `"web"`     | Search the web       |
+| `"writing"` | Writing-focused mode |
 
-| Value        | Description    |
-| ------------ | -------------- |
-| `ALL`        | No time filter |
-| `TODAY`      | Last 24 hours  |
-| `LAST_WEEK`  | Last 7 days    |
-| `LAST_MONTH` | Last 30 days   |
-| `LAST_YEAR`  | Last 365 days  |
+### `time_range`
 
-### `LogLevel`
+| Value     | Description    |
+| --------- | -------------- |
+| `"all"`   | No time filter |
+| `"day"`   | Last 24 hours  |
+| `"week"`  | Last 7 days    |
+| `"month"` | Last 30 days   |
+| `"year"`  | Last 365 days  |
 
-| Value      | Description                  |
-| ---------- | ---------------------------- |
-| `DISABLED` | No logging (default)         |
-| `DEBUG`    | All messages including debug |
-| `INFO`     | Info, warnings, and errors   |
-| `WARNING`  | Warnings and errors only     |
-| `ERROR`    | Errors only                  |
-| `CRITICAL` | Critical/fatal errors only   |
+### `logging_level`
+
+| Value        | Description                  |
+| ------------ | ---------------------------- |
+| `"disabled"` | No logging (default)         |
+| `"debug"`    | All messages including debug |
+| `"info"`     | Info, warnings, and errors   |
+| `"warning"`  | Warnings and errors only     |
+| `"error"`    | Errors only                  |
+| `"critical"` | Critical/fatal errors only   |
+
+---
 
 ## Exceptions
 
@@ -199,4 +231,105 @@ except AuthenticationError:
     print("Token expired — refresh your session token")
 except PerplexityError as e:
     print(f"Library error: {e}")
+```
+
+---
+
+## OpenAI-Compatible API
+
+Install with the `api` extra:
+
+```bash
+uv add "perplexity-webui-scraper[api]"
+```
+
+### `perplexity-webui-scraper-api`
+
+Starts the server. No token is configured at startup — authentication is done **per-request** via `Authorization: Bearer`, exactly like the real OpenAI API.
+
+| Option        | Short | Default     | Description                                                         |
+| ------------- | ----- | ----------- | ------------------------------------------------------------------- |
+| `--host`      | `-H`  | `127.0.0.1` | Bind address                                                        |
+| `--port`      | `-p`  | `8000`      | Port to listen on                                                   |
+| `--reload`    |       | `False`     | Enable auto-reload (dev mode)                                       |
+| `--log-level` |       | `info`      | Uvicorn log level (`debug`, `info`, `warning`, `error`, `critical`) |
+
+```bash
+# Minimal — binds to localhost:8000
+perplexity-webui-scraper-api
+
+# Expose on the network
+perplexity-webui-scraper-api --host 0.0.0.0 --port 8080
+```
+
+### Authentication
+
+Pass your Perplexity session token as the Bearer token in every request — clients are cached by token server-side so no session overhead on repeated calls:
+
+```bash
+curl http://localhost:8000/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "best", "messages": [{"role": "user", "content": "Hello!"}]}'
+```
+
+Returns `HTTP 401` if the header is missing or malformed.
+
+### Endpoints
+
+| Method | Path                   | Description                                 |
+| ------ | ---------------------- | ------------------------------------------- |
+| `GET`  | `/v1/models`           | List all available models                   |
+| `POST` | `/v1/chat/completions` | Chat completion (streaming + non-streaming) |
+| `GET`  | `/docs`                | Interactive Swagger UI                      |
+| `GET`  | `/redoc`               | ReDoc API documentation                     |
+
+### `POST /v1/chat/completions`
+
+**Request body:**
+
+| Field      | Type   | Required | Description                                                        |
+| ---------- | ------ | -------- | ------------------------------------------------------------------ |
+| `model`    | `str`  | yes      | Any model ID from `/v1/models` (e.g. `"best"`, `"gpt-5.4"`)        |
+| `messages` | `list` | yes      | List of `{role, content}` messages (`system`, `user`, `assistant`) |
+| `stream`   | `bool` | no       | Enable SSE streaming (default: `false`)                            |
+
+> Any extra OpenAI fields (`temperature`, `top_p`, `n`, `max_tokens`, etc.) are accepted for client compatibility but silently ignored.
+
+**Non-streaming response:**
+
+```json
+{
+  "id": "chatcmpl-...",
+  "object": "chat.completion",
+  "created": 1234567890,
+  "model": "best",
+  "choices": [
+    {
+      "index": 0,
+      "message": { "role": "assistant", "content": "..." },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": { "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0 }
+}
+```
+
+**Streaming** (`stream: true`) uses Server-Sent Events, one `data: {...}` JSON chunk per event, ending with `data: [DONE]`.
+
+### Using with OpenAI Python SDK
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8000/v1",
+    api_key="YOUR_SESSION_TOKEN",  # sent as Authorization: Bearer automatically
+)
+
+response = client.chat.completions.create(
+    model="gpt-5.4",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+print(response.choices[0].message.content)
 ```
