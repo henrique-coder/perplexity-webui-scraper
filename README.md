@@ -14,7 +14,7 @@ Python scraper to extract AI responses from [Perplexity's](https://www.perplexit
 
 ---
 
-**📚 Full Documentation & Advanced Guide:** [https://henrique-coder.github.io/perplexity-webui-scraper/](https://henrique-coder.github.io/perplexity-webui-scraper)
+**📚 Full Documentation & Advanced Guide:** [https://henrique-coder.github.io/perplexity-webui-scraper](https://henrique-coder.github.io/perplexity-webui-scraper)
 
 ---
 

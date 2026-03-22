@@ -317,8 +317,6 @@ Returns `HTTP 401` if the header is missing or malformed.
 
 **Streaming** (`stream: true`) uses Server-Sent Events, one `data: {...}` JSON chunk per event, ending with `data: [DONE]`.
 
-### Using with OpenAI Python SDK
-
 ```python
 from openai import OpenAI
 
@@ -332,4 +330,106 @@ response = client.chat.completions.create(
     messages=[{"role": "user", "content": "Hello!"}],
 )
 print(response.choices[0].message.content)
+```
+
+### Passing Optional Arguments
+
+You can pass Perplexity-specific configurations (like `search_focus`, `citation_mode`, or `coordinates`) through the `extra_body` dictionary natively via the OpenAI SDK. The API intercepts the `"perplexity"` block.
+
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="YOUR_SESSION_TOKEN")
+
+response = client.chat.completions.create(
+    model="gemini-3.1-pro",
+    messages=[{"role": "user", "content": "Analyze these recent academic papers"}],
+    extra_body={
+        "perplexity": {
+            "source_focus": "academic",
+            "time_range": "year",
+            "citation_mode": "markdown",
+            "save_to_library": True
+        }
+    }
+)
+
+print(response.choices[0].message.content)
+```
+
+With `curl`, simply append `"perplexity"` to the base JSON payload:
+
+```bash
+curl http://localhost:8000/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-5.4",
+    "messages": [{"role": "user", "content": "Technology news"}],
+    "perplexity": {
+      "search_focus": "web",
+      "source_focus": ["social", "academic"],
+      "time_range": "week"
+    }
+  }'
+```
+
+### Multimodal Uploads / Images
+
+The REST API fully implements OpenAI's Vision API standard. This means **any compatible chatbot frontend** (like Open WebUI, LibreChat, Chatbox, or AnythingLLM) will work out-of-the-box. When users upload files in these generic UIs, the chatbot automatically encodes the file to a base64 Data URI and sends it to our API as an `image_url` part.
+
+Base64-encoded Data URIs are automatically extracted and uploaded securely to Perplexity before querying the model.
+
+**Example with OpenAI Python SDK:**
+
+```python
+import base64
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="YOUR_SESSION_TOKEN")
+
+# Read an image and encode it to base64
+with open("document.pdf", "rb") as file:
+    pdf_b64 = base64.b64encode(file.read()).decode("utf-8")
+
+response = client.chat.completions.create(
+    model="claude-sonnet-4.6",
+    messages=[
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "What is in this document?"},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:application/pdf;base64,{pdf_b64}"}
+                }
+            ]
+        }
+    ]
+)
+
+print(response.choices[0].message.content)
+```
+
+**Example with cURL:**
+
+```bash
+curl http://localhost:8000/v1/chat/completions \
+  -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "claude-sonnet-4.6",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          { "type": "text", "text": "What is in this image?" },
+          {
+            "type": "image_url",
+            "image_url": { "url": "data:image/jpeg;base64,/9j/4AAQSkZJR..." }
+          }
+        ]
+      }
+    ]
+  }'
 ```

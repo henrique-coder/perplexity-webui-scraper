@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0).
 
+## [0.7.0] - 2026-03-22
+
+### Added
+
+- Introduced a drop-in **OpenAI-compatible REST API** server (`[api]` extra) using FastAPI.
+- Added full support for multimodal messages (text and base64-encoded image URLs) via the new API. This uses the standard OpenAI Vision schema, making it natively compatible with any generic chatbot frontend (e.g. Open WebUI, AnythingLLM, LibreChat).
+- Implemented per-request authentication using the `Authorization: Bearer <token>` header, aligning with industry standards.
+- Engineered a client cache mechanism to reuse Perplexity clients across requests with the same token, significantly boosting performance.
+- Introduced the `perplexity` extension payload block to pass Perplexity-specific parameters inside native OpenAI requests.
+
+### Changed
+
+- **Refactored Enums to Strings**: All Enums (`CitationMode`, `SearchFocus`, `SourceFocus`, `TimeRange`, `LogLevel`) have been entirely removed and replaced with intuitive lowercase string literals (e.g., `"web"`, `"academic"`, `"finance"`, `"all"`).
+- Re-architected `core.py` to seamlessly map the new intuitive user-facing string literals to Perplexity's hidden internal backend strings (`"scholar"`, `"edgar"`, etc).
+- Refactored `mcp/server.py` and `api/server.py` to enforce the new type-safe Literal strings and eliminate dictionary lookups.
+- Migrated default logging to use lowercase `LogLevel` strings safely parsed by Pydantic at runtime.
+- Simplified `example.py` configuration snippets using the updated standard literals.
+
+### Removed
+
+- Deleted the `enums.py` file completely.
+- Removed legacy CLI arguments handling session tokens dynamically via parameters or `.env` to enforce secure per-request Bearer authentication.
+
 ## [0.6.4] - 2026-03-22
 
 ### Changed
