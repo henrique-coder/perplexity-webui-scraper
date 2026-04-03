@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0).
 
+## [0.7.1] - 2026-04-03
+
+### Changed
+
+- Updated default examples and documentation across the codebase to feature the GPT-5.4 model instead of the deprecated variations.
+- Updated dependencies `requests` (to 2.33.0) and `cryptography` (to 46.0.6) via dependabot.
+
+### Removed
+
+- Removed deprecated models: Gemini 3 Flash (`gemini-3-flash`), Gemini 3 Flash Thinking (`gemini-3-flash-thinking`), Grok 4.1 (`grok-4.1`), e Grok 4.1 Thinking (`grok-4.1-thinking`).
+
 ## [0.7.0] - 2026-03-22
 
 ### Added

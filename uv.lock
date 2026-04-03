@@ -1204,7 +1204,7 @@ wheels = [
 
 [[package]]
 name = "perplexity-webui-scraper"
-version = "0.7.0"
+version = "0.7.1"
 source = { editable = "." }
 dependencies = [
     { name = "curl-cffi" },
