@@ -136,7 +136,7 @@ curl http://localhost:8000/v1/chat/completions \
 curl -N http://localhost:8000/v1/chat/completions \
   -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"model": "gemini-3-flash", "messages": [{"role": "user", "content": "Hello!"}], "stream": true}'
+  -d '{"model": "gpt-5.4", "messages": [{"role": "user", "content": "Hello!"}], "stream": true}'
 ```
 
 ```python

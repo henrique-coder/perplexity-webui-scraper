@@ -42,19 +42,19 @@ MODELS: dict[str, Model] = {
         subscription_tier="pro",
         tool_name="pplx_sonar",
     ),
-    "gemini-3-flash": Model(
-        identifier="gemini30flash",
-        name="Gemini 3 Flash",
-        description="Google's fast model",
+    "gpt-5.4": Model(
+        identifier="gpt54",
+        name="GPT-5.4",
+        description="OpenAI's latest model",
         subscription_tier="pro",
-        tool_name="pplx_gemini_flash",
+        tool_name="pplx_gpt54",
     ),
-    "gemini-3-flash-thinking": Model(
-        identifier="gemini30flash_high",
-        name="Gemini 3 Flash Thinking",
-        description="Google's fast model with thinking",
+    "gpt-5.4-thinking": Model(
+        identifier="gpt54_thinking",
+        name="GPT-5.4 Thinking",
+        description="OpenAI's latest model with thinking",
         subscription_tier="pro",
-        tool_name="pplx_gemini_flash_think",
+        tool_name="pplx_gpt54_thinking",
     ),
     "gemini-3.1-pro": Model(
         identifier="gemini31pro_low",
@@ -69,20 +69,6 @@ MODELS: dict[str, Model] = {
         description="Google's latest model with thinking",
         subscription_tier="pro",
         tool_name="pplx_gemini31_pro_think",
-    ),
-    "gpt-5.4": Model(
-        identifier="gpt54",
-        name="GPT-5.4",
-        description="OpenAI's latest model",
-        subscription_tier="pro",
-        tool_name="pplx_gpt54",
-    ),
-    "gpt-5.4-thinking": Model(
-        identifier="gpt54_thinking",
-        name="GPT-5.4 Thinking",
-        description="OpenAI's latest model with thinking",
-        subscription_tier="pro",
-        tool_name="pplx_gpt54_thinking",
     ),
     "claude-sonnet-4.6": Model(
         identifier="claude46sonnet",
@@ -111,20 +97,6 @@ MODELS: dict[str, Model] = {
         description="Anthropic's Opus reasoning model with thinking",
         subscription_tier="max",
         tool_name="pplx_claude_o46_think",
-    ),
-    "grok-4.1": Model(
-        identifier="grok41nonreasoning",
-        name="Grok 4.1",
-        description="xAI's latest model",
-        subscription_tier="pro",
-        tool_name="pplx_grok41",
-    ),
-    "grok-4.1-thinking": Model(
-        identifier="grok41reasoning",
-        name="Grok 4.1 Thinking",
-        description="xAI's latest model with thinking",
-        subscription_tier="pro",
-        tool_name="pplx_grok41_think",
     ),
     "nv-nemotron-3-super-thinking": Model(
         identifier="nv_nemotron_3_super",

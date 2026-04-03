@@ -85,7 +85,7 @@ class ChatCompletionRequest(BaseModel):
     The ``perplexity`` block exposes all ``ConversationConfig`` knobs:
 
         {
-          "model": "gemini-3-flash",
+          "model": "gpt-5.4",
           "messages": [...],
           "perplexity": {
             "citation_mode":   "clean",

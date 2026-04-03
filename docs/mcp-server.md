@@ -76,8 +76,6 @@ Each tool uses a specific AI model. Enable only the ones you need:
 | `pplx_ask`                   | Pro                        | Automatically selects the most responsive model based on the query | pro       |
 | `pplx_deep_research`         | Deep research              | Fast and thorough for routine research                             | pro       |
 | `pplx_sonar`                 | Sonar                      | Perplexity's latest model                                          | pro       |
-| `pplx_gemini_flash`          | Gemini 3 Flash             | Google's fast model                                                | pro       |
-| `pplx_gemini_flash_think`    | Gemini 3 Flash Thinking    | Google's fast model with thinking                                  | pro       |
 | `pplx_gemini31_pro`          | Gemini 3.1 Pro             | Google's latest model                                              | pro       |
 | `pplx_gemini31_pro_think`    | Gemini 3.1 Pro Thinking    | Google's latest model with thinking                                | pro       |
 | `pplx_gpt54`                 | GPT-5.4                    | OpenAI's latest model                                              | pro       |
@@ -86,8 +84,6 @@ Each tool uses a specific AI model. Enable only the ones you need:
 | `pplx_claude_s46_think`      | Claude Sonnet 4.6 Thinking | Anthropic's newest reasoning model                                 | pro       |
 | `pplx_claude_o46`            | Claude Opus 4.6            | Anthropic's most advanced model                                    | max       |
 | `pplx_claude_o46_think`      | Claude Opus 4.6 Thinking   | Anthropic's Opus reasoning model with thinking                     | max       |
-| `pplx_grok41`                | Grok 4.1                   | xAI's latest model                                                 | pro       |
-| `pplx_grok41_think`          | Grok 4.1 Thinking          | xAI's latest model with thinking                                   | pro       |
 | `pplx_nemotron3_super_think` | Nemotron 3 Super Thinking  | NVIDIA's Nemotron 3 Super 120B model with thinking                 | pro       |
 
 **All tools support `source_focus`:** `web`, `academic`, `social`, `finance`, `all`

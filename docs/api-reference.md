@@ -83,8 +83,6 @@ conversation.ask("...", model="gemini-3.1-pro")
 | `"best"`                         | Pro                        | Automatically selects the most responsive model    | pro       |
 | `"deep-research"`                | Deep research              | Fast and thorough for routine research             | pro       |
 | `"sonar"`                        | Sonar                      | Perplexity's latest model                          | pro       |
-| `"gemini-3-flash"`               | Gemini 3 Flash             | Google's fast model                                | pro       |
-| `"gemini-3-flash-thinking"`      | Gemini 3 Flash Thinking    | Google's fast model with thinking                  | pro       |
 | `"gemini-3.1-pro"`               | Gemini 3.1 Pro             | Google's latest model                              | pro       |
 | `"gemini-3.1-pro-thinking"`      | Gemini 3.1 Pro Thinking    | Google's latest model with thinking                | pro       |
 | `"gpt-5.4"`                      | GPT-5.4                    | OpenAI's latest model                              | pro       |
@@ -93,8 +91,6 @@ conversation.ask("...", model="gemini-3.1-pro")
 | `"claude-sonnet-4.6-thinking"`   | Claude Sonnet 4.6 Thinking | Anthropic's newest reasoning model                 | pro       |
 | `"claude-opus-4.6"`              | Claude Opus 4.6            | Anthropic's most advanced model                    | max       |
 | `"claude-opus-4.6-thinking"`     | Claude Opus 4.6 Thinking   | Anthropic's Opus reasoning model with thinking     | max       |
-| `"grok-4.1"`                     | Grok 4.1                   | xAI's latest model                                 | pro       |
-| `"grok-4.1-thinking"`            | Grok 4.1 Thinking          | xAI's latest model with thinking                   | pro       |
 | `"nv-nemotron-3-super-thinking"` | Nemotron 3 Super Thinking  | NVIDIA's Nemotron 3 Super 120B model with thinking | pro       |
 
 Inspect models programmatically:
