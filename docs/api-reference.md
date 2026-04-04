@@ -258,6 +258,20 @@ perplexity-webui-scraper-api
 perplexity-webui-scraper-api --host 0.0.0.0 --port 8080
 ```
 
+### Running via Container (Podman / Docker)
+
+You can effortlessly run the REST API using the provided `Containerfile` via Podman or Docker. This is the recommended way to securely host the API without depending on virtual environments. The container utilizes the official `uv` image based on Python 3.14 Alpine, guaranteeing ultra-fast dependency caching and an extremely small footprint.
+
+```bash
+# 1. Build the image
+podman build -t perplexity-api .
+
+# 2. Run the server (exposed on port 8000)
+podman run -d -p 8000:8000 --name perp-api perplexity-api
+```
+
+_> You can easily replace `podman` with `docker` in the commands above given the seamless OCI compatibility of the Containerfile._
+
 ### Authentication
 
 Pass your Perplexity session token as the Bearer token in every request — clients are cached by token server-side so no session overhead on repeated calls:
