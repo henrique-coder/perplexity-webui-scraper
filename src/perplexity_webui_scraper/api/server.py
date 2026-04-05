@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Annotated
 from uuid import uuid4
 
 from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from perplexity_webui_scraper.config import ClientConfig, ConversationConfig
@@ -37,6 +38,14 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Clients cached by token to avoid re-creating on every request.
