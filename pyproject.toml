@@ -37,8 +37,8 @@ docs = [
     "mkdocs-material>=9.7.6",
 ]
 lint = [
-    "ruff>=0.15.9",
-    "ty>=0.0.28",
+    "ruff>=0.15.10",
+    "ty>=0.0.29",
 ]
 
 [project.optional-dependencies]
@@ -47,11 +47,11 @@ cli = [
 ]
 api = [
     "fastapi>=0.135.3",
-    "uvicorn[standard]>=0.43.0",
+    "uvicorn[standard]>=0.44.0",
     "typer>=0.24.1",
 ]
 mcp = [
-    "fastmcp>=3.2.0",
+    "fastmcp>=3.2.3",
 ]
 
 [project.urls]
