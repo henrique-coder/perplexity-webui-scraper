@@ -97,9 +97,9 @@ conversation.ask("Research notes for project X")
 print(conversation.answer)
 ```
 
-> **How to find the Space UUID** — the URL slug (e.g. `questions-9emjYx__RDaUatwqW144tQ`) is **not** the UUID. Obtain it via:
+> **How to find the Space UUID** — the URL slug (e.g. `questions-abcdef123456`) is **not** the UUID. Obtain it via:
 >
 > - **Browser DevTools**: make any query inside the Space → Network tab → `perplexity_ask` request → copy `target_collection_uuid` from the JSON payload.
-> - **[Complexity browser extension](https://github.com/perplexity-complexity/complexity)**: surfaces Space UUIDs directly in the Perplexity UI.
+> - **[Complexity browser extension](https://github.com/pnd280/complexity)**: surfaces Space UUIDs directly in the Perplexity UI.
 
 > **Note:** Perplexity accepts up to 30 files per prompt natively in its WebUI logic. Each file has a maximum standard size of 50 MB, however, large text files might block execution natively due to context ceilings. Use appropriately.

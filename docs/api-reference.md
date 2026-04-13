@@ -138,10 +138,10 @@ config = ConversationConfig(citation_mode="markdown")
 | `coordinates`     | `Coordinates \| None`                            | `None`            | Geographic location (lat/lng)                      |
 | `space_uuid`      | `str \| None`                                    | `None`            | UUID of the Perplexity Space to post the thread to |
 
-> **How to obtain `space_uuid`:** The URL slug (e.g. `questions-9emjYx__RDaUatwqW144tQ`) is **not** the UUID. Use one of these methods:
+> **How to obtain `space_uuid`:** The URL slug (e.g. `questions-abcdef123456`) is **not** the UUID. Use one of these methods:
 >
-> - **Browser DevTools** — open the Space on perplexity.ai, make any query, open the Network tab, find the `perplexity_ask` SSE request, and copy the `target_collection_uuid` value from the JSON payload.
-> - **[Complexity browser extension](https://github.com/perplexity-complexity/complexity)** — surfaces Space metadata (including UUIDs) directly in the Perplexity UI.
+> - **Browser DevTools** — open the Space on perplexity.ai, make any query, open the Network tab, find the `perplexity_ask` request, and copy the `target_collection_uuid` value from the JSON payload.
+> - **[Complexity browser extension](https://github.com/pnd280/complexity)** — surfaces Space metadata (including UUIDs) directly in the Perplexity UI.
 
 ### `ClientConfig`
 
