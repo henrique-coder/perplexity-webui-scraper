@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
+from asyncio import Lock
 from dataclasses import dataclass, field
 from os.path import commonprefix
 from time import time
@@ -54,9 +54,7 @@ app.add_middleware(
 # Clients cached by token to avoid re-creating on every request.
 _clients: dict[str, Perplexity] = {}
 
-# ---------------------------------------------------------------------------
 # Conversation cache — keyed by (session_token, thread_uuid)
-# ---------------------------------------------------------------------------
 
 _CONVERSATION_TTL_SECONDS: float = 30 * 60  # 30 minutes
 
@@ -71,7 +69,7 @@ class _CachedConversation:
 
 # Cache dict and its async lock.
 _conversations: dict[tuple[str, str], _CachedConversation] = {}
-_conversations_lock = asyncio.Lock()
+_conversations_lock = Lock()
 
 
 def _evict_stale() -> None:
@@ -81,17 +79,14 @@ def _evict_stale() -> None:
     """
 
     now = time()
-    stale_keys = [
-        key for key, entry in _conversations.items() if now - entry.last_access > _CONVERSATION_TTL_SECONDS
-    ]
+    stale_keys = [key for key, entry in _conversations.items() if now - entry.last_access > _CONVERSATION_TTL_SECONDS]
 
     for key in stale_keys:
         del _conversations[key]
 
 
-# ---------------------------------------------------------------------------
 # Auth helpers
-# ---------------------------------------------------------------------------
+
 
 def _extract_token(authorization: str | None) -> str:
     """Extract the raw session token from the ``Authorization: Bearer`` header.
@@ -170,26 +165,31 @@ def _build_conversation_config(model: str, ext: PerplexityExtensions | None) -> 
 
     # citation_mode
     citation_mode = "clean"
+
     if ext.citation_mode:
         citation_mode = ext.citation_mode
 
     # search_focus
     search_focus = "web"
+
     if ext.search_focus:
         search_focus = ext.search_focus
 
     # source_focus
     source_focus = "web"
+
     if ext.source_focus is not None:
         source_focus = ext.source_focus
 
     # time_range
     time_range = "all"
+
     if ext.time_range:
         time_range = ext.time_range
 
     # coordinates
     coordinates: Coordinates | None = None
+
     if ext.coordinates is not None:
         coordinates = Coordinates(
             latitude=ext.coordinates.latitude,
@@ -253,6 +253,7 @@ async def chat_completions(
 
     if request.model not in MODELS:
         available = ", ".join(f'"{k}"' for k in MODELS)
+
         raise HTTPException(
             status_code=400,
             detail=f"Unknown model {request.model!r}. Available: {available}",
@@ -264,7 +265,7 @@ async def chat_completions(
     thread_uuid = request.perplexity.thread_uuid if request.perplexity else None
 
     if thread_uuid:
-        # --- Case A / B: continuation requested ---
+        # Case A / B: continuation requested
         async with _conversations_lock:
             _evict_stale()
             cached = _conversations.get((token, thread_uuid))
@@ -291,7 +292,7 @@ async def chat_completions(
                 break
 
     else:
-        # --- Case C: new conversation ---
+        # Case C: new conversation
         query, files = _build_query_and_files(request)
         config = _build_conversation_config(request.model, request.perplexity)
         conversation = client.create_conversation(config)
@@ -307,7 +308,7 @@ async def chat_completions(
             },
         )
 
-    # --- Non-streaming path ---
+    # Non-streaming path
     conversation.ask(query, files=files or None)
     answer = conversation.answer or ""
     conv_uuid = conversation.uuid

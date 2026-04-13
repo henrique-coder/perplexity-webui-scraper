@@ -7,22 +7,22 @@ session token or network access.
 from __future__ import annotations
 
 from time import time
-from typing import Any
 from unittest.mock import MagicMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
+from orjson import loads
+from pytest import fixture
 
 from perplexity_webui_scraper.api.server import (
     _CachedConversation,
+    _clients,
     _conversations,
     app,
 )
+from perplexity_webui_scraper.core import Conversation
 
 
-# ---------------------------------------------------------------------------
 # Constants
-# ---------------------------------------------------------------------------
 
 TOKEN = "test-session-token"
 AUTH_HEADER = f"Bearer {TOKEN}"
@@ -30,9 +30,7 @@ THREAD_UUID = "test-thread-uuid-1234"
 MODEL_ID = "gpt-5.4"
 
 
-# ---------------------------------------------------------------------------
 # Model validation mock
-# ---------------------------------------------------------------------------
 # The existing MODELS registry uses Pydantic iteration which yields
 # (field_name, Model) tuples, making ``"gpt-5.4" in MODELS`` always False.
 # We mock the ``resolve`` method and bypass the ``in`` check so tests can
@@ -52,9 +50,7 @@ class _MockModelRegistry:
 _mock_models = _MockModelRegistry()
 
 
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
 
 
 def _make_mock_conversation(uuid: str = THREAD_UUID, answer: str = "Mock answer") -> MagicMock:
@@ -64,13 +60,11 @@ def _make_mock_conversation(uuid: str = THREAD_UUID, answer: str = "Mock answer"
     streaming code path.
     """
 
-    from perplexity_webui_scraper.core import Conversation
-
     conv = MagicMock(spec=Conversation)
     conv.uuid = uuid
     conv.answer = answer
 
-    def ask_side_effect(query: str, files: Any = None, stream: bool = False) -> None:
+    def ask_side_effect(query: str, files: list | None = None, stream: bool = False) -> None:
         conv.answer = f"Response to: {query}"
 
     conv.ask = MagicMock(side_effect=ask_side_effect)
@@ -90,16 +84,12 @@ def _make_mock_client(conv: MagicMock | None = None) -> MagicMock:
     return client
 
 
-# ---------------------------------------------------------------------------
 # Fixtures
-# ---------------------------------------------------------------------------
 
 
-@pytest.fixture(autouse=True)
+@fixture(autouse=True)
 def _clean_caches():
     """Clear all caches and patch MODELS before each test."""
-
-    from perplexity_webui_scraper.api.server import _clients
 
     _conversations.clear()
     _clients.clear()
@@ -111,21 +101,18 @@ def _clean_caches():
     _clients.clear()
 
 
-@pytest.fixture
-def http_client():
+@fixture
+def http_client() -> TestClient:
     """FastAPI test client."""
 
     return TestClient(app)
 
 
-# ---------------------------------------------------------------------------
 # Test 1: New conversation — no thread_uuid
-# ---------------------------------------------------------------------------
 
 
 def test_new_conversation_returns_thread_uuid(http_client: TestClient) -> None:
-    """A request without thread_uuid should create a new conversation and
-    return perplexity.thread_uuid in the response."""
+    """A request without thread_uuid should create a new conversation and return perplexity.thread_uuid."""
 
     mock_conv = _make_mock_conversation()
     mock_client = _make_mock_client(mock_conv)
@@ -147,14 +134,11 @@ def test_new_conversation_returns_thread_uuid(http_client: TestClient) -> None:
     assert data["perplexity"]["thread_uuid"] == THREAD_UUID
 
 
-# ---------------------------------------------------------------------------
 # Test 2: Follow-up with thread_uuid
-# ---------------------------------------------------------------------------
 
 
 def test_followup_with_thread_uuid(http_client: TestClient) -> None:
-    """A request with a valid cached thread_uuid should continue the
-    conversation using only the last user message."""
+    """A request with a valid cached thread_uuid should continue using only the last message."""
 
     mock_conv = _make_mock_conversation()
     mock_client = _make_mock_client(mock_conv)
@@ -178,11 +162,13 @@ def test_followup_with_thread_uuid(http_client: TestClient) -> None:
         )
 
     assert resp.status_code == 200
+
     data = resp.json()
 
     # Should have called .ask() with only the last user message
     mock_conv.ask.assert_called_once()
     call_args = mock_conv.ask.call_args
+
     assert call_args[0][0] == "Follow-up question"
 
     # Response should include the thread_uuid
@@ -192,14 +178,11 @@ def test_followup_with_thread_uuid(http_client: TestClient) -> None:
     mock_client.create_conversation.assert_not_called()
 
 
-# ---------------------------------------------------------------------------
 # Test 3: Non-existent thread_uuid returns 404
-# ---------------------------------------------------------------------------
 
 
 def test_invalid_thread_uuid_returns_404(http_client: TestClient) -> None:
-    """A request with a thread_uuid that is not in the cache should return
-    a 404 error with a clear message."""
+    """A request with an uncached thread_uuid should return a 404 error with a clear message."""
 
     mock_client = _make_mock_client()
 
@@ -218,16 +201,11 @@ def test_invalid_thread_uuid_returns_404(http_client: TestClient) -> None:
     assert "not found or expired" in resp.json()["error"]["message"]
 
 
-# ---------------------------------------------------------------------------
 # Test 4: Streaming with thread_uuid
-# ---------------------------------------------------------------------------
 
 
 def test_streaming_new_conversation_includes_thread_uuid(http_client: TestClient) -> None:
-    """A streaming request without thread_uuid should include
-    perplexity.thread_uuid in the final chunk."""
-
-    import json
+    """A streaming request without thread_uuid should include it in the final chunk."""
 
     mock_conv = _make_mock_conversation()
     mock_client = _make_mock_client(mock_conv)
@@ -255,11 +233,11 @@ def test_streaming_new_conversation_includes_thread_uuid(http_client: TestClient
     lines = resp.text.strip().split("\n")
     final_chunk = None
 
-    for line in lines:
-        line = line.strip()
+    for raw_line in lines:
+        line = raw_line.strip()
 
         if line.startswith("data: ") and line != "data: [DONE]":
-            chunk = json.loads(line[6:])
+            chunk = loads(line[6:])
 
             if chunk.get("choices", [{}])[0].get("finish_reason") == "stop":
                 final_chunk = chunk
@@ -270,14 +248,11 @@ def test_streaming_new_conversation_includes_thread_uuid(http_client: TestClient
     assert final_chunk["perplexity"]["thread_uuid"] == THREAD_UUID
 
 
-# ---------------------------------------------------------------------------
 # Test 5: space_uuid and thread_uuid together
-# ---------------------------------------------------------------------------
 
 
 def test_space_uuid_and_thread_uuid_together(http_client: TestClient) -> None:
-    """Passing both space_uuid and thread_uuid should not conflict.
-    thread_uuid takes precedence for conversation lookup."""
+    """Passing both space_uuid and thread_uuid should not conflict."""
 
     mock_conv = _make_mock_conversation()
     mock_client = _make_mock_client(mock_conv)
@@ -300,21 +275,20 @@ def test_space_uuid_and_thread_uuid_together(http_client: TestClient) -> None:
         )
 
     assert resp.status_code == 200
+
     data = resp.json()
+
     assert data["perplexity"]["thread_uuid"] == THREAD_UUID
 
     # Should have used the cached conversation, not created a new one
     mock_client.create_conversation.assert_not_called()
 
 
-# ---------------------------------------------------------------------------
 # Test 6: TTL eviction
-# ---------------------------------------------------------------------------
 
 
 def test_expired_conversation_is_evicted(http_client: TestClient) -> None:
-    """A conversation that has exceeded the TTL should be evicted and
-    return a 404 on the next access."""
+    """A conversation that has exceeded the TTL should be evicted and return a 404."""
 
     mock_conv = _make_mock_conversation()
     mock_client = _make_mock_client(mock_conv)
@@ -340,14 +314,11 @@ def test_expired_conversation_is_evicted(http_client: TestClient) -> None:
     assert "not found or expired" in resp.json()["error"]["message"]
 
 
-# ---------------------------------------------------------------------------
 # Test 7: Backward compatibility — no perplexity block at all
-# ---------------------------------------------------------------------------
 
 
 def test_no_perplexity_block_works_as_before(http_client: TestClient) -> None:
-    """A request with no perplexity block should work identically to the
-    original behavior (new conversation, no continuation)."""
+    """A request with no perplexity block should work identically to the original behavior."""
 
     mock_conv = _make_mock_conversation()
     mock_client = _make_mock_client(mock_conv)
@@ -363,6 +334,7 @@ def test_no_perplexity_block_works_as_before(http_client: TestClient) -> None:
         )
 
     assert resp.status_code == 200
+
     data = resp.json()
 
     # Should still include thread_uuid in response for future continuation

@@ -106,12 +106,12 @@ class ChatCompletionRequest(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    # --- Standard OpenAI fields ---
+    # Standard OpenAI fields
     model: str
     messages: list[ChatMessage]
     stream: bool = False
 
-    # --- Perplexity extensions block ---
+    # Perplexity extensions block
     perplexity: PerplexityExtensions | None = None
 
 
