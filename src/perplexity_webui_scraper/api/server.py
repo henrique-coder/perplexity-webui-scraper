@@ -219,20 +219,6 @@ async def list_models(
     return JSONResponse(content=build_models_response(MODELS).model_dump())
 
 
-def _extract_last_user_message(request: ChatCompletionRequest) -> str:
-    """Return the text of the last user message for thread continuation.
-
-    When continuing an existing thread, only the latest user message is
-    relevant — prior context is already held server-side by Perplexity.
-    """
-
-    for msg in reversed(request.messages):
-        if msg.role == "user":
-            return msg.text()
-
-    return ""
-
-
 @app.post("/v1/chat/completions", response_model=None)
 async def chat_completions(
     raw_request: Request,
