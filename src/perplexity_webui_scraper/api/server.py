@@ -251,13 +251,15 @@ async def chat_completions(
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    if request.model not in MODELS:
-        available = ", ".join(f'"{k}"' for k in MODELS)
+    try:
+        MODELS.resolve(request.model)
+    except ValueError:
+        available = ", ".join(f'"{model.id}"' for model in MODELS._all())
 
         raise HTTPException(
             status_code=400,
             detail=f"Unknown model {request.model!r}. Available: {available}",
-        )
+        ) from None
 
     token = _extract_token(authorization)
     client = _get_client(authorization)
@@ -282,14 +284,29 @@ async def chat_completions(
             cached.last_access = time()
             conversation = cached.conversation
 
-        query = _extract_last_user_message(request)
+        query = ""
         files: list[FileInput] = []
+        found_user_msg = False
 
-        # Collect any image attachments from the last user message
+        # Collect query and images from the last user message
         for msg in reversed(request.messages):
             if msg.role == "user":
+                found_user_msg = True
+                query = msg.text()
                 files = list(msg.image_bytes())
                 break
+
+        if not found_user_msg:
+            raise HTTPException(
+                status_code=400,
+                detail="Thread continuation requires at least one user message.",
+            )
+
+        if not query and not files:
+            raise HTTPException(
+                status_code=400,
+                detail="Thread continuation requires the last user message to contain text or images.",
+            )
 
     else:
         # Case C: new conversation
@@ -315,9 +332,20 @@ async def chat_completions(
 
     # Cache the conversation after a successful response
     if conv_uuid:
+        key = (token, conv_uuid)
         async with _conversations_lock:
+            if thread_uuid or key in _conversations:
+                # Update existing conversation or recreate it
+                cached = _conversations.get(key)
+                if cached:
+                    cached.conversation = conversation
+                    cached.last_access = time()
+                else:
+                    _conversations[key] = _CachedConversation(conversation=conversation)
+            else:
+                _conversations[key] = _CachedConversation(conversation=conversation)
+
             _evict_stale()
-            _conversations[(token, conv_uuid)] = _CachedConversation(conversation=conversation)
 
     return JSONResponse(
         content=ChatCompletionResponse.build(
@@ -399,13 +427,15 @@ async def _stream_response(
     conv_uuid = conversation.uuid
 
     if conv_uuid:
+        key = (token, conv_uuid)
         async with _conversations_lock:
-            _evict_stale()
+            if is_new or key not in _conversations:
+                _conversations[key] = _CachedConversation(conversation=conversation)
+            else:
+                _conversations[key].conversation = conversation
+                _conversations[key].last_access = time()
 
-            if is_new:
-                _conversations[(token, conv_uuid)] = _CachedConversation(conversation=conversation)
-            elif (token, conv_uuid) in _conversations:
-                _conversations[(token, conv_uuid)].last_access = time()
+            _evict_stale()
 
     # Build the perplexity response extension for the final chunk.
     pplx_ext = PerplexityResponseExtensions(thread_uuid=conv_uuid) if conv_uuid else None
