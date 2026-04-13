@@ -163,6 +163,17 @@ class PerplexityExtensions(BaseModel):
     the UUID — they are completely different identifiers.
     """
 
+    thread_uuid: str | None = None
+    """UUID of an existing conversation thread to continue.
+
+    When provided, the server reuses the cached ``Conversation`` object and
+    sends only the last user message as a follow-up.  The response will
+    include the same ``thread_uuid`` in the ``perplexity`` response block.
+
+    If the conversation has expired from the cache (30-minute TTL), the
+    server returns a 404 error suggesting the client start a new conversation.
+    """
+
     @model_validator(mode="before")
     @classmethod
     def _normalise_strings(cls, values: dict[str, Any]) -> dict[str, Any]:
@@ -188,6 +199,17 @@ class CoordinatesInput(BaseModel):
 
     latitude: float
     longitude: float
+
+
+class PerplexityResponseExtensions(BaseModel):
+    """Perplexity-specific metadata included in API responses.
+
+    Returned under the ``perplexity`` key alongside standard OpenAI fields.
+    """
+
+    thread_uuid: str
+    """UUID of the conversation thread.  Use this value in subsequent requests
+    to continue the same conversation."""
 
 
 class ChatCompletionMessage(BaseModel):
@@ -222,10 +244,18 @@ class ChatCompletionResponse(BaseModel):
     model: str
     choices: list[ChatCompletionChoice]
     usage: ChatCompletionUsage = ChatCompletionUsage()
+    perplexity: PerplexityResponseExtensions | None = None
 
     @classmethod
-    def build(cls, model: str, content: str) -> ChatCompletionResponse:
-        """Build a response from a model ID and answer text."""
+    def build(
+        cls,
+        model: str,
+        content: str,
+        thread_uuid: str | None = None,
+    ) -> ChatCompletionResponse:
+        """Build a response from a model ID, answer text, and optional thread UUID."""
+
+        pplx = PerplexityResponseExtensions(thread_uuid=thread_uuid) if thread_uuid else None
 
         return cls(
             id=f"chatcmpl-{uuid4().hex}",
@@ -236,6 +266,7 @@ class ChatCompletionResponse(BaseModel):
                     message=ChatCompletionMessage(content=content),
                 )
             ],
+            perplexity=pplx,
         )
 
 
@@ -262,11 +293,12 @@ class ChatCompletionChunk(BaseModel):
     created: int
     model: str
     choices: list[ChatCompletionChunkChoice]
+    perplexity: PerplexityResponseExtensions | None = None
 
     def to_sse_line(self) -> str:
         """Serialize to a Server-Sent Events data line."""
 
-        return f"data: {self.model_dump_json()}\n\n"
+        return f"data: {self.model_dump_json(exclude_none=True)}\n\n"
 
 
 class ModelObject(BaseModel):
