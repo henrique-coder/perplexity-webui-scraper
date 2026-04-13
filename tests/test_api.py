@@ -16,11 +16,14 @@ MODEL_ID = "gpt-5.4"
 
 
 class _MockModelRegistry:
-    def __contains__(self, item: object) -> bool:
-        return True
+    def resolve(self, item: str) -> MagicMock:
+        if item == "non-existent-model":
+            raise ValueError
 
-    def __iter__(self):
-        yield MODEL_ID
+        return MagicMock(id=MODEL_ID)
+
+    def _all(self) -> list[MagicMock]:
+        return [MagicMock(id=MODEL_ID)]
 
 
 _mock_models = _MockModelRegistry()
@@ -58,6 +61,7 @@ def test_missing_auth_header(client: TestClient) -> None:
         "/v1/chat/completions",
         json={"model": MODEL_ID, "messages": [{"role": "user", "content": "Hello"}]},
     )
+
     assert response.status_code == 401
     assert "Missing or invalid Authorization header" in response.json()["error"]["message"]
 
@@ -77,15 +81,13 @@ def test_malformed_auth_header(client: TestClient) -> None:
 def test_invalid_model(client: TestClient) -> None:
     """Request with an unregistered model should return 400 Bad Request."""
 
-    # We temporarily disable our mock registry to let the real one fail
-    with patch("perplexity_webui_scraper.api.server.MODELS", {}):
-        response = client.post(
-            "/v1/chat/completions",
-            json={"model": "non-existent-model", "messages": [{"role": "user", "content": "Hello"}]},
-            headers={"Authorization": AUTH_HEADER},
-        )
-        assert response.status_code == 400
-        assert "Unknown model" in response.json()["error"]["message"]
+    response = client.post(
+        "/v1/chat/completions",
+        json={"model": "non-existent-model", "messages": [{"role": "user", "content": "Hello"}]},
+        headers={"Authorization": AUTH_HEADER},
+    )
+    assert response.status_code == 400
+    assert "Unknown model" in response.json()["error"]["message"]
 
 
 @patch("perplexity_webui_scraper.api.server._get_client")

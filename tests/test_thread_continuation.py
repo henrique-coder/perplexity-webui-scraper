@@ -40,11 +40,11 @@ MODEL_ID = "gpt-5.4"
 class _MockModelRegistry:
     """Minimal stand-in for ModelRegistry that accepts any model ID."""
 
-    def __contains__(self, item: object) -> bool:
-        return True
+    def resolve(self, item: str) -> MagicMock:
+        return MagicMock(id=MODEL_ID)
 
-    def __iter__(self):
-        yield MODEL_ID
+    def _all(self) -> list[MagicMock]:
+        return [MagicMock(id=MODEL_ID)]
 
 
 _mock_models = _MockModelRegistry()
