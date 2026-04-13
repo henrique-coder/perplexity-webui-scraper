@@ -77,4 +77,29 @@ conversation.ask("Read this PDF", files=[(pdf_bytes, "report.pdf", "application/
 conversation.ask("Compare these", files=["local.jpg", (remote_bytes, "remote.png")])
 ```
 
+## Posting to a Perplexity Space
+
+You can route a conversation into a specific [Space](https://www.perplexity.ai/spaces) by passing its UUID via `space_uuid`. The thread will be saved inside that Space automatically.
+
+```python
+from perplexity_webui_scraper import ConversationConfig, Perplexity
+
+client = Perplexity(session_token="YOUR_TOKEN")
+
+conversation = client.create_conversation(
+    ConversationConfig(
+        model="gpt-5.4",
+        space_uuid="12345678-1234-1234-1234-123456789abc",  # your Space UUID
+    )
+)
+
+conversation.ask("Research notes for project X")
+print(conversation.answer)
+```
+
+> **How to find the Space UUID** — the URL slug (e.g. `questions-9emjYx__RDaUatwqW144tQ`) is **not** the UUID. Obtain it via:
+>
+> - **Browser DevTools**: make any query inside the Space → Network tab → `perplexity_ask` request → copy `target_collection_uuid` from the JSON payload.
+> - **[Complexity browser extension](https://github.com/perplexity-complexity/complexity)**: surfaces Space UUIDs directly in the Perplexity UI.
+
 > **Note:** Perplexity accepts up to 30 files per prompt natively in its WebUI logic. Each file has a maximum standard size of 50 MB, however, large text files might block execution natively due to context ceilings. Use appropriately.

@@ -48,7 +48,7 @@ class Perplexity:
     __slots__ = ("_http",)
 
     def __init__(self, session_token: str, config: ClientConfig | None = None) -> None:
-        """Initialize with session token."""
+        """Initialize the client with a session token and optional config."""
 
         if not session_token or not session_token.strip():
             raise ValueError("session_token cannot be empty")
@@ -72,12 +72,12 @@ class Perplexity:
         logger.info("Perplexity client initialized")
 
     def create_conversation(self, config: ConversationConfig | None = None) -> Conversation:
-        """Create a new conversation."""
+        """Create and return a new Conversation ready for querying."""
 
         return Conversation(self._http, config or ConversationConfig())
 
     def close(self) -> None:
-        """Close the client."""
+        """Close the HTTP client and release all resources."""
 
         self._http.close()
 
@@ -102,7 +102,6 @@ class Conversation:
         "_read_write_token",
         "_search_results",
         "_stream_generator",
-        "_title",
     )
 
     def __init__(self, http: HTTPClient, config: ConversationConfig) -> None:
@@ -111,7 +110,6 @@ class Conversation:
         self._citation_mode: CitationMode = "default"
         self._backend_uuid: str | None = None
         self._read_write_token: str | None = None
-        self._title: str | None = None
         self._answer: str | None = None
         self._chunks: list[str] = []
         self._search_results: list[SearchResultItem] = []
@@ -123,12 +121,6 @@ class Conversation:
         """Last response text."""
 
         return self._answer
-
-    @property
-    def title(self) -> str | None:
-        """Conversation title."""
-
-        return self._title
 
     @property
     def search_results(self) -> list[SearchResultItem]:
@@ -156,7 +148,7 @@ class Conversation:
         citation_mode: CitationMode | None = None,
         stream: bool = False,
     ) -> Conversation:
-        """Ask a question. Returns self for method chaining or streaming iteration."""
+        """Send a query and return self for chaining or streaming iteration."""
 
         model_id = model or self._config.model or _DEFAULT_MODEL
         effective_model = _resolve_model(model_id)
@@ -195,7 +187,6 @@ class Conversation:
             self._complete(payload)
 
     def _reset_response_state(self) -> None:
-        self._title = None
         self._answer = None
         self._chunks = []
         self._search_results = []
@@ -447,6 +438,12 @@ class Conversation:
             "version": API_VERSION,
         }
 
+        if cfg.space_uuid:
+            params["target_collection_uuid"] = cfg.space_uuid
+            params["target_thread_access_level"] = 1
+            params["query_source"] = "collection"
+            params["is_incognito"] = False
+
         if self._backend_uuid is not None:
             params["last_backend_uuid"] = self._backend_uuid
             params["query_source"] = "followup"
@@ -496,8 +493,6 @@ class Conversation:
             self._backend_uuid = data["backend_uuid"]
         if "read_write_token" in data:
             self._read_write_token = data["read_write_token"]
-        if data.get("thread_title"):
-            self._title = data["thread_title"]
         if "text" not in data and "blocks" not in data:
             return
         if data.get("status") == "FAILED":
@@ -534,14 +529,12 @@ class Conversation:
                     else:
                         answer_data = raw_content
 
-                    title = data.get("thread_title") or answer_data.get("thread_title")
-                    self._update_state(title, answer_data)
+                    self._update_state(answer_data)
 
                     break
 
         elif isinstance(json_data, dict):
-            title = data.get("thread_title") or json_data.get("thread_title")
-            self._update_state(title, json_data)
+            self._update_state(json_data)
 
         else:
             raise ResponseParsingError(
@@ -577,10 +570,7 @@ class Conversation:
 
         return questions
 
-    def _update_state(self, title: str | None, answer_data: dict[str, Any]) -> None:
-        if title is not None:
-            self._title = title
-
+    def _update_state(self, answer_data: dict[str, Any]) -> None:
         web_results = answer_data.get("web_results", [])
 
         if web_results:
@@ -609,7 +599,6 @@ class Conversation:
 
     def _build_response(self) -> Response:
         return Response(
-            title=self._title,
             answer=self._answer,
             chunks=list(self._chunks),
             last_chunk=self._chunks[-1] if self._chunks else None,

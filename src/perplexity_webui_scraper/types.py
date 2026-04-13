@@ -5,7 +5,7 @@ from __future__ import annotations
 from os import PathLike
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # Type alias for accepted file inputs in ask():
@@ -25,49 +25,49 @@ LogLevel = Literal["disabled", "debug", "info", "warning", "error", "critical"]
 
 
 class Coordinates(BaseModel):
-    """Geographic coordinates (lat/lng)."""
+    """Geographic coordinates (latitude/longitude)."""
 
     model_config = ConfigDict(frozen=True)
 
-    latitude: float
-    longitude: float
+    latitude: float = Field(description="Latitude in decimal degrees (-90 to +90).")
+    longitude: float = Field(description="Longitude in decimal degrees (-180 to +180).")
 
 
 class SearchResultItem(BaseModel):
-    """A single search result."""
+    """A single search result returned by Perplexity."""
 
     model_config = ConfigDict(frozen=True)
 
-    title: str | None = None
-    snippet: str | None = None
-    url: str | None = None
+    url: str | None = Field(default=None, description="Full URL of the source.")
+    title: str | None = Field(default=None, description="Page or article title.")
+    snippet: str | None = Field(default=None, description="Short excerpt from the source page.")
 
 
 class Response(BaseModel):
     """Response from Perplexity AI."""
 
-    title: str | None = None
-    answer: str | None = None
-    chunks: list[str] = []
-    last_chunk: str | None = None
-    search_results: list[SearchResultItem] = []
-    conversation_uuid: str | None = None
-    raw_data: dict[str, Any] = {}
+    answer: str | None = Field(default=None, description="Full, final response text. None until complete.")
+    chunks: list[str] = Field(default_factory=list, description="Partial response chunks received during streaming.")
+    last_chunk: str | None = Field(default=None, description="Most recently received chunk (shortcut to chunks[-1]).")
+    search_results: list[SearchResultItem] = Field(
+        default_factory=list, description="Web sources cited in the response."
+    )
+    conversation_uuid: str | None = Field(
+        default=None, description="Backend UUID identifying this conversation thread."
+    )
+    raw_data: dict[str, Any] = Field(default_factory=dict, description="Raw deserialized response payload.")
 
 
 class _FileInfo(BaseModel):
-    """Internal file info for uploads.
-
-    Exactly one of ``path`` or ``data`` is set:
-    - ``path`` — source filesystem path (bytes read lazily at upload time)
-    - ``data`` — in-memory bytes (no filesystem access needed)
-    """
+    """Internal upload descriptor. Exactly one of ``path`` or ``data`` is set."""
 
     model_config = ConfigDict(frozen=True)
 
-    filename: str
-    size: int
-    mimetype: str
-    is_image: bool
-    path: str | None = None
-    data: bytes | None = None
+    filename: str = Field(description="Display name sent to Perplexity.")
+    mimetype: str = Field(description='MIME type string (e.g. "image/jpeg").')
+    size: int = Field(description="File size in bytes.")
+    is_image: bool = Field(description="Whether the file is an image type.")
+    path: str | None = Field(
+        default=None, description="Absolute filesystem path. Bytes are read lazily at upload time."
+    )
+    data: bytes | None = Field(default=None, description="In-memory bytes. No filesystem access needed.")

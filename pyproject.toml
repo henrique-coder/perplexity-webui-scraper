@@ -1,6 +1,6 @@
 [project]
 name = "perplexity-webui-scraper"
-version = "0.7.1"
+version = "0.8.0"
 description = "Python scraper to extract AI responses from Perplexity's web interface."
 authors = [{ name = "Henrique Moreira", email = "github@henriquecoder.com" }]
 readme = "README.md"
@@ -43,7 +43,8 @@ lint = [
 
 [project.optional-dependencies]
 cli = [
-    "rich>=14.3.3",
+    "pyperclip>=1.11.0",
+    "rich>=15.0.0",
 ]
 api = [
     "fastapi>=0.135.3",
@@ -145,6 +146,10 @@ redundant-cast                = "warn"
 unused-ignore-comment         = "warn"
 division-by-zero              = "warn"
 index-out-of-bounds           = "warn"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
 
 [project.scripts]
 get-perplexity-session-token = "perplexity_webui_scraper.cli.get_perplexity_session_token:get_token"

@@ -160,6 +160,7 @@ def _build_conversation_config(model: str, ext: PerplexityExtensions | None) -> 
         language=ext.language or "en-US",
         timezone=ext.timezone,
         coordinates=coordinates,
+        space_uuid=ext.space_uuid,
     )
 
 

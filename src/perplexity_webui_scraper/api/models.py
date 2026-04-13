@@ -4,10 +4,14 @@ from __future__ import annotations
 
 from base64 import b64decode
 from time import time
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, model_validator
+
+
+if TYPE_CHECKING:
+    from perplexity_webui_scraper.models import ModelRegistry
 
 
 class ContentPartText(BaseModel):
@@ -147,6 +151,18 @@ class PerplexityExtensions(BaseModel):
     coordinates: CoordinatesInput | None = None
     """Geographic location for localised results."""
 
+    space_uuid: str | None = None
+    """UUID of the Perplexity Space (collection) to post the thread into.
+
+    How to obtain the Space UUID:
+    - **Browser DevTools**: open the Space, make any query, Network tab →
+      ``perplexity_ask`` request → copy ``target_collection_uuid``.
+    - **Complexity extension**: exposes Space UUIDs directly in the browser UI.
+
+    Note: the URL slug (e.g. ``questions-9emjYx__RDaUatwqW144tQ``) is **not**
+    the UUID — they are completely different identifiers.
+    """
+
     @model_validator(mode="before")
     @classmethod
     def _normalise_strings(cls, values: dict[str, Any]) -> dict[str, Any]:
@@ -283,9 +299,9 @@ class ErrorResponse(BaseModel):
     error: ErrorDetail
 
 
-def build_models_response(models_dict: dict[str, Any]) -> ModelList:
+def build_models_response(registry: ModelRegistry) -> ModelList:
     """Build a ModelList from the MODELS registry."""
 
     return ModelList(
-        data=[ModelObject(id=model_id) for model_id in models_dict],
+        data=[ModelObject(id=model.id) for model in registry._all()],
     )

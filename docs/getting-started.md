@@ -76,7 +76,7 @@ This interactive tool will:
 2. Send a verification code to your email
 3. Accept either a 6-digit code or magic link
 4. Extract and display your session token
-5. Optionally save it to your `.env` file
+5. Prompt to safely copy it directly to your clipboard
 
 ### Option 2: Manual (Browser)
 

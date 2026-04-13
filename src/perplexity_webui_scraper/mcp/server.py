@@ -84,7 +84,7 @@ def _ask(query: str, model_id: str, source_focus: SourceFocusName = "web") -> st
 def _create_tool_function(model_id: str) -> None:
     """Dynamically create and register a tool for a model."""
 
-    model = MODELS[model_id]
+    model = MODELS.resolve(model_id)
 
     @mcp.tool(name=model.tool_name, description=f"{model.name} - {model.description}")
     def tool_fn(query: str, source_focus: SourceFocusName = "web") -> str:
@@ -94,8 +94,8 @@ def _create_tool_function(model_id: str) -> None:
 def _register_all_tools() -> None:
     """Register all model tools dynamically."""
 
-    for model_id in MODELS:
-        _create_tool_function(model_id)
+    for model in MODELS._all():
+        _create_tool_function(model.id)
 
 
 _register_all_tools()

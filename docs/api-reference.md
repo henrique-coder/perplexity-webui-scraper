@@ -60,12 +60,11 @@ Returns `self` (the `Conversation`) for method chaining or streaming iteration.
 
 ### Conversation Properties
 
-| Property         | Type                     | Description                       |
-| ---------------- | ------------------------ | --------------------------------- |
-| `answer`         | `str \| None`            | Full response text                |
-| `title`          | `str \| None`            | Auto-generated conversation title |
-| `search_results` | `list[SearchResultItem]` | Source URLs used in the response  |
-| `uuid`           | `str \| None`            | Conversation backend UUID         |
+| Property         | Type                     | Description                      |
+| ---------------- | ------------------------ | -------------------------------- |
+| `answer`         | `str \| None`            | Full response text               |
+| `search_results` | `list[SearchResultItem]` | Source URLs used in the response |
+| `uuid`           | `str \| None`            | Conversation backend UUID        |
 
 ---
 
@@ -126,17 +125,23 @@ config = ConversationConfig(citation_mode="markdown")
 
 ### `ConversationConfig`
 
-| Parameter         | Type                                             | Default           | Description                                |
-| ----------------- | ------------------------------------------------ | ----------------- | ------------------------------------------ |
-| `model`           | `str \| None`                                    | `None` (`"best"`) | Model ID string                            |
-| `citation_mode`   | `Literal["default", "markdown", "clean"]`        | `"clean"`         | Citation format                            |
-| `save_to_library` | `bool`                                           | `False`           | Save conversation to Perplexity library    |
-| `search_focus`    | `Literal["web", "writing"]`                      | `"web"`           | Search type                                |
-| `source_focus`    | `str \| list[str]`                               | `"web"`           | Source types (web, academic, social, etc.) |
-| `time_range`      | `Literal["all", "day", "week", "month", "year"]` | `"all"`           | Recency filter for results                 |
-| `language`        | `str`                                            | `"en-US"`         | Language for the response                  |
-| `timezone`        | `str \| None`                                    | `None`            | IANA timezone (e.g. `"America/Sao_Paulo"`) |
-| `coordinates`     | `Coordinates \| None`                            | `None`            | Geographic location (lat/lng)              |
+| Parameter         | Type                                             | Default           | Description                                        |
+| ----------------- | ------------------------------------------------ | ----------------- | -------------------------------------------------- |
+| `model`           | `str \| None`                                    | `None` (`"best"`) | Model ID string                                    |
+| `citation_mode`   | `Literal["default", "markdown", "clean"]`        | `"clean"`         | Citation format                                    |
+| `save_to_library` | `bool`                                           | `False`           | Save conversation to Perplexity library            |
+| `search_focus`    | `Literal["web", "writing"]`                      | `"web"`           | Search type                                        |
+| `source_focus`    | `str \| list[str]`                               | `"web"`           | Source types (web, academic, social, etc.)         |
+| `time_range`      | `Literal["all", "day", "week", "month", "year"]` | `"all"`           | Recency filter for results                         |
+| `language`        | `str`                                            | `"en-US"`         | Language for the response                          |
+| `timezone`        | `str \| None`                                    | `None`            | IANA timezone (e.g. `"America/Sao_Paulo"`)         |
+| `coordinates`     | `Coordinates \| None`                            | `None`            | Geographic location (lat/lng)                      |
+| `space_uuid`      | `str \| None`                                    | `None`            | UUID of the Perplexity Space to post the thread to |
+
+> **How to obtain `space_uuid`:** The URL slug (e.g. `questions-9emjYx__RDaUatwqW144tQ`) is **not** the UUID. Use one of these methods:
+>
+> - **Browser DevTools** — open the Space on perplexity.ai, make any query, open the Network tab, find the `perplexity_ask` SSE request, and copy the `target_collection_uuid` value from the JSON payload.
+> - **[Complexity browser extension](https://github.com/perplexity-complexity/complexity)** — surfaces Space metadata (including UUIDs) directly in the Perplexity UI.
 
 ### `ClientConfig`
 
@@ -382,6 +387,23 @@ curl http://localhost:8000/v1/chat/completions \
       "time_range": "week"
     }
   }'
+```
+
+### Posting to a Perplexity Space
+
+Set `space_uuid` in the `perplexity` block to route the thread into a specific Space (collection).
+The UUID is different from the URL slug — see [ConversationConfig](#conversationconfig) for how to obtain it.
+
+```python
+response = client.chat.completions.create(
+    model="gpt-5.4",
+    messages=[{"role": "user", "content": "Research notes for project X"}],
+    extra_body={
+        "perplexity": {
+            "space_uuid": "12345678-1234-1234-1234-123456789abc"
+        }
+    }
+)
 ```
 
 ### Multimodal Uploads / Images

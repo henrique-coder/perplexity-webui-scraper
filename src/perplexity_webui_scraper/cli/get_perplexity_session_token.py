@@ -2,56 +2,31 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from sys import exit
 from typing import NoReturn
 
-from curl_cffi.requests import Session
+from curl_cffi import Session
 from orjson import loads
+from pyperclip import PyperclipException, copy
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
 
 
 BASE_URL: str = "https://www.perplexity.ai"
-ENV_KEY: str = "PERPLEXITY_SESSION_TOKEN"
 
 console = Console(stderr=True, soft_wrap=True)
 
 
-def update_env(token: str) -> bool:
-    """Securely updates the .env file with the session token."""
-
-    path = Path(".env")
-    line_entry = f'{ENV_KEY}="{token}"'
-
-    try:
-        lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
-        updated = False
-        new_lines = []
-
-        for line in lines:
-            if line.strip().startswith(ENV_KEY):
-                new_lines.append(line_entry)
-                updated = True
-            else:
-                new_lines.append(line)
-
-        if not updated:
-            if new_lines and new_lines[-1] != "":
-                new_lines.append("")
-
-            new_lines.append(line_entry)
-
-        path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
-    except Exception:
-        return False
-    else:
-        return True
-
-
 def _initialize_session() -> tuple[Session, str]:
-    """Initialize session and obtain CSRF token."""
+    """Initialize session and obtain CSRF token.
+
+    Returns:
+        A tuple of the initialized session and the CSRF token string.
+
+    Raises:
+        ValueError: If the CSRF token cannot be obtained from the API.
+    """
 
     session = Session(impersonate="chrome", headers={"Referer": BASE_URL, "Origin": BASE_URL})
 
@@ -67,7 +42,16 @@ def _initialize_session() -> tuple[Session, str]:
 
 
 def _request_verification_code(session: Session, csrf: str, email: str) -> None:
-    """Send verification code to user's email."""
+    """Send a verification code to the user's email address.
+
+    Args:
+        session: The active curl-cffi session.
+        csrf: The CSRF token for the request.
+        email: The user's Perplexity account email address.
+
+    Raises:
+        ValueError: If the authentication request returns a non-200 status.
+    """
 
     with console.status("[bold green]Sending verification code...", spinner="dots"):
         response = session.post(
@@ -86,7 +70,19 @@ def _request_verification_code(session: Session, csrf: str, email: str) -> None:
 
 
 def _validate_and_get_redirect_url(session: Session, email: str, user_input: str) -> str:
-    """Validate user input (OTP or magic link) and return redirect URL."""
+    """Validate the OTP or magic link and return the authentication redirect URL.
+
+    Args:
+        session: The active curl-cffi session.
+        email: The user's Perplexity account email address.
+        user_input: Either a 6-digit OTP code or a magic link URL.
+
+    Returns:
+        The full redirect URL to complete authentication.
+
+    Raises:
+        ValueError: If the code is invalid or no redirect URL is returned.
+    """
 
     with console.status("[bold green]Validating...", spinner="dots"):
         if user_input.startswith("http"):
@@ -114,7 +110,18 @@ def _validate_and_get_redirect_url(session: Session, email: str, user_input: str
 
 
 def _extract_session_token(session: Session, redirect_url: str) -> str:
-    """Extract session token from cookies after authentication."""
+    """Extract the session token from cookies after completing authentication.
+
+    Args:
+        session: The active curl-cffi session.
+        redirect_url: The full redirect URL returned after OTP/link validation.
+
+    Returns:
+        The raw ``__Secure-next-auth.session-token`` cookie value.
+
+    Raises:
+        ValueError: If the token cookie is not found after the redirect.
+    """
 
     session.get(redirect_url)
     token = session.cookies.get("__Secure-next-auth.session-token")
@@ -125,23 +132,29 @@ def _extract_session_token(session: Session, redirect_url: str) -> str:
     return token
 
 
-def _display_and_save_token(token: str) -> None:
-    """Display token and optionally save to .env file."""
+def _display_and_copy_token(token: str) -> None:
+    """Display the token and optionally copy it to the system clipboard.
+
+    Prompts the user with a yes/no question (default: yes). If confirmed,
+    copies the token to the clipboard using ``pyperclip``.
+
+    Args:
+        token: The raw session token string to display and copy.
+    """
 
     console.print("\n[bold green]✅ Token generated successfully![/bold green]")
     console.print(f"\n[bold white]Your session token:[/bold white]\n[green]{token}[/green]\n")
 
-    prompt_text = f"Save token to [bold yellow].env[/bold yellow] file ({ENV_KEY})?"
-
-    if Confirm.ask(prompt_text, default=True, console=console):
-        if update_env(token):
-            console.print("[dim]Token saved to .env successfully.[/dim]")
-        else:
-            console.print("[red]Failed to save to .env file.[/red]")
+    if Confirm.ask("Copy token to clipboard?", default=True, console=console):
+        try:
+            copy(token)
+            console.print("[dim]Token copied to clipboard.[/dim]")
+        except PyperclipException as error:
+            console.print(f"[red]Could not copy to clipboard: {error}[/red]")
 
 
 def _show_header() -> None:
-    """Display welcome header."""
+    """Display the welcome header panel."""
 
     console.print(
         Panel(
@@ -155,7 +168,7 @@ def _show_header() -> None:
 
 
 def _show_exit_message() -> None:
-    """Display security note and wait for user to exit."""
+    """Display the security note and wait for the user to press ENTER before clearing the screen."""
 
     console.print("\n[bold yellow]⚠️ Security Note:[/bold yellow]")
     console.print("Press [bold white]ENTER[/bold white] to clear screen and exit.")
@@ -163,7 +176,12 @@ def _show_exit_message() -> None:
 
 
 def get_token() -> NoReturn:
-    """Executes the authentication flow within an ephemeral terminal screen."""
+    """Run the full authentication flow inside an ephemeral terminal screen.
+
+    Guides the user through email-based sign-in (OTP or magic link),
+    displays the extracted session token, and offers to copy it to the
+    clipboard. The screen is cleared on exit for security.
+    """
 
     with console.screen():
         try:
@@ -182,7 +200,7 @@ def get_token() -> NoReturn:
 
             token = _extract_session_token(session, redirect_url)
 
-            _display_and_save_token(token)
+            _display_and_copy_token(token)
 
             _show_exit_message()
 
