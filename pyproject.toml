@@ -40,6 +40,10 @@ lint = [
     "ruff>=0.15.10",
     "ty>=0.0.29",
 ]
+test = [
+    "httpx>=0.28.1",
+    "pytest>=9.0.3",
+]
 
 [project.optional-dependencies]
 cli = [

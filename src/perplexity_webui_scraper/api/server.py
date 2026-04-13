@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from asyncio import Lock
+from dataclasses import dataclass, field
 from os.path import commonprefix
 from time import time
 from typing import TYPE_CHECKING, Annotated
@@ -29,6 +31,7 @@ from .models import (
     ErrorDetail,
     ErrorResponse,
     PerplexityExtensions,
+    PerplexityResponseExtensions,
     build_models_response,
 )
 
@@ -51,12 +54,42 @@ app.add_middleware(
 # Clients cached by token to avoid re-creating on every request.
 _clients: dict[str, Perplexity] = {}
 
+# Conversation cache — keyed by (session_token, thread_uuid)
 
-def _get_client(authorization: str | None) -> Perplexity:
-    """Return a cached (or newly created) Perplexity client for the given token.
+_CONVERSATION_TTL_SECONDS: float = 30 * 60  # 30 minutes
 
-    The token is extracted from the ``Authorization: Bearer <token>`` header,
-    which is required on every request — exactly like the real OpenAI API.
+
+@dataclass
+class _CachedConversation:
+    """A cached ``Conversation`` with a last-access timestamp for TTL eviction."""
+
+    conversation: Conversation
+    last_access: float = field(default_factory=time)
+
+
+# Cache dict and its async lock.
+_conversations: dict[tuple[str, str], _CachedConversation] = {}
+_conversations_lock = Lock()
+
+
+def _evict_stale() -> None:
+    """Remove conversation cache entries that have exceeded the TTL.
+
+    Must be called while ``_conversations_lock`` is held.
+    """
+
+    now = time()
+    stale_keys = [key for key, entry in _conversations.items() if now - entry.last_access > _CONVERSATION_TTL_SECONDS]
+
+    for key in stale_keys:
+        del _conversations[key]
+
+
+# Auth helpers
+
+
+def _extract_token(authorization: str | None) -> str:
+    """Extract the raw session token from the ``Authorization: Bearer`` header.
 
     Raises:
         HTTPException: 401 if the header is missing or malformed.
@@ -80,6 +113,14 @@ def _get_client(authorization: str | None) -> Perplexity:
             status_code=401,
             detail="Bearer token is empty.",
         )
+
+    return token
+
+
+def _get_client(authorization: str | None) -> Perplexity:
+    """Return a cached (or newly created) Perplexity client for the given token."""
+
+    token = _extract_token(authorization)
 
     if token not in _clients:
         _clients[token] = Perplexity(token, config=ClientConfig())
@@ -124,26 +165,31 @@ def _build_conversation_config(model: str, ext: PerplexityExtensions | None) -> 
 
     # citation_mode
     citation_mode = "clean"
+
     if ext.citation_mode:
         citation_mode = ext.citation_mode
 
     # search_focus
     search_focus = "web"
+
     if ext.search_focus:
         search_focus = ext.search_focus
 
     # source_focus
     source_focus = "web"
+
     if ext.source_focus is not None:
         source_focus = ext.source_focus
 
     # time_range
     time_range = "all"
+
     if ext.time_range:
         time_range = ext.time_range
 
     # coordinates
     coordinates: Coordinates | None = None
+
     if ext.coordinates is not None:
         coordinates = Coordinates(
             latitude=ext.coordinates.latitude,
@@ -173,12 +219,31 @@ async def list_models(
     return JSONResponse(content=build_models_response(MODELS).model_dump())
 
 
+def _extract_last_user_message(request: ChatCompletionRequest) -> str:
+    """Return the text of the last user message for thread continuation.
+
+    When continuing an existing thread, only the latest user message is
+    relevant — prior context is already held server-side by Perplexity.
+    """
+
+    for msg in reversed(request.messages):
+        if msg.role == "user":
+            return msg.text()
+
+    return ""
+
+
 @app.post("/v1/chat/completions", response_model=None)
 async def chat_completions(
     raw_request: Request,
     authorization: Annotated[str | None, Header(alias="Authorization")] = None,
 ) -> JSONResponse | StreamingResponse:
-    """Handle a chat completion request (streaming and non-streaming)."""
+    """Handle a chat completion request (streaming and non-streaming).
+
+    Supports thread continuation: pass ``perplexity.thread_uuid`` to reuse
+    a cached conversation.  Omit it to start a new conversation (the
+    default, backward-compatible behaviour).
+    """
 
     try:
         body = await raw_request.json()
@@ -188,19 +253,53 @@ async def chat_completions(
 
     if request.model not in MODELS:
         available = ", ".join(f'"{k}"' for k in MODELS)
+
         raise HTTPException(
             status_code=400,
             detail=f"Unknown model {request.model!r}. Available: {available}",
         )
 
+    token = _extract_token(authorization)
     client = _get_client(authorization)
-    query, files = _build_query_and_files(request)
-    config = _build_conversation_config(request.model, request.perplexity)
-    conversation = client.create_conversation(config)
+
+    thread_uuid = request.perplexity.thread_uuid if request.perplexity else None
+
+    if thread_uuid:
+        # Case A / B: continuation requested
+        async with _conversations_lock:
+            _evict_stale()
+            cached = _conversations.get((token, thread_uuid))
+
+            if cached is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=(
+                        f"Conversation '{thread_uuid}' not found or expired. "
+                        "Start a new conversation by omitting thread_uuid."
+                    ),
+                )
+
+            cached.last_access = time()
+            conversation = cached.conversation
+
+        query = _extract_last_user_message(request)
+        files: list[FileInput] = []
+
+        # Collect any image attachments from the last user message
+        for msg in reversed(request.messages):
+            if msg.role == "user":
+                files = list(msg.image_bytes())
+                break
+
+    else:
+        # Case C: new conversation
+        query, files = _build_query_and_files(request)
+        config = _build_conversation_config(request.model, request.perplexity)
+        conversation = client.create_conversation(config)
 
     if request.stream:
         return StreamingResponse(
-            _stream_response(conversation, query, files, request.model),
+            _stream_response(conversation, query, files, request.model, token, is_new=thread_uuid is None),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
@@ -209,10 +308,24 @@ async def chat_completions(
             },
         )
 
+    # Non-streaming path
     conversation.ask(query, files=files or None)
     answer = conversation.answer or ""
+    conv_uuid = conversation.uuid
 
-    return JSONResponse(content=ChatCompletionResponse.build(model=request.model, content=answer).model_dump())
+    # Cache the conversation after a successful response
+    if conv_uuid:
+        async with _conversations_lock:
+            _evict_stale()
+            _conversations[(token, conv_uuid)] = _CachedConversation(conversation=conversation)
+
+    return JSONResponse(
+        content=ChatCompletionResponse.build(
+            model=request.model,
+            content=answer,
+            thread_uuid=conv_uuid,
+        ).model_dump(exclude_none=True),
+    )
 
 
 async def _stream_response(
@@ -220,8 +333,20 @@ async def _stream_response(
     query: str,
     files: list[FileInput],
     model_id: str,
+    token: str,
+    is_new: bool,
 ) -> AsyncGenerator[str, None]:
-    """Async generator yielding SSE lines for a streaming chat completion."""
+    """Async generator yielding SSE lines for a streaming chat completion.
+
+    Args:
+        conversation: The ``Conversation`` object to query.
+        query: The user query text.
+        files: File attachments for the query.
+        model_id: Model identifier for the response envelope.
+        token: Session token used as part of the conversation cache key.
+        is_new: ``True`` when this is a brand-new conversation that should
+            be cached after the stream completes.
+    """
 
     if not isinstance(conversation, Conversation):
         return
@@ -270,7 +395,22 @@ async def _stream_response(
         # Client disconnected mid-stream — stop gracefully
         return
 
-    # Final chunk — stop signal
+    # Cache the conversation now that we have the UUID from the response.
+    conv_uuid = conversation.uuid
+
+    if conv_uuid:
+        async with _conversations_lock:
+            _evict_stale()
+
+            if is_new:
+                _conversations[(token, conv_uuid)] = _CachedConversation(conversation=conversation)
+            elif (token, conv_uuid) in _conversations:
+                _conversations[(token, conv_uuid)].last_access = time()
+
+    # Build the perplexity response extension for the final chunk.
+    pplx_ext = PerplexityResponseExtensions(thread_uuid=conv_uuid) if conv_uuid else None
+
+    # Final chunk — stop signal with thread_uuid
     yield ChatCompletionChunk(
         id=completion_id,
         created=created,
@@ -281,6 +421,7 @@ async def _stream_response(
                 finish_reason="stop",
             )
         ],
+        perplexity=pplx_ext,
     ).to_sse_line()
 
     yield "data: [DONE]\n\n"
