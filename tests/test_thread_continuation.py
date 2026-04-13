@@ -43,7 +43,7 @@ class _MockModelRegistry:
     def resolve(self, item: str) -> MagicMock:
         return MagicMock(id=MODEL_ID)
 
-    def _all(self):
+    def _all(self) -> list[MagicMock]:
         return [MagicMock(id=MODEL_ID)]
 
 

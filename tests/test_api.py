@@ -22,7 +22,7 @@ class _MockModelRegistry:
 
         return MagicMock(id=MODEL_ID)
 
-    def _all(self):
+    def _all(self) -> list[MagicMock]:
         return [MagicMock(id=MODEL_ID)]
 
 
