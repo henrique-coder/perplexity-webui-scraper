@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 from os import PathLike  # noqa: TC003
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from .types import CitationMode, Coordinates, LogLevel, SearchFocus, SourceFocus, TimeRange  # noqa: TC001
+
+
+if TYPE_CHECKING:
+    from curl_cffi.requests import BrowserTypeLiteral
 
 
 class ConversationConfig(BaseModel):
@@ -67,7 +72,7 @@ class ClientConfig(BaseModel):
         default=3600,
         description="Request timeout in seconds (default: 1 hour).",
     )
-    impersonate: str = Field(
+    impersonate: BrowserTypeLiteral = Field(
         default="chrome",
         description='Browser fingerprint to impersonate (e.g. "chrome", "firefox").',
     )

@@ -6,7 +6,8 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
-site/
+.gemini/
+.mom/
 .debug/
 
 # Files
