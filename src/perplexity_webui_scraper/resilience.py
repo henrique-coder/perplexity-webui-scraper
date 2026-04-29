@@ -13,9 +13,12 @@ from pydantic import BaseModel, ConfigDict
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from curl_cffi.requests import BrowserTypeLiteral
+
+
 T = TypeVar("T")
 
-BROWSER_PROFILES: tuple[str, ...] = (
+BROWSER_PROFILES: tuple[BrowserTypeLiteral, ...] = (
     "chrome",
     "chrome110",
     "chrome116",
@@ -71,7 +74,7 @@ class RateLimiter:
             self._last_request = monotonic()
 
 
-def get_random_browser_profile() -> str:
+def get_random_browser_profile() -> BrowserTypeLiteral:
     """Get a random browser profile for fingerprint rotation."""
 
     return choice(BROWSER_PROFILES)

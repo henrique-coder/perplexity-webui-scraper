@@ -6,8 +6,8 @@ from contextlib import suppress
 from time import monotonic
 from typing import TYPE_CHECKING, Any
 
+from curl_cffi.requests import BrowserTypeLiteral, Session
 from curl_cffi.requests import Response as CurlResponse
-from curl_cffi.requests import Session
 
 from .constants import (
     API_BASE_URL,
@@ -46,7 +46,7 @@ class HTTPClient:
         self,
         session_token: str,
         timeout: int = DEFAULT_TIMEOUT,
-        impersonate: str = "chrome",
+        impersonate: BrowserTypeLiteral = "chrome",
         max_retries: int = 3,
         retry_base_delay: float = 1.0,
         retry_max_delay: float = 60.0,
@@ -76,7 +76,7 @@ class HTTPClient:
         self._session = self._create_session(impersonate)
         logger.debug("HTTPClient initialized | impersonate={}", impersonate)
 
-    def _create_session(self, impersonate: str) -> Session:
+    def _create_session(self, impersonate: BrowserTypeLiteral) -> Session:
         """Create a new HTTP session."""
 
         headers: dict[str, str] = {
