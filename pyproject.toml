@@ -25,7 +25,7 @@ dependencies = [
     "curl-cffi>=0.15.0",
     "loguru>=0.7.3",
     "orjson>=3.11.8",
-    "pydantic>=2.13.3"
+    "pydantic>=2.13.3",
 ]
 
 [dependency-groups]

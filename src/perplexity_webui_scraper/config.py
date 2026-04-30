@@ -3,15 +3,11 @@
 from __future__ import annotations
 
 from os import PathLike  # noqa: TC003
-from typing import TYPE_CHECKING
 
+from curl_cffi.requests import BrowserTypeLiteral  # noqa: TC002
 from pydantic import BaseModel, ConfigDict, Field
 
 from .types import CitationMode, Coordinates, LogLevel, SearchFocus, SourceFocus, TimeRange  # noqa: TC001
-
-
-if TYPE_CHECKING:
-    from curl_cffi.requests import BrowserTypeLiteral
 
 
 class ConversationConfig(BaseModel):
@@ -19,7 +15,7 @@ class ConversationConfig(BaseModel):
 
     model: str | None = Field(
         default=None,
-        description='Model ID string (e.g. "gpt-5.4"). None falls back to "best" (auto-selection).',
+        description='Model ID string (e.g. "openai/gpt-5.4"). None falls back to "perplexity/best" (auto-selection).',
     )
     search_focus: SearchFocus = Field(
         default="web",

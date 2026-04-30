@@ -41,20 +41,20 @@ Returns a `Conversation` object. Each conversation maintains its own context for
 ```python
 from perplexity_webui_scraper import ConversationConfig
 
-conversation = client.create_conversation(ConversationConfig(model="gpt-5.4"))
+conversation = client.create_conversation(ConversationConfig(model="openai/gpt-5.4"))
 ```
 
 ---
 
 ## `Conversation.ask(query, model?, files?, citation_mode?, stream?)`
 
-| Parameter       | Type                      | Default           | Description                  |
-| --------------- | ------------------------- | ----------------- | ---------------------------- |
-| `query`         | `str`                     | _(required)_      | The question to ask          |
-| `model`         | `str \| None`             | `None` → `"best"` | Model ID string              |
-| `files`         | `list[FileInput] \| None` | `None`            | File attachments             |
-| `citation_mode` | `str \| None`             | `None`            | Override conversation config |
-| `stream`        | `bool`                    | `False`           | Yield chunks as they arrive  |
+| Parameter       | Type                      | Default                      | Description                  |
+| --------------- | ------------------------- | ---------------------------- | ---------------------------- |
+| `query`         | `str`                     | _(required)_                 | The question to ask          |
+| `model`         | `str \| None`             | `None` → `"perplexity/best"` | Model ID string              |
+| `files`         | `list[FileInput] \| None` | `None`                       | File attachments             |
+| `citation_mode` | `str \| None`             | `None`                       | Override conversation config |
+| `stream`        | `bool`                    | `False`                      | Yield chunks as they arrive  |
 
 Returns `self` (the `Conversation`) for method chaining or streaming iteration.
 
@@ -73,32 +73,35 @@ Returns `self` (the `Conversation`) for method chaining or streaming iteration.
 Models are specified as plain strings — the same style as the OpenAI SDK:
 
 ```python
-ConversationConfig(model="gpt-5.4-thinking")
-conversation.ask("...", model="gemini-3.1-pro")
+ConversationConfig(model="openai/gpt-5.4-thinking")
+conversation.ask("...", model="google/gemini-3.1-pro-thinking-low")
 ```
 
-| Model ID                         | Name                       | Description                                        | Min. Tier |
-| -------------------------------- | -------------------------- | -------------------------------------------------- | --------- |
-| `"best"`                         | Pro                        | Automatically selects the most responsive model    | pro       |
-| `"deep-research"`                | Deep research              | Fast and thorough for routine research             | pro       |
-| `"sonar"`                        | Sonar                      | Perplexity's latest model                          | pro       |
-| `"gemini-3.1-pro"`               | Gemini 3.1 Pro             | Google's latest model                              | pro       |
-| `"gemini-3.1-pro-thinking"`      | Gemini 3.1 Pro Thinking    | Google's latest model with thinking                | pro       |
-| `"gpt-5.4"`                      | GPT-5.4                    | OpenAI's latest model                              | pro       |
-| `"gpt-5.4-thinking"`             | GPT-5.4 Thinking           | OpenAI's latest model with thinking                | pro       |
-| `"claude-sonnet-4.6"`            | Claude Sonnet 4.6          | Anthropic's fast model                             | pro       |
-| `"claude-sonnet-4.6-thinking"`   | Claude Sonnet 4.6 Thinking | Anthropic's newest reasoning model                 | pro       |
-| `"claude-opus-4.6"`              | Claude Opus 4.6            | Anthropic's most advanced model                    | max       |
-| `"claude-opus-4.6-thinking"`     | Claude Opus 4.6 Thinking   | Anthropic's Opus reasoning model with thinking     | max       |
-| `"nv-nemotron-3-super-thinking"` | Nemotron 3 Super Thinking  | NVIDIA's Nemotron 3 Super 120B model with thinking | pro       |
+| Model ID                                | Name                         | Description                                         | Min. Tier |
+| --------------------------------------- | ---------------------------- | --------------------------------------------------- | --------- |
+| `"perplexity/best"`                     | Pro                          | Perplexity Pro (Auto-select). Tier: Pro.            | pro       |
+| `"perplexity/deep-research"`            | Deep research                | Perplexity Deep Research. Tier: Pro.                | pro       |
+| `"perplexity/sonar-2"`                  | Sonar 2                      | Perplexity Sonar 2. Tier: Pro.                      | pro       |
+| `"openai/gpt-5.4"`                      | GPT-5.4                      | OpenAI GPT-5.4. Tier: Pro.                          | pro       |
+| `"openai/gpt-5.4-thinking"`             | GPT-5.4 Thinking             | OpenAI GPT-5.4 (Thinking). Tier: Pro.               | pro       |
+| `"openai/gpt-5.5-thinking"`             | GPT-5.5 Thinking             | OpenAI GPT-5.5 (Thinking). Tier: Max.               | max       |
+| `"google/gemini-3.1-pro-thinking-low"`  | Gemini 3.1 Pro Thinking Low  | Google Gemini 3.1 Pro (Thinking Low). Tier: Pro.    | pro       |
+| `"google/gemini-3.1-pro-thinking-high"` | Gemini 3.1 Pro Thinking High | Google Gemini 3.1 Pro (Thinking High). Tier: Pro.   | pro       |
+| `"anthropic/claude-opus-4.6"`           | Claude Opus 4.6              | Anthropic Claude Opus 4.6. Tier: Max.               | max       |
+| `"anthropic/claude-opus-4.6-thinking"`  | Claude Opus 4.6 Thinking     | Anthropic Claude Opus 4.6 (Thinking). Tier: Max.    | max       |
+| `"anthropic/claude-opus-4.7"`           | Claude Opus 4.7              | Anthropic Claude Opus 4.7. Tier: Max.               | max       |
+| `"anthropic/claude-opus-4.7-thinking"`  | Claude Opus 4.7 Thinking     | Anthropic Claude Opus 4.7 (Thinking). Tier: Max.    | max       |
+| `"moonshot/kimi-k2.6-instant"`          | Kimi K2.6 Instant            | Moonshot AI Kimi K2.6 Instant. Tier: Pro.           | pro       |
+| `"moonshot/kimi-k2.6-thinking"`         | Kimi K2.6 Thinking           | Moonshot AI Kimi K2.6 (Thinking). Tier: Pro.        | pro       |
+| `"nvidia/nemotron-3-super-thinking"`    | Nemotron 3 Super Thinking    | NVIDIA Nemotron 3 Super 120B (Thinking). Tier: Pro. | pro       |
 
 Inspect models programmatically:
 
 ```python
 from perplexity_webui_scraper import MODELS
 
-for model_id, model in MODELS.items():
-    print(f"{model_id!r:35} → {model.name} [{model.subscription_tier}]")
+for model in MODELS._all():
+    print(f"{model.id!r:35} → {model.name} [{model.min_tier}]")
 ```
 
 ---
@@ -125,18 +128,18 @@ config = ConversationConfig(citation_mode="markdown")
 
 ### `ConversationConfig`
 
-| Parameter         | Type                                             | Default           | Description                                        |
-| ----------------- | ------------------------------------------------ | ----------------- | -------------------------------------------------- |
-| `model`           | `str \| None`                                    | `None` (`"best"`) | Model ID string                                    |
-| `citation_mode`   | `Literal["default", "markdown", "clean"]`        | `"clean"`         | Citation format                                    |
-| `save_to_library` | `bool`                                           | `False`           | Save conversation to Perplexity library            |
-| `search_focus`    | `Literal["web", "writing"]`                      | `"web"`           | Search type                                        |
-| `source_focus`    | `str \| list[str]`                               | `"web"`           | Source types (web, academic, social, etc.)         |
-| `time_range`      | `Literal["all", "day", "week", "month", "year"]` | `"all"`           | Recency filter for results                         |
-| `language`        | `str`                                            | `"en-US"`         | Language for the response                          |
-| `timezone`        | `str \| None`                                    | `None`            | IANA timezone (e.g. `"America/Sao_Paulo"`)         |
-| `coordinates`     | `Coordinates \| None`                            | `None`            | Geographic location (lat/lng)                      |
-| `space_uuid`      | `str \| None`                                    | `None`            | UUID of the Perplexity Space to post the thread to |
+| Parameter         | Type                                             | Default                      | Description                                        |
+| ----------------- | ------------------------------------------------ | ---------------------------- | -------------------------------------------------- |
+| `model`           | `str \| None`                                    | `None` (`"perplexity/best"`) | Model ID string                                    |
+| `citation_mode`   | `Literal["default", "markdown", "clean"]`        | `"clean"`                    | Citation format                                    |
+| `save_to_library` | `bool`                                           | `False`                      | Save conversation to Perplexity library            |
+| `search_focus`    | `Literal["web", "writing"]`                      | `"web"`                      | Search type                                        |
+| `source_focus`    | `str \| list[str]`                               | `"web"`                      | Source types (web, academic, social, etc.)         |
+| `time_range`      | `Literal["all", "day", "week", "month", "year"]` | `"all"`                      | Recency filter for results                         |
+| `language`        | `str`                                            | `"en-US"`                    | Language for the response                          |
+| `timezone`        | `str \| None`                                    | `None`                       | IANA timezone (e.g. `"America/Sao_Paulo"`)         |
+| `coordinates`     | `Coordinates \| None`                            | `None`                       | Geographic location (lat/lng)                      |
+| `space_uuid`      | `str \| None`                                    | `None`                       | UUID of the Perplexity Space to post the thread to |
 
 > **How to obtain `space_uuid`:** The URL slug (e.g. `questions-abcdef123456`) is **not** the UUID. Use one of these methods:
 >
@@ -225,7 +228,7 @@ from perplexity_webui_scraper import (
 )
 
 try:
-    conversation.ask("Analyze recent market trends", model="deep-research")
+    conversation.ask("Analyze recent market trends", model="perplexity/deep-research")
 except ResearchClarifyingQuestionsError as e:
     print("Needs clarification:", e.questions)
 except AuthenticationError:
@@ -285,7 +288,7 @@ Pass your Perplexity session token as the Bearer token in every request — clie
 curl http://localhost:8000/v1/chat/completions \
   -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"model": "best", "messages": [{"role": "user", "content": "Hello!"}]}'
+  -d '{"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello!"}]}'
 ```
 
 Returns `HTTP 401` if the header is missing or malformed.
@@ -303,11 +306,11 @@ Returns `HTTP 401` if the header is missing or malformed.
 
 **Request body:**
 
-| Field      | Type   | Required | Description                                                        |
-| ---------- | ------ | -------- | ------------------------------------------------------------------ |
-| `model`    | `str`  | yes      | Any model ID from `/v1/models` (e.g. `"best"`, `"gpt-5.4"`)        |
-| `messages` | `list` | yes      | List of `{role, content}` messages (`system`, `user`, `assistant`) |
-| `stream`   | `bool` | no       | Enable SSE streaming (default: `false`)                            |
+| Field      | Type   | Required | Description                                                                   |
+| ---------- | ------ | -------- | ----------------------------------------------------------------------------- |
+| `model`    | `str`  | yes      | Any model ID from `/v1/models` (e.g. `"perplexity/best"`, `"openai/gpt-5.4"`) |
+| `messages` | `list` | yes      | List of `{role, content}` messages (`system`, `user`, `assistant`)            |
+| `stream`   | `bool` | no       | Enable SSE streaming (default: `false`)                                       |
 
 > Any extra OpenAI fields (`temperature`, `top_p`, `n`, `max_tokens`, etc.) are accepted for client compatibility but silently ignored.
 
@@ -318,7 +321,7 @@ Returns `HTTP 401` if the header is missing or malformed.
   "id": "chatcmpl-...",
   "object": "chat.completion",
   "created": 1234567890,
-  "model": "best",
+  "model": "perplexity/best",
   "choices": [
     {
       "index": 0,
@@ -341,7 +344,7 @@ client = OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="gpt-5.4",
+    model="openai/gpt-5.4",
     messages=[{"role": "user", "content": "Hello!"}],
 )
 print(response.choices[0].message.content)
@@ -357,7 +360,7 @@ from openai import OpenAI
 client = OpenAI(base_url="http://localhost:8000/v1", api_key="YOUR_SESSION_TOKEN")
 
 response = client.chat.completions.create(
-    model="gemini-3.1-pro",
+    model="google/gemini-3.1-pro-thinking-low",
     messages=[{"role": "user", "content": "Analyze these recent academic papers"}],
     extra_body={
         "perplexity": {
@@ -379,7 +382,7 @@ curl http://localhost:8000/v1/chat/completions \
   -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gpt-5.4",
+    "model": "openai/gpt-5.4",
     "messages": [{"role": "user", "content": "Technology news"}],
     "perplexity": {
       "search_focus": "web",
@@ -396,7 +399,7 @@ The UUID is different from the URL slug — see [ConversationConfig](#conversati
 
 ```python
 response = client.chat.completions.create(
-    model="gpt-5.4",
+    model="openai/gpt-5.4",
     messages=[{"role": "user", "content": "Research notes for project X"}],
     extra_body={
         "perplexity": {
@@ -425,7 +428,7 @@ with open("document.pdf", "rb") as file:
     pdf_b64 = base64.b64encode(file.read()).decode("utf-8")
 
 response = client.chat.completions.create(
-    model="claude-sonnet-4.6",
+    model="anthropic/claude-opus-4.7",
     messages=[
         {
             "role": "user",
@@ -450,7 +453,7 @@ curl http://localhost:8000/v1/chat/completions \
   -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "claude-sonnet-4.6",
+    "model": "anthropic/claude-opus-4.7",
     "messages": [
       {
         "role": "user",

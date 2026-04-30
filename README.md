@@ -84,7 +84,7 @@ for chunk in conversation.ask("Explain AI", stream=True):
 ```python
 from perplexity_webui_scraper import ConversationConfig
 
-conversation = client.create_conversation(ConversationConfig(model="gpt-5.4-thinking"))
+conversation = client.create_conversation(ConversationConfig(model="openai/gpt-5.4-thinking"))
 conversation.ask("Solve this step by step: ...")
 print(conversation.answer)
 ```
@@ -144,13 +144,13 @@ Pass your Perplexity session token as the API key in every request — exactly l
 curl http://localhost:8000/v1/chat/completions \
   -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"model": "best", "messages": [{"role": "user", "content": "Hello!"}]}'
+  -d '{"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello!"}]}'
 
 # Streaming
 curl -N http://localhost:8000/v1/chat/completions \
   -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"model": "gpt-5.4", "messages": [{"role": "user", "content": "Hello!"}], "stream": true}'
+  -d '{"model": "openai/gpt-5.4", "messages": [{"role": "user", "content": "Hello!"}], "stream": true}'
 ```
 
 ```python
@@ -162,7 +162,7 @@ client = OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="gpt-5.4",
+    model="openai/gpt-5.4",
     messages=[{"role": "user", "content": "Hello!"}],
 )
 print(response.choices[0].message.content)

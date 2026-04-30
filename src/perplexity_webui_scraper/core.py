@@ -39,7 +39,7 @@ from .types import CitationMode, FileInput, Response, SearchResultItem, _FileInf
 
 logger = get_logger(__name__)
 
-_DEFAULT_MODEL: str = "best"
+_DEFAULT_MODEL: str = "perplexity/best"
 
 
 class Perplexity:
