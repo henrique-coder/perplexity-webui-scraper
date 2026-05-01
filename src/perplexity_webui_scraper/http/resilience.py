@@ -1,8 +1,7 @@
-"""Resilience utilities: rate limiting and retry logic."""
+"""Retry and rate-limiting utilities for the HTTP layer."""
 
 from __future__ import annotations
 
-from random import choice
 from threading import Lock
 from time import monotonic, sleep
 from typing import TYPE_CHECKING, TypeVar
@@ -13,31 +12,23 @@ from pydantic import BaseModel, ConfigDict
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from curl_cffi.requests import BrowserTypeLiteral
-
 
 T = TypeVar("T")
 
-BROWSER_PROFILES: tuple[BrowserTypeLiteral, ...] = (
-    "chrome",
-    "chrome110",
-    "chrome116",
-    "chrome119",
-    "chrome120",
-    "chrome123",
-    "chrome124",
-    "chrome131",
-    "edge99",
-    "edge101",
-    "safari15_3",
-    "safari15_5",
-    "safari17_0",
-    "safari17_2_ios",
-)
-
 
 class RetryConfig(BaseModel):
-    """Configuration for retry behavior."""
+    """Immutable configuration for exponential-backoff retry behaviour.
+
+    Attributes:
+        max_retries: Maximum number of retry attempts after the initial failure.
+            Set to ``0`` to disable retries.
+        base_delay: Initial backoff delay in seconds before the first retry.
+            Doubles with each subsequent attempt (exponential backoff).
+        max_delay: Upper cap on the backoff delay in seconds.  Prevents
+            excessively long waits on later retry attempts.
+        jitter: Jitter factor (0-1).  A fraction of the computed delay is
+            added or subtracted randomly to avoid thundering-herd effects.
+    """
 
     model_config = ConfigDict(frozen=True)
 
@@ -48,7 +39,14 @@ class RetryConfig(BaseModel):
 
 
 class RateLimiter:
-    """Token bucket rate limiter."""
+    """Simple token-bucket rate limiter using a threading lock.
+
+    Ensures that no more than ``requests_per_second`` requests are issued
+    per second across all threads sharing this limiter instance.
+
+    Attributes:
+        requests_per_second: Maximum allowed request rate.
+    """
 
     __slots__ = ("_last_request", "_lock", "requests_per_second")
 
@@ -58,8 +56,11 @@ class RateLimiter:
         self._lock = Lock()
 
     def acquire(self) -> None:
-        """Wait until a request can be made within rate limits."""
+        """Block the calling thread until a request slot is available.
 
+        Uses a monotonic clock to compute the minimum interval between
+        requests and sleeps if the interval has not elapsed yet.
+        """
         with self._lock:
             now = monotonic()
             min_interval = 1.0 / self.requests_per_second
@@ -74,13 +75,7 @@ class RateLimiter:
             self._last_request = monotonic()
 
 
-def get_random_browser_profile() -> BrowserTypeLiteral:
-    """Get a random browser profile for fingerprint rotation."""
-
-    return choice(BROWSER_PROFILES)
-
-
-def retry_with_backoff(
+def retry_with_backoff[T](
     fn: Callable[[], T],
     config: RetryConfig,
     on_retry: Callable[[int, BaseException, float], None] | None = None,
@@ -90,17 +85,21 @@ def retry_with_backoff(
 
     Args:
         fn: Zero-argument callable to execute.
-        config: Retry configuration.
-        on_retry: Optional callback invoked before each retry with (attempt, exception, wait_seconds).
-        retryable: Exception types that trigger a retry.
+        config: :class:`RetryConfig` controlling retry behaviour.
+        on_retry: Optional callback invoked **before** each retry with
+            ``(attempt, exception, wait_seconds)``.  Use this to rotate
+            sessions, log warnings, etc.
+        retryable: Tuple of exception types that trigger a retry.  Any
+            exception not in this tuple is re-raised immediately without
+            retrying.  Pass an empty tuple to retry on any exception.
 
     Returns:
         The return value of *fn* on success.
 
     Raises:
-        The last exception if all attempts are exhausted.
+        The last exception raised by *fn* if all attempts are exhausted.
+        ``RuntimeError`` if the loop exits unexpectedly without an exception.
     """
-
     last_exc: BaseException | None = None
     max_attempts = config.max_retries + 1
 
@@ -127,6 +126,8 @@ def retry_with_backoff(
 
             if on_retry is not None:
                 on_retry(attempt, exc, wait)
+
+            sleep(wait)
 
     if last_exc is not None:
         raise last_exc

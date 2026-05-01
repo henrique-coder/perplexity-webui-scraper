@@ -7,6 +7,7 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 .gemini/
+.claude/
 .mom/
 .debug/
 
@@ -18,3 +19,9 @@ example*.py
 *.log
 *.tmp
 *.bak
+
+# MOM (generated at runtime)
+.mom/
+.mcp.json
+.claude/
+CLAUDE.md

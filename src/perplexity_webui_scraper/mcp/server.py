@@ -1,111 +1,57 @@
-"""MCP server implementation using FastMCP."""
+"""FastMCP server instance and client lifecycle management."""
 
 from __future__ import annotations
 
-from os import environ
-from typing import TYPE_CHECKING, Literal
+import os
 
 from fastmcp import FastMCP
 
-from perplexity_webui_scraper.config import ClientConfig, ConversationConfig
-from perplexity_webui_scraper.core import Perplexity
-from perplexity_webui_scraper.models import MODELS
+from perplexity_webui_scraper import Perplexity
+from perplexity_webui_scraper.config.client import ClientConfig
+from perplexity_webui_scraper.mcp.tools import register_all_tools
 
 
-if TYPE_CHECKING:
-    from perplexity_webui_scraper.types import SourceFocus
-
-mcp = FastMCP(
-    "perplexity-webui-scraper",
-    instructions=(
-        "Search the web with Perplexity AI using premium models. "
-        "Each tool uses a specific AI model - enable only the ones you need. "
-        "All tools support source_focus: web, academic, social, finance, all."
-    ),
-)
-
-SOURCE_FOCUS_MAP: dict[str, list[SourceFocus]] = {
-    "web": ["web"],
-    "academic": ["academic"],
-    "social": ["social"],
-    "finance": ["finance"],
-    "all": ["web", "academic", "social"],
-}
-
-SourceFocusName = Literal["web", "academic", "social", "finance", "all"]
+mcp: FastMCP = FastMCP(name="perplexity-webui-scraper")  # type: ignore[type-arg]
 
 _client: Perplexity | None = None
 
 
 def _get_client() -> Perplexity:
-    """Get or create Perplexity client."""
+    """Return the singleton Perplexity client, creating it on first call.
 
+    Reads the ``PERPLEXITY_SESSION_TOKEN`` environment variable.
+
+    Returns:
+        Active :class:`~perplexity_webui_scraper.Perplexity` instance.
+
+    Raises:
+        RuntimeError: If the environment variable is not set.
+    """
     global _client  # noqa: PLW0603
 
     if _client is None:
-        token = environ.get("PERPLEXITY_SESSION_TOKEN", "")
+        token = os.environ.get("PERPLEXITY_SESSION_TOKEN", "")
 
         if not token:
-            msg = (
-                "PERPLEXITY_SESSION_TOKEN environment variable is required. "
-                "Set it with: export PERPLEXITY_SESSION_TOKEN='your_token_here'"
+            raise RuntimeError(
+                "PERPLEXITY_SESSION_TOKEN environment variable is not set. "
+                "Set it before starting the MCP server:\n\n"
+                "  PERPLEXITY_SESSION_TOKEN=<token> perplexity-webui-scraper-mcp"
             )
-
-            raise ValueError(msg)
 
         _client = Perplexity(token, config=ClientConfig())
 
     return _client
 
 
-def _ask(query: str, model_id: str, source_focus: SourceFocusName = "web") -> str:
-    """Execute a query with a specific model."""
-
-    client = _get_client()
-    sources = SOURCE_FOCUS_MAP.get(source_focus, ["web"])
-
-    try:
-        conversation = client.create_conversation(
-            ConversationConfig(
-                model=model_id,
-                citation_mode="default",
-                search_focus="web",
-                source_focus=sources,
-            )
-        )
-
-        conversation.ask(query)
-    except Exception as error:
-        return f"Error: {error!s}"
-    else:
-        return conversation.answer or "No answer received"
+register_all_tools(mcp, _get_client)
 
 
-def _create_tool_function(model_id: str) -> None:
-    """Dynamically create and register a tool for a model."""
-
-    model = MODELS.resolve(model_id)
-
-    @mcp.tool(name=model.tool_name, description=f"{model.name} - {model.description}")
-    def tool_fn(query: str, source_focus: SourceFocusName = "web") -> str:
-        return _ask(query, model_id, source_focus)
-
-
-def _register_all_tools() -> None:
-    """Register all model tools dynamically."""
-
-    for model in MODELS._all():
-        _create_tool_function(model.id)
-
-
-_register_all_tools()
-
-
-def main() -> None:
-    """Run the MCP server."""
-
+def run_server() -> None:
+    """Start the MCP server (blocking).  Call from ``__main__`` only."""
     mcp.run()
 
 
-if __name__ == "__main__":
-    main()
+def main() -> None:
+    """Console script entry point."""
+    run_server()

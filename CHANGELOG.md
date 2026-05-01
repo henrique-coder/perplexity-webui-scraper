@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0).
 
+## [1.0.0] - 2026-04-30
+
+### 🚨 MAJOR BREAKING CHANGES (v1.0.0 Stable Release)
+
+- **Ground-up Architectural Refactor:** The codebase was structurally rewritten from flat files into a modular `src/` layout with isolated domains (`api/`, `cli/`, `config/`, `core/`, `http/`, `mcp/`, `models/`, and `_internal/`). Old imports from `< 0.8.0` are fundamentally broken.
+- **Python >= 3.12 constraint:** Raised the minimum Python requirement to utilize modern constructs like PEP 695 generics (`[T]`) and structural pattern matching (`match`/`case`).
+
+### Added
+
+- **Containerization Support:** Added an Alpine-based `Containerfile` and direct `Justfile` tasks (`build-container`, `run-container`, `stop-container`) for frictionless API deployment via Podman.
+- **Advanced TLS Fingerprinting:** Integrated `curl_cffi` as the core HTTP backend, swapping out `requests` to provide browser-grade TLS fingerprints that natively bypass bot-detection algorithms.
+- **JSON-Backed Model Registry:** Migrated the hardcoded models introduced in 0.8.0 to a dynamically loaded `_static/models.json` architecture.
+- **Structured Logging:** Integrated `loguru` to handle all internal console outputs with structured, filtered logging instead of standard `print()`.
+- **Rich CLI UX:** Restored `pyperclip` and added `rich` to the `[cli]` optional dependency group. The `get-perplexity-session-token` script now features a beautiful Typer-based terminal UI and automatically copies the captured token directly to the clipboard.
+- **Strict Typing Enforcement:** Adopted `ty` as the definitive static type checker and rigidly enforced pure Google-style docstrings via `ruff` across all modules. 
+
+### Changed
+
+- Re-architected Pydantic schemas by stripping all `Field()` metadata (previously added in 0.8.0), migrating entirely to native, clean type hints.
+- Exported the `Coordinates` class directly to `_internal/types.py` to eradicate circular dependencies between conversation and response modules.
+
+### Removed
+
+- Removed all flat source files from the project root (`core.py`, `models.py`, `http.py`, etc) as they were completely replaced by the new package structure.
+
+---
+
 ## [0.8.0] - 2026-04-12
 
 ### Added

@@ -27,7 +27,6 @@ def _initialize_session() -> tuple[Session, str]:
     Raises:
         ValueError: If the CSRF token cannot be obtained from the API.
     """
-
     session = Session(impersonate="chrome", headers={"Referer": BASE_URL, "Origin": BASE_URL})
 
     with console.status("[bold green]Initializing secure connection...", spinner="dots"):
@@ -52,7 +51,6 @@ def _request_verification_code(session: Session, csrf: str, email: str) -> None:
     Raises:
         ValueError: If the authentication request returns a non-200 status.
     """
-
     with console.status("[bold green]Sending verification code...", spinner="dots"):
         response = session.post(
             f"{BASE_URL}/api/auth/signin/email?version=2.18&source=default",
@@ -83,7 +81,6 @@ def _validate_and_get_redirect_url(session: Session, email: str, user_input: str
     Raises:
         ValueError: If the code is invalid or no redirect URL is returned.
     """
-
     with console.status("[bold green]Validating...", spinner="dots"):
         if user_input.startswith("http"):
             return user_input
@@ -122,7 +119,6 @@ def _extract_session_token(session: Session, redirect_url: str) -> str:
     Raises:
         ValueError: If the token cookie is not found after the redirect.
     """
-
     session.get(redirect_url)
     token = session.cookies.get("__Secure-next-auth.session-token")
 
@@ -141,7 +137,6 @@ def _display_and_copy_token(token: str) -> None:
     Args:
         token: The raw session token string to display and copy.
     """
-
     console.print("\n[bold green]✅ Token generated successfully![/bold green]")
     console.print(f"\n[bold white]Your session token:[/bold white]\n[green]{token}[/green]\n")
 
@@ -155,7 +150,6 @@ def _display_and_copy_token(token: str) -> None:
 
 def _show_header() -> None:
     """Display the welcome header panel."""
-
     console.print(
         Panel(
             "[bold white]Perplexity WebUI Scraper[/bold white]\n\n"
@@ -169,7 +163,6 @@ def _show_header() -> None:
 
 def _show_exit_message() -> None:
     """Display the security note and wait for the user to press ENTER before clearing the screen."""
-
     console.print("\n[bold yellow]⚠️ Security Note:[/bold yellow]")
     console.print("Press [bold white]ENTER[/bold white] to clear screen and exit.")
     console.input()
@@ -182,7 +175,6 @@ def get_token() -> NoReturn:
     displays the extracted session token, and offers to copy it to the
     clipboard. The screen is cleared on exit for security.
     """
-
     with console.screen():
         try:
             _show_header()

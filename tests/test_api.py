@@ -22,7 +22,7 @@ class _MockModelRegistry:
 
         return MagicMock(id=MODEL_ID)
 
-    def _all(self) -> list[MagicMock]:
+    def list_all(self) -> list[MagicMock]:
         return [MagicMock(id=MODEL_ID)]
 
 
@@ -44,7 +44,6 @@ def _make_mock_conversation() -> MagicMock:
 @fixture(autouse=True)
 def _patch_models():
     """Bypass model validation so we can focus on API logic."""
-
     with patch("perplexity_webui_scraper.api.server.MODELS", _mock_models):
         yield
 
@@ -56,7 +55,6 @@ def client() -> TestClient:
 
 def test_missing_auth_header(client: TestClient) -> None:
     """Request without Authorization header should return 401."""
-
     response = client.post(
         "/v1/chat/completions",
         json={"model": MODEL_ID, "messages": [{"role": "user", "content": "Hello"}]},
@@ -68,7 +66,6 @@ def test_missing_auth_header(client: TestClient) -> None:
 
 def test_malformed_auth_header(client: TestClient) -> None:
     """Request with malformed Authorization header (not Bearer) should return 401."""
-
     response = client.post(
         "/v1/chat/completions",
         json={"model": MODEL_ID, "messages": [{"role": "user", "content": "Hello"}]},
@@ -80,7 +77,6 @@ def test_malformed_auth_header(client: TestClient) -> None:
 
 def test_invalid_model(client: TestClient) -> None:
     """Request with an unregistered model should return 400 Bad Request."""
-
     response = client.post(
         "/v1/chat/completions",
         json={"model": "non-existent-model", "messages": [{"role": "user", "content": "Hello"}]},
@@ -93,7 +89,6 @@ def test_invalid_model(client: TestClient) -> None:
 @patch("perplexity_webui_scraper.api.server._get_client")
 def test_perplexity_extensions_are_parsed(mock_get_client: MagicMock, client: TestClient) -> None:
     """Verify that Perplexity extensions are parsed into the config."""
-
     mock_client_instance = MagicMock()
     mock_conv = _make_mock_conversation()
     mock_client_instance.create_conversation.return_value = mock_conv
@@ -129,7 +124,6 @@ def test_perplexity_extensions_are_parsed(mock_get_client: MagicMock, client: Te
 @patch("perplexity_webui_scraper.api.server._get_client")
 def test_system_prompt_concatenation(mock_get_client: MagicMock, client: TestClient) -> None:
     """Verify that a 'system' message is prepended to the final query string sent to Perplexity."""
-
     mock_client_instance = MagicMock()
     mock_conv = _make_mock_conversation()
     mock_client_instance.create_conversation.return_value = mock_conv

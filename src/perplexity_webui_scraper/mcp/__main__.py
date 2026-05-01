@@ -1,9 +1,9 @@
-"""CLI entry point for MCP server."""
+"""Entry point: python -m perplexity_webui_scraper.mcp."""
 
 from __future__ import annotations
 
-from . import run_server
+from perplexity_webui_scraper.mcp.server import main
 
 
 if __name__ == "__main__":
-    run_server()
+    main()

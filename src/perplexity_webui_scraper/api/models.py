@@ -39,7 +39,6 @@ class ChatMessage(BaseModel):
 
     def text(self) -> str:
         """Return the plain-text portion of this message."""
-
         if isinstance(self.content, str):
             return self.content
 
@@ -51,7 +50,6 @@ class ChatMessage(BaseModel):
         Only ``data:`` URIs (base64-encoded) are supported — external URLs are
         not fetched to avoid unpredictable network calls from the server.
         """
-
         if isinstance(self.content, str):
             return []
 
@@ -178,7 +176,6 @@ class PerplexityExtensions(BaseModel):
     @classmethod
     def _normalise_strings(cls, values: dict[str, Any]) -> dict[str, Any]:
         """Lowercase all string fields for case-insensitive matching."""
-
         if not isinstance(values, dict):
             return values
 
@@ -254,7 +251,6 @@ class ChatCompletionResponse(BaseModel):
         thread_uuid: str | None = None,
     ) -> ChatCompletionResponse:
         """Build a response from a model ID, answer text, and optional thread UUID."""
-
         pplx = PerplexityResponseExtensions(thread_uuid=thread_uuid) if thread_uuid else None
 
         return cls(
@@ -297,7 +293,6 @@ class ChatCompletionChunk(BaseModel):
 
     def to_sse_line(self) -> str:
         """Serialize to a Server-Sent Events data line."""
-
         return f"data: {self.model_dump_json(exclude_none=True)}\n\n"
 
 
@@ -333,7 +328,6 @@ class ErrorResponse(BaseModel):
 
 def build_models_response(registry: ModelRegistry) -> ModelList:
     """Build a ModelList from the MODELS registry."""
-
     return ModelList(
-        data=[ModelObject(id=model.id) for model in registry._all()],
+        data=[ModelObject(id=model.id) for model in registry.list_all()],
     )
