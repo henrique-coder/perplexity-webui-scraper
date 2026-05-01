@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- Removed all flat source files from the project root (`core.py`, `models.py`, `http.py`, etc) as they were completely replaced by the new package structure.ed.
+- Removed all flat source files from the project root (`core.py`, `models.py`, `http.py`, etc) as they were completely replaced by the new package structure.
 
 ---
 
