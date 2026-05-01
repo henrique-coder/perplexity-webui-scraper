@@ -1,10 +1,10 @@
 [
   {
     "id": "perplexity/best",
-    "name": "Pro",
-    "description": "Perplexity Pro (Auto-select).",
+    "name": "Best",
+    "description": "Perplexity Best (Auto-select).",
     "identifier": "default",
-    "tool_name": "pplx_ask",
+    "tool_name": "pplx_best",
     "min_tier": "pro",
     "mode": "search"
   },

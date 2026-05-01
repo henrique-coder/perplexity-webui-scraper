@@ -3,12 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable  # noqa: TC003
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-
-if TYPE_CHECKING:
-    from perplexity_webui_scraper._internal.types import SearchFocus, SourceFocus, TimeRange
-
+from perplexity_webui_scraper._internal.types import SearchFocus, SourceFocus, TimeRange  # noqa: TC001
 from perplexity_webui_scraper.core.client import Perplexity  # noqa: TC001
 from perplexity_webui_scraper.mcp.tools.ask import _ask
 from perplexity_webui_scraper.models.registry import MODELS

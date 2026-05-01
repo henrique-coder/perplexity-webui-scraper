@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import os
+from os import environ
 
 from fastmcp import FastMCP
 
@@ -30,7 +30,7 @@ def _get_client() -> Perplexity:
     global _client  # noqa: PLW0603
 
     if _client is None:
-        token = os.environ.get("PERPLEXITY_SESSION_TOKEN", "")
+        token = environ.get("PERPLEXITY_SESSION_TOKEN", "")
 
         if not token:
             raise RuntimeError(

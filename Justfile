@@ -17,6 +17,9 @@ lint:
 test:
     uv run pytest
 
+docs:
+    uv run mkdocs serve --watch docs --watch src
+
 build-container:
     podman build -t perplexity-webui-scraper .
 
