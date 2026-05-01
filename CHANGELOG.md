@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0).
 
+## [1.0.1] - 2026-05-01
+
+### Added
+
+- **Automated API Documentation:** Integrated `mkdocstrings[python]` into the MkDocs Material setup. Seven dedicated pages under `docs/api/` now render API docs directly from Google-style docstrings — covering the client, conversation, configuration models, response models, model registry, type aliases, and exception hierarchy.
+- **`just docs` recipe:** Added a `docs` Justfile task that runs `mkdocs serve --watch docs --watch src` for hot-reloading local documentation previews.
+- **`.prettierignore`:** Added rule to exclude `docs/api/` from Prettier formatting, preventing it from escaping underscores in `:::` mkdocstrings directives.
+
+### Changed
+
+- **API server startup banner:** Replaced `typer.echo` with a Rich `Panel` (via `rich.console.Console`) in both `api/cli.py` and `api/launcher.py`. The panel now shows server URL, docs, ReDoc, and auth format with icons and styled text.
+- **Import style:** Standardised all bare `import X` statements across the codebase to `from X import Y` form (`orjson`, `os`, `uvicorn`) for consistency with the project-wide style guide.
+- **Clipboard copy default:** Changed the `get-perplexity-session-token` clipboard prompt from opt-out (`[Y/n]`) to opt-in (`[y/N]`), defaulting to `False`.
+- **`uvicorn` import guard removed:** The `try/except ImportError` probe for `uvicorn` in `api/cli.py` and `api/launcher.py` has been removed. `uvicorn` is now imported unconditionally at the top of the module alongside other dependencies.
+- **Model display name:** Updated `perplexity/best` model `name` from `"Pro"` to `"Best"` and MCP `tool_name` from `pplx_ask` to `pplx_best` in `_static/models.json`.
+- **`mkdocstrings[python]`** added to the `docs` dependency group in `pyproject.toml`.
+- **`mkdocs.yml`:** Registered the `mkdocstrings` plugin with Google-style handler options (`merge_init_into_class`, `separate_signature`, `signature_crossrefs`, `unwrap_annotated`, private member filter). Navigation expanded with a nested **Python API** section.
+
+---
+
 ## [1.0.0] - 2026-04-30
 
 ### 🚨 MAJOR BREAKING CHANGES (v1.0.0 Stable Release)
@@ -19,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **JSON-Backed Model Registry:** Migrated the hardcoded models introduced in 0.8.0 to a dynamically loaded `_static/models.json` architecture.
 - **Structured Logging:** Integrated `loguru` to handle all internal console outputs with structured, filtered logging instead of standard `print()`.
 - **Rich CLI UX:** Restored `pyperclip` and added `rich` to the `[cli]` optional dependency group. The `get-perplexity-session-token` script now features a beautiful Typer-based terminal UI and automatically copies the captured token directly to the clipboard.
-- **Strict Typing Enforcement:** Adopted `ty` as the definitive static type checker and rigidly enforced pure Google-style docstrings via `ruff` across all modules. 
+- **Strict Typing Enforcement:** Adopted `ty` as the definitive static type checker and rigidly enforced pure Google-style docstrings via `ruff` across all modules.
 
 ### Changed
 

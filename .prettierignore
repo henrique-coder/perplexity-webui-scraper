@@ -1,0 +1,3 @@
+# Ignore auto-generated mkdocstrings API pages
+# (prettier escapes underscores in ::: identifiers, breaking mkdocstrings paths)
+docs/api/

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from importlib.resources import files
 
-import orjson
+from orjson import loads
 
 from perplexity_webui_scraper.models.types import Model
 
@@ -33,7 +33,7 @@ class ModelRegistry:
         models_file = static_pkg.joinpath("models.json")
 
         raw: bytes = models_file.read_bytes()  # type: ignore[arg-type]
-        data: list[dict[str, object]] = orjson.loads(raw)
+        data: list[dict[str, object]] = loads(raw)
 
         for item in data:
             model = Model.model_validate(item)
