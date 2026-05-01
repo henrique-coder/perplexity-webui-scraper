@@ -39,7 +39,7 @@ from perplexity_webui_scraper import (
 )
 
 config = ConversationConfig(
-    model="perplexity/deep-research",
+    model="perplexity/best",
     citation_mode="markdown",
     source_focus=["web", "academic"],
     language="en-US",

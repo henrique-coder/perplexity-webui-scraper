@@ -13,10 +13,10 @@ from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 
+from perplexity_webui_scraper._internal.types import Coordinates, FileInput
 from perplexity_webui_scraper.config import ClientConfig, ConversationConfig
 from perplexity_webui_scraper.core import Conversation, Perplexity
 from perplexity_webui_scraper.models import MODELS
-from perplexity_webui_scraper.types import Coordinates, FileInput
 
 
 if TYPE_CHECKING:
@@ -77,7 +77,6 @@ def _evict_stale() -> None:
 
     Must be called while ``_conversations_lock`` is held.
     """
-
     now = time()
     stale_keys = [key for key, entry in _conversations.items() if now - entry.last_access > _CONVERSATION_TTL_SECONDS]
 
@@ -94,7 +93,6 @@ def _extract_token(authorization: str | None) -> str:
     Raises:
         HTTPException: 401 if the header is missing or malformed.
     """
-
     bearer_prefix = "Bearer "
 
     if not authorization or not authorization.startswith(bearer_prefix):
@@ -119,7 +117,6 @@ def _extract_token(authorization: str | None) -> str:
 
 def _get_client(authorization: str | None) -> Perplexity:
     """Return a cached (or newly created) Perplexity client for the given token."""
-
     token = _extract_token(authorization)
 
     if token not in _clients:
@@ -136,7 +133,6 @@ def _build_query_and_files(request: ChatCompletionRequest) -> tuple[str, list[Fi
     parts are decoded into ``(bytes, filename, mimetype)`` tuples and collected
     as file attachments for the Perplexity ``ask()`` call.
     """
-
     parts: list[str] = []
     files: list[FileInput] = []
 
@@ -159,7 +155,6 @@ def _build_query_and_files(request: ChatCompletionRequest) -> tuple[str, list[Fi
 
 def _build_conversation_config(model: str, ext: PerplexityExtensions | None) -> ConversationConfig:
     """Build a ``ConversationConfig`` merging model ID with Perplexity extensions."""
-
     if ext is None:
         return ConversationConfig(model=model)
 
@@ -215,7 +210,6 @@ async def list_models(
     _authorization: Annotated[str | None, Header(alias="Authorization")] = None,
 ) -> JSONResponse:
     """List all available models in OpenAI format."""
-
     return JSONResponse(content=build_models_response(MODELS).model_dump())
 
 
@@ -230,7 +224,6 @@ async def chat_completions(
     a cached conversation.  Omit it to start a new conversation (the
     default, backward-compatible behaviour).
     """
-
     try:
         body = await raw_request.json()
         request = ChatCompletionRequest.model_validate(body)
@@ -240,7 +233,7 @@ async def chat_completions(
     try:
         MODELS.resolve(request.model)
     except ValueError:
-        available = ", ".join(f'"{model.id}"' for model in MODELS._all())
+        available = ", ".join(f'"{model.id}"' for model in MODELS.list_all())
 
         raise HTTPException(
             status_code=400,
@@ -361,7 +354,6 @@ async def _stream_response(
         is_new: ``True`` when this is a brand-new conversation that should
             be cached after the stream completes.
     """
-
     if not isinstance(conversation, Conversation):
         return
 
@@ -446,7 +438,6 @@ async def _stream_response(
 @app.exception_handler(HTTPException)
 async def http_exception_handler(_request: Request, exc: HTTPException) -> JSONResponse:
     """Return errors in OpenAI-compatible format."""
-
     return JSONResponse(
         status_code=exc.status_code,
         content=ErrorResponse(

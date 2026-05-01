@@ -1,4 +1,4 @@
-"""Typer CLI for the OpenAI-compatible Perplexity API server."""
+"""Typer CLI for launching the OpenAI-compatible Perplexity API server."""
 
 from __future__ import annotations
 
@@ -41,9 +41,9 @@ def main(
         typer.Option("--log-level", help="Uvicorn log level."),
     ] = "info",
 ) -> None:
-    """Start the OpenAI-compatible API server.
+    """Start the OpenAI-compatible Perplexity API server.
 
-    Authentication is done per-request via the Authorization: Bearer header.
+    Authentication is done per-request via the ``Authorization: Bearer`` header.
     Pass your Perplexity session token as the API key in every request.
     """
     if not _HAS_UVICORN:
@@ -65,7 +65,7 @@ def main(
     )
 
     uvicorn.run(
-        "perplexity_webui_scraper.api.server:app",
+        "perplexity_webui_scraper.api.app:app",
         host=host,
         port=port,
         reload=reload,

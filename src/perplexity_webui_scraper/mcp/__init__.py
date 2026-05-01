@@ -1,14 +1,8 @@
-"""MCP server for Perplexity WebUI Scraper."""
+"""MCP server package — re-exports run_server."""
 
 from __future__ import annotations
 
+from perplexity_webui_scraper.mcp.server import run_server
+
 
 __all__: list[str] = ["run_server"]
-
-
-def run_server() -> None:
-    """Run the MCP server."""
-
-    from .server import main  # noqa: PLC0415
-
-    main()

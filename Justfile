@@ -16,3 +16,12 @@ lint:
 
 test:
     uv run pytest
+
+build-container:
+    podman build -t perplexity-webui-scraper .
+
+run-container:
+    podman run --rm -p 8000:8000 --name perplexity-api perplexity-webui-scraper
+
+stop-container:
+    podman stop perplexity-api

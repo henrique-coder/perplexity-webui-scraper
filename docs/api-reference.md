@@ -41,7 +41,7 @@ Returns a `Conversation` object. Each conversation maintains its own context for
 ```python
 from perplexity_webui_scraper import ConversationConfig
 
-conversation = client.create_conversation(ConversationConfig(model="openai/gpt-5.4"))
+conversation = client.create_conversation(ConversationConfig(model="perplexity/best"))
 ```
 
 ---
@@ -73,7 +73,7 @@ Returns `self` (the `Conversation`) for method chaining or streaming iteration.
 Models are specified as plain strings — the same style as the OpenAI SDK:
 
 ```python
-ConversationConfig(model="openai/gpt-5.4-thinking")
+ConversationConfig(model="perplexity/best")
 conversation.ask("...", model="google/gemini-3.1-pro-thinking-low")
 ```
 
@@ -100,7 +100,7 @@ Inspect models programmatically:
 ```python
 from perplexity_webui_scraper import MODELS
 
-for model in MODELS._all():
+for model in MODELS.list_all():
     print(f"{model.id!r:35} → {model.name} [{model.min_tier}]")
 ```
 
@@ -228,7 +228,7 @@ from perplexity_webui_scraper import (
 )
 
 try:
-    conversation.ask("Analyze recent market trends", model="perplexity/deep-research")
+    conversation.ask("Analyze recent market trends", model="perplexity/best")
 except ResearchClarifyingQuestionsError as e:
     print("Needs clarification:", e.questions)
 except AuthenticationError:
@@ -306,11 +306,11 @@ Returns `HTTP 401` if the header is missing or malformed.
 
 **Request body:**
 
-| Field      | Type   | Required | Description                                                                   |
-| ---------- | ------ | -------- | ----------------------------------------------------------------------------- |
-| `model`    | `str`  | yes      | Any model ID from `/v1/models` (e.g. `"perplexity/best"`, `"openai/gpt-5.4"`) |
-| `messages` | `list` | yes      | List of `{role, content}` messages (`system`, `user`, `assistant`)            |
-| `stream`   | `bool` | no       | Enable SSE streaming (default: `false`)                                       |
+| Field      | Type   | Required | Description                                                        |
+| ---------- | ------ | -------- | ------------------------------------------------------------------ |
+| `model`    | `str`  | yes      | Any model ID from `/v1/models` (e.g. `"perplexity/best"`)          |
+| `messages` | `list` | yes      | List of `{role, content}` messages (`system`, `user`, `assistant`) |
+| `stream`   | `bool` | no       | Enable SSE streaming (default: `false`)                            |
 
 > Any extra OpenAI fields (`temperature`, `top_p`, `n`, `max_tokens`, etc.) are accepted for client compatibility but silently ignored.
 
@@ -344,7 +344,7 @@ client = OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="openai/gpt-5.4",
+    model="perplexity/best",
     messages=[{"role": "user", "content": "Hello!"}],
 )
 print(response.choices[0].message.content)
@@ -382,7 +382,7 @@ curl http://localhost:8000/v1/chat/completions \
   -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "openai/gpt-5.4",
+    "model": "perplexity/best",
     "messages": [{"role": "user", "content": "Technology news"}],
     "perplexity": {
       "search_focus": "web",
@@ -399,7 +399,7 @@ The UUID is different from the URL slug — see [ConversationConfig](#conversati
 
 ```python
 response = client.chat.completions.create(
-    model="openai/gpt-5.4",
+    model="perplexity/best",
     messages=[{"role": "user", "content": "Research notes for project X"}],
     extra_body={
         "perplexity": {
@@ -428,7 +428,7 @@ with open("document.pdf", "rb") as file:
     pdf_b64 = base64.b64encode(file.read()).decode("utf-8")
 
 response = client.chat.completions.create(
-    model="anthropic/claude-opus-4.7",
+    model="perplexity/best",
     messages=[
         {
             "role": "user",
@@ -453,7 +453,7 @@ curl http://localhost:8000/v1/chat/completions \
   -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "anthropic/claude-opus-4.7",
+    "model": "perplexity/best",
     "messages": [
       {
         "role": "user",

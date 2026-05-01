@@ -23,7 +23,7 @@ Python scraper to extract AI responses from [Perplexity's](https://www.perplexit
 This library lets you interact with Perplexity AI programmatically using the same web endpoints as the browser — no official API key required. It supports conversations, file uploads, streaming, an MCP server for AI agents, and a drop-in OpenAI-compatible REST API.
 
 - **Requirements:** A Perplexity Pro or Max account and your browser session token.
-- **Key Features:** Full model support (GPT-5.4, Opus 4.6, Deep Research…), file attachments, streaming, MCP Server, OpenAI-compatible API.
+- **Key Features:** 15 models (GPT-5.4, Claude Opus, Gemini, Deep Research…), file attachments (images, PDFs, …), streaming, MCP Server for AI agents, OpenAI-compatible REST API, multi-turn conversation thread continuation.
 
 ## Installation
 
@@ -84,9 +84,18 @@ for chunk in conversation.ask("Explain AI", stream=True):
 ```python
 from perplexity_webui_scraper import ConversationConfig
 
-conversation = client.create_conversation(ConversationConfig(model="openai/gpt-5.4-thinking"))
+conversation = client.create_conversation(ConversationConfig(model="perplexity/best"))
 conversation.ask("Solve this step by step: ...")
 print(conversation.answer)
+```
+
+### 5. List all available models
+
+```python
+from perplexity_webui_scraper import MODELS
+
+for model in MODELS.list_all():
+    print(f"{model.id:40} {model.name}")
 ```
 
 ## Available CLIs
@@ -150,7 +159,7 @@ curl http://localhost:8000/v1/chat/completions \
 curl -N http://localhost:8000/v1/chat/completions \
   -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"model": "openai/gpt-5.4", "messages": [{"role": "user", "content": "Hello!"}], "stream": true}'
+  -d '{"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello!"}], "stream": true}'
 ```
 
 ```python
@@ -162,7 +171,7 @@ client = OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="openai/gpt-5.4",
+    model="perplexity/best",
     messages=[{"role": "user", "content": "Hello!"}],
 )
 print(response.choices[0].message.content)

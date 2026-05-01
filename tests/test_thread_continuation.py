@@ -59,7 +59,6 @@ def _make_mock_conversation(uuid: str = THREAD_UUID, answer: str = "Mock answer"
     Uses ``spec=Conversation`` so ``isinstance()`` checks pass in the
     streaming code path.
     """
-
     conv = MagicMock(spec=Conversation)
     conv.uuid = uuid
     conv.answer = answer
@@ -74,7 +73,6 @@ def _make_mock_conversation(uuid: str = THREAD_UUID, answer: str = "Mock answer"
 
 def _make_mock_client(conv: MagicMock | None = None) -> MagicMock:
     """Create a mock ``Perplexity`` client."""
-
     client = MagicMock()
 
     if conv is None:
@@ -90,7 +88,6 @@ def _make_mock_client(conv: MagicMock | None = None) -> MagicMock:
 @fixture(autouse=True)
 def _clean_caches():
     """Clear all caches and patch MODELS before each test."""
-
     _conversations.clear()
     _clients.clear()
 
@@ -104,7 +101,6 @@ def _clean_caches():
 @fixture
 def http_client() -> TestClient:
     """FastAPI test client."""
-
     return TestClient(app)
 
 
@@ -113,7 +109,6 @@ def http_client() -> TestClient:
 
 def test_new_conversation_returns_thread_uuid(http_client: TestClient) -> None:
     """A request without thread_uuid should create a new conversation and return perplexity.thread_uuid."""
-
     mock_conv = _make_mock_conversation()
     mock_client = _make_mock_client(mock_conv)
 
@@ -139,7 +134,6 @@ def test_new_conversation_returns_thread_uuid(http_client: TestClient) -> None:
 
 def test_followup_with_thread_uuid(http_client: TestClient) -> None:
     """A request with a valid cached thread_uuid should continue using only the last message."""
-
     mock_conv = _make_mock_conversation()
     mock_client = _make_mock_client(mock_conv)
 
@@ -183,7 +177,6 @@ def test_followup_with_thread_uuid(http_client: TestClient) -> None:
 
 def test_invalid_thread_uuid_returns_404(http_client: TestClient) -> None:
     """A request with an uncached thread_uuid should return a 404 error with a clear message."""
-
     mock_client = _make_mock_client()
 
     with patch("perplexity_webui_scraper.api.server._get_client", return_value=mock_client):
@@ -206,7 +199,6 @@ def test_invalid_thread_uuid_returns_404(http_client: TestClient) -> None:
 
 def test_streaming_new_conversation_includes_thread_uuid(http_client: TestClient) -> None:
     """A streaming request without thread_uuid should include it in the final chunk."""
-
     mock_conv = _make_mock_conversation()
     mock_client = _make_mock_client(mock_conv)
 
@@ -253,7 +245,6 @@ def test_streaming_new_conversation_includes_thread_uuid(http_client: TestClient
 
 def test_space_uuid_and_thread_uuid_together(http_client: TestClient) -> None:
     """Passing both space_uuid and thread_uuid should not conflict."""
-
     mock_conv = _make_mock_conversation()
     mock_client = _make_mock_client(mock_conv)
 
@@ -289,7 +280,6 @@ def test_space_uuid_and_thread_uuid_together(http_client: TestClient) -> None:
 
 def test_expired_conversation_is_evicted(http_client: TestClient) -> None:
     """A conversation that has exceeded the TTL should be evicted and return a 404."""
-
     mock_conv = _make_mock_conversation()
     mock_client = _make_mock_client(mock_conv)
 
@@ -319,7 +309,6 @@ def test_expired_conversation_is_evicted(http_client: TestClient) -> None:
 
 def test_no_perplexity_block_works_as_before(http_client: TestClient) -> None:
     """A request with no perplexity block should work identically to the original behavior."""
-
     mock_conv = _make_mock_conversation()
     mock_client = _make_mock_client(mock_conv)
 

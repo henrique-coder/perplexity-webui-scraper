@@ -1,19 +1,17 @@
 [project]
 name = "perplexity-webui-scraper"
-version = "0.8.0"
-description = "Python scraper to extract AI responses from Perplexity's web interface."
+version = "1.0.0"
+description = "An advanced, high-performance Python client, MCP server, and REST API for reverse-engineering Perplexity AI's WebUI."
 authors = [{ name = "Henrique Moreira", email = "github@henriquecoder.com" }]
+license = { text = "MIT" }
 readme = "README.md"
-requires-python = ">=3.10, <3.15"
-keywords = ["perplexity", "ai", "scraper", "webui", "api", "client"]
+requires-python = ">=3.12, <3.15"
+keywords = ["perplexity", "ai", "scraper", "mcp", "fastapi", "openai-compatible"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
@@ -22,42 +20,31 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "curl-cffi>=0.15.0",
-    "loguru>=0.7.3",
-    "orjson>=3.11.8",
-    "pydantic>=2.13.3",
-]
-
-[dependency-groups]
-dev = [
-    "python-dotenv>=1.2.2",
-]
-docs = [
-    "mkdocs>=1.6.1",
-    "mkdocs-material>=9.7.6",
-]
-lint = [
-    "ruff>=0.15.12",
-    "ty>=0.0.33",
-]
-test = [
-    "httpx>=0.28.1",
-    "pytest>=9.0.3",
+    "curl-cffi~=0.15.0",
+    "loguru~=0.7.0",
+    "orjson~=3.11.0",
+    "pydantic>=2.10.0,<3.0.0",
 ]
 
 [project.optional-dependencies]
 cli = [
-    "pyperclip>=1.11.0",
-    "rich>=15.0.0",
+    "pyperclip~=1.11.0",
+    "rich~=15.0.0",
+    "typer~=0.25.0",
 ]
 api = [
-    "fastapi>=0.136.1",
-    "uvicorn[standard]>=0.46.0",
-    "typer>=0.25.0",
+    "fastapi~=0.136.0",
+    "uvicorn[standard]~=0.46.0",
+    "typer~=0.25.0",
 ]
 mcp = [
-    "fastmcp>=3.2.4",
+    "fastmcp~=3.2.0",
 ]
+
+[project.scripts]
+get-perplexity-session-token = "perplexity_webui_scraper.cli.__main__:main"
+perplexity-webui-scraper-api = "perplexity_webui_scraper.api.launcher:app"
+perplexity-webui-scraper-mcp = "perplexity_webui_scraper.mcp.server:main"
 
 [project.urls]
 Homepage = "https://github.com/henrique-coder/perplexity-webui-scraper"
@@ -66,59 +53,50 @@ Repository = "https://github.com/henrique-coder/perplexity-webui-scraper.git"
 Issues = "https://github.com/henrique-coder/perplexity-webui-scraper/issues"
 Changelog = "https://github.com/henrique-coder/perplexity-webui-scraper/releases"
 
+[dependency-groups]
+dev = [
+    "python-dotenv~=1.2.0",
+]
+docs = [
+    "mkdocs~=1.6.0",
+    "mkdocs-material~=9.7.0",
+]
+lint = [
+    "ruff~=0.15.0",
+    "ty~=0.0.30",
+]
+test = [
+    "httpx~=0.28.0",
+    "pytest~=9.0.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12.0"]
+build-backend = "uv_build"
+
 [tool.ruff]
 line-length = 120
 indent-width = 4
+target-version = "py312"
 
 [tool.ruff.lint]
-select = [
-    "F",     # Pyflakes: unused imports/variables, undefined names
-    "E",     # pycodestyle errors: PEP 8 style violations
-    "W",     # pycodestyle warnings: whitespace and blank line issues
-    "I",     # isort: import sorting and organization
-    "N",     # pep8-naming: PEP 8 naming conventions
-    "UP",    # pyupgrade: upgrade syntax for newer Python versions
-    "ANN",   # flake8-annotations: enforce type hints
-    "FA",    # flake8-future-annotations: require from __future__ import annotations
-    "ICN",   # flake8-import-conventions: standard import aliases
-    "B",     # flake8-bugbear: common bugs and design problems
-    "SIM",   # flake8-simplify: simplify complex code patterns
-    "C4",    # flake8-comprehensions: better list/dict/set comprehensions
-    "PIE",   # flake8-pie: unnecessary pass, duplicate keys
-    "ISC",   # flake8-implicit-str-concat: implicit string concatenation
-    "RSE",   # flake8-raise: unnecessary parentheses on raise
-    "RET",   # flake8-return: return statement best practices
-    "PTH",   # flake8-use-pathlib: prefer pathlib over os.path
-    "T20",   # flake8-print: detect leftover print() statements
-    "TCH",   # flake8-type-checking: optimize TYPE_CHECKING imports
-    "G",     # flake8-logging-format: logging best practices
-    "LOG",   # flake8-logging: correct use of logging module
-    "TRY",   # tryceratops: try/except best practices
-    "ERA",   # eradicate: detect commented-out code
-    "PERF",  # Perflint: performance anti-patterns
-    "FURB",  # refurb: modernize legacy Python idioms
-    "PL",    # Pylint: broad code quality checks
-    "RUF",   # Ruff-specific: modern Python best practices
-    "D205",  # pydocstyle: blank line required between summary and description
-]
-ignore = [
-    "ISC001",   # Implicit string concatenation on one line: conflicts with formatter
-    "TRY003",   # Long exception messages outside exception class: overly opinionated
-    "TRY301",   # Abstract raise to inner function: too opinionated for validation code
-    "G004",     # Logging with f-string: loguru prefers f-strings
-    "PLE1205",  # Too many arguments for logging format: false positive for loguru {}
-    "PLR0912",  # Too many branches: acceptable for complex validation logic
-    "PLR0913",  # Too many arguments: common in APIs and constructors
-    "PLR0915",  # Too many statements: acceptable for complex validation logic
-    "PLR2004",  # Magic value in comparison: too strict for general use
-]
+select = ["F", "E", "W", "I", "N", "UP", "ANN", "FA", "ICN", "B", "SIM", "C4", "PIE", "ISC", "RSE", "RET", "PTH", "T20", "TCH", "G", "LOG", "TRY", "ERA", "PERF", "FURB", "PL", "RUF", "D"]
+ignore = ["ISC001", "TRY003", "TRY301", "G004", "PLE1205", "PLR0912", "PLR0913", "PLR0915", "PLR2004", "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107", "D203", "D213", "ANN401"]
 fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = true
+skip-magic-trailing-comma = false
 
 [tool.ruff.lint.isort]
 lines-after-imports = 2
 force-sort-within-sections = true
 split-on-trailing-comma = true
-known-first-party = []
+known-first-party = ["perplexity_webui_scraper"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -130,36 +108,21 @@ docstring-quotes = "double"
 suppress-none-returning = true
 allow-star-arg-any = true
 
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-line-ending = "lf"
-docstring-code-format = true
-skip-magic-trailing-comma = false
-
 [tool.ty.rules]
-invalid-argument-type         = "error"
-invalid-return-type           = "error"
-missing-argument              = "error"
+invalid-argument-type = "error"
+invalid-return-type = "error"
+missing-argument = "error"
 too-many-positional-arguments = "error"
-unresolved-attribute          = "error"
-unresolved-import             = "error"
-unsupported-operator          = "error"
-possibly-missing-attribute    = "warn"
-redundant-cast                = "warn"
-unused-ignore-comment         = "warn"
-division-by-zero              = "warn"
-index-out-of-bounds           = "warn"
+unresolved-attribute = "error"
+unresolved-import = "error"
+unsupported-operator = "error"
+possibly-missing-attribute = "warn"
+redundant-cast = "warn"
+unused-ignore-comment = "warn"
+division-by-zero = "warn"
+index-out-of-bounds = "warn"
 
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
-
-[project.scripts]
-get-perplexity-session-token = "perplexity_webui_scraper.cli.get_perplexity_session_token:get_token"
-perplexity-webui-scraper-api = "perplexity_webui_scraper.api.cli:app"
-perplexity-webui-scraper-mcp = "perplexity_webui_scraper.mcp:run_server"
-
-[build-system]
-requires = ["uv_build"]
-build-backend = "uv_build"
+typeCheckingMode = "basic"
