@@ -1,6 +1,6 @@
 [project]
 name = "perplexity-webui-scraper"
-version = "1.0.1"
+version = "1.0.2"
 description = "An advanced, high-performance Python client, MCP server, and REST API for reverse-engineering Perplexity AI's WebUI."
 authors = [{ name = "Henrique Moreira", email = "github@henriquecoder.com" }]
 license = { text = "MIT" }

@@ -72,21 +72,21 @@
     "mode": "copilot"
   },
   {
-    "id": "anthropic/claude-opus-4.6",
-    "name": "Claude Opus 4.6",
-    "description": "Anthropic Claude Opus 4.6.",
-    "identifier": "claude46opus",
-    "tool_name": "pplx_claude_o46",
-    "min_tier": "max",
+    "id": "anthropic/claude-sonnet-4.6",
+    "name": "Claude Sonnet 4.6",
+    "description": "Anthropic Claude Sonnet 4.6.",
+    "identifier": "claude46sonnet",
+    "tool_name": "pplx_claude_s46",
+    "min_tier": "pro",
     "mode": "copilot"
   },
   {
-    "id": "anthropic/claude-opus-4.6-thinking",
-    "name": "Claude Opus 4.6 Thinking",
-    "description": "Anthropic Claude Opus 4.6 (Thinking).",
-    "identifier": "claude46opusthinking",
-    "tool_name": "pplx_claude_o46_think",
-    "min_tier": "max",
+    "id": "anthropic/claude-sonnet-4.6-thinking",
+    "name": "Claude Sonnet 4.6 Thinking",
+    "description": "Anthropic Claude Sonnet 4.6 (Thinking).",
+    "identifier": "claude46sonnetthinking",
+    "tool_name": "pplx_claude_s46_think",
+    "min_tier": "pro",
     "mode": "copilot"
   },
   {
