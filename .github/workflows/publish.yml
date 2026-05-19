@@ -90,7 +90,7 @@ jobs:
         run: uv build
 
       - name: Upload Package Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: python-dist
           path: dist/*
@@ -184,7 +184,7 @@ jobs:
           Compress-Archive -Path "release/stage/perplexity-webui-scraper.exe" -DestinationPath "release/perplexity-webui-scraper-$version-${{ matrix.target }}.zip"
 
       - name: Upload Executable Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: binary-${{ matrix.target }}
           path: release/*
@@ -272,13 +272,13 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Download Package Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: python-dist
           path: dist
 
       - name: Download Executable Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: binary-*
           path: release-binaries
