@@ -247,7 +247,7 @@ Install with the `api` extra:
 uv add "perplexity-webui-scraper[api]"
 ```
 
-### `perplexity-webui-scraper-api`
+### `perplexity-webui-scraper api`
 
 Starts the server. No token is configured at startup — authentication is done **per-request** via `Authorization: Bearer`, exactly like the real OpenAI API.
 
@@ -260,25 +260,30 @@ Starts the server. No token is configured at startup — authentication is done 
 
 ```bash
 # Minimal — binds to localhost:8000
-perplexity-webui-scraper-api
+perplexity-webui-scraper api
 
 # Expose on the network
-perplexity-webui-scraper-api --host 0.0.0.0 --port 8080
+perplexity-webui-scraper api --host 0.0.0.0 --port 8080
 ```
 
 ### Running via Container (Podman / Docker)
 
-You can effortlessly run the REST API using the provided `Containerfile` via Podman or Docker. This is the recommended way to securely host the API without depending on virtual environments. The container utilizes the official `uv` image based on Python 3.14 Alpine, guaranteeing ultra-fast dependency caching and an extremely small footprint.
+The REST API is published as a multi-arch image on GHCR for `linux/amd64` and `linux/arm64`.
 
 ```bash
-# 1. Build the image
-podman build -t perplexity-api .
+# Pull a release image
+docker pull ghcr.io/henrique-coder/perplexity-webui-scraper:latest
 
-# 2. Run the server (exposed on port 8000)
-podman run -d -p 8000:8000 --name perp-api perplexity-api
+# Run the server (exposed on port 8000)
+docker run -d -p 8000:8000 --name perp-api ghcr.io/henrique-coder/perplexity-webui-scraper:latest
 ```
 
-_> You can easily replace `podman` with `docker` in the commands above given the seamless OCI compatibility of the Containerfile._
+For local development, use the provided `Containerfile`:
+
+```bash
+podman build -t perplexity-api .
+podman run -d -p 8000:8000 --name perp-api perplexity-api
+```
 
 ### Authentication
 

@@ -1,4 +1,4 @@
-name: Publish to PyPI
+name: Publish Release
 
 on:
   push:
@@ -6,6 +6,17 @@ on:
       - prod
     paths:
       - "CHANGELOG.md"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g. 1.0.2). Empty = auto-detect from source."
+        required: false
+        type: string
+      dry_run:
+        description: "Build only, skip PyPI publish and GitHub Release"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   check_version:
@@ -23,9 +34,31 @@ jobs:
       - name: Check if Version Changed
         id: check
         run: |
+          # Manual trigger with explicit version: use it directly
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "version_changed=true" >> $GITHUB_OUTPUT
+            echo "new_version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "📦 Manual trigger — using version ${{ inputs.version }}"
+            exit 0
+          fi
+
           CURRENT_VERSION=$(grep -oP '(?<=^## \[)\d+\.\d+\.\d+(?=\])' CHANGELOG.md | head -n 1)
           PROJECT_VERSION=$(grep -oP '(?<=^version = ")[^"]+' pyproject.toml | head -n 1)
 
+          if [ "$CURRENT_VERSION" != "$PROJECT_VERSION" ]; then
+            echo "❌ Version mismatch: CHANGELOG.md ($CURRENT_VERSION) != pyproject.toml ($PROJECT_VERSION)"
+            exit 1
+          fi
+
+          # Auto-detected from source. If manual dispatch, skip tag check.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version_changed=true" >> $GITHUB_OUTPUT
+            echo "new_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            echo "🧪 Manual dispatch — auto-detected version $CURRENT_VERSION (tag check skipped)"
+            exit 0
+          fi
+
+          # Push to prod: verify tag doesn't already exist
           git fetch origin tag "v$CURRENT_VERSION" --no-tags || true
           if git rev-parse "v$CURRENT_VERSION" >/dev/null 2>&1; then
             echo "⏭️ Tag v$CURRENT_VERSION already exists. Skipping publish."
@@ -33,20 +66,193 @@ jobs:
             exit 0
           fi
 
-          if [ "$CURRENT_VERSION" != "$PROJECT_VERSION" ]; then
-            echo "❌ Version mismatch: CHANGELOG.md ($CURRENT_VERSION) != pyproject.toml ($PROJECT_VERSION)"
-            exit 1
-          fi
-
           echo "version_changed=true" >> $GITHUB_OUTPUT
           echo "new_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "✅ Versions match ($CURRENT_VERSION) and tag does not exist. Triggering publish pipeline."
 
-  publish:
-    name: Build & Publish
+  build_package:
+    name: Build Python Package
     runs-on: ubuntu-latest
     needs: check_version
     if: needs.check_version.outputs.version_changed == 'true'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Build Package
+        run: uv build
+
+      - name: Upload Package Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: dist/*
+          if-no-files-found: error
+
+  build_executables:
+    name: Build Executable (${{ matrix.target }})
+    needs: check_version
+    if: needs.check_version.outputs.version_changed == 'true'
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-amd64
+            executable: perplexity-webui-scraper
+            archive: tar.gz
+          - os: ubuntu-24.04-arm
+            target: linux-arm64
+            executable: perplexity-webui-scraper
+            archive: tar.gz
+          - os: macos-13
+            target: macos-amd64
+            executable: perplexity-webui-scraper
+            archive: tar.gz
+          - os: macos-14
+            target: macos-arm64
+            executable: perplexity-webui-scraper
+            archive: tar.gz
+          - os: windows-latest
+            target: windows-amd64
+            executable: perplexity-webui-scraper.exe
+            archive: zip
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Project
+        run: pip install ".[cli,mcp,api]"
+
+      - name: Build Executable with Nuitka
+        uses: Nuitka/Nuitka-Action@main
+        with:
+          nuitka-version: "4.1.1"
+          script-name: src/perplexity_webui_scraper/cli/__main__.py
+          mode: onefile
+          output-file: ${{ matrix.executable }}
+          include-package: |
+            perplexity_webui_scraper
+            fastmcp
+            mcp
+            uvicorn
+            curl_cffi
+          include-package-data: |
+            perplexity_webui_scraper._static
+
+      - name: Smoke Test Executable
+        shell: bash
+        run: |
+          BIN="build/${{ matrix.executable }}"
+          chmod +x "$BIN" || true
+          "$BIN" --help
+          "$BIN" api --help
+          "$BIN" token --help
+
+      - name: Package Unix Executable
+        if: matrix.archive == 'tar.gz'
+        shell: bash
+        run: |
+          VERSION="v${{ needs.check_version.outputs.new_version }}"
+          mkdir -p release/stage
+          cp "build/nuitka/${{ matrix.executable }}" release/stage/perplexity-webui-scraper
+          chmod +x release/stage/perplexity-webui-scraper
+          tar -C release/stage -czf "release/perplexity-webui-scraper-${VERSION}-${{ matrix.target }}.tar.gz" perplexity-webui-scraper
+
+      - name: Package Windows Executable
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          $version = "v${{ needs.check_version.outputs.new_version }}"
+          New-Item -ItemType Directory -Force -Path release/stage | Out-Null
+          Copy-Item "build/nuitka/${{ matrix.executable }}" "release/stage/perplexity-webui-scraper.exe"
+          Compress-Archive -Path "release/stage/perplexity-webui-scraper.exe" -DestinationPath "release/perplexity-webui-scraper-$version-${{ matrix.target }}.zip"
+
+      - name: Upload Executable Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.target }}
+          path: release/*
+          if-no-files-found: error
+
+  publish_container:
+    name: Publish Docker Image
+    runs-on: ubuntu-latest
+    needs:
+      - check_version
+      - build_package
+      - build_executables
+    if: needs.check_version.outputs.version_changed == 'true'
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=v${{ needs.check_version.outputs.new_version }}
+            type=raw,value=${{ needs.check_version.outputs.new_version }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ needs.check_version.outputs.new_version }}
+            type=semver,pattern={{major}},value=v${{ needs.check_version.outputs.new_version }}
+            type=raw,value=latest
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Containerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  release:
+    name: Publish PyPI and GitHub Release
+    runs-on: ubuntu-latest
+    needs:
+      - check_version
+      - build_package
+      - build_executables
+      - publish_container
+    if: needs.check_version.outputs.version_changed == 'true' && inputs.dry_run != true
 
     permissions:
       contents: write
@@ -65,13 +271,23 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
 
-      - name: Build Package
-        run: uv build
+      - name: Download Package Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: dist
+
+      - name: Download Executable Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          path: release-binaries
+          merge-multiple: true
 
       - name: Publish to PyPI
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-        run: uv publish
+        run: uv publish dist/*
 
       - name: Generate Release Notes
         id: release_body
@@ -84,6 +300,12 @@ jobs:
 
           AUTHORS=$(git log $PREVIOUS_TAG..HEAD --format='%ae' | sort -u)
 
+          echo "" >> release_notes.md
+          echo "### 🐳 Docker Image" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "\`\`\`bash" >> release_notes.md
+          echo "docker run --rm -p 8000:8000 ghcr.io/${{ github.repository }}:${{ needs.check_version.outputs.new_version }}" >> release_notes.md
+          echo "\`\`\`" >> release_notes.md
           echo "" >> release_notes.md
           echo "### 👥 Contributors" >> release_notes.md
           echo "" >> release_notes.md
@@ -122,6 +344,7 @@ jobs:
           files: |
             dist/*.whl
             dist/*.tar.gz
+            release-binaries/*
           draft: false
           prerelease: false
         env:

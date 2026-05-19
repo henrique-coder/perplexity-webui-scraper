@@ -20,6 +20,11 @@ example*.py
 *.tmp
 *.bak
 
+# Build artifacts
+build/
+dist/
+*.spec
+
 # MOM (generated at runtime)
 .mom/
 .mcp.json
