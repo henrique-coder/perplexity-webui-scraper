@@ -142,7 +142,7 @@ jobs:
       - name: Build Executable with Nuitka
         uses: Nuitka/Nuitka-Action@main
         with:
-          nuitka-version: "4.1.1"
+          nuitka-version: "4.0.8"
           script-name: src/perplexity_webui_scraper/cli/__main__.py
           mode: onefile
           output-file: ${{ matrix.executable }}
