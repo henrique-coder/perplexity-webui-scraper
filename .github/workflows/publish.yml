@@ -110,22 +110,27 @@ jobs:
             target: linux-amd64
             executable: perplexity-webui-scraper
             archive: tar.gz
+            icon: docs/assets/icon.png
           - os: ubuntu-24.04-arm
             target: linux-arm64
             executable: perplexity-webui-scraper
             archive: tar.gz
+            icon: docs/assets/icon.png
           - os: macos-13
             target: macos-amd64
             executable: perplexity-webui-scraper
             archive: tar.gz
+            icon: docs/assets/icon.png
           - os: macos-14
             target: macos-arm64
             executable: perplexity-webui-scraper
             archive: tar.gz
+            icon: docs/assets/icon.png
           - os: windows-latest
             target: windows-amd64
             executable: perplexity-webui-scraper.exe
             archive: zip
+            icon: docs/assets/icon.ico
 
     steps:
       - name: Checkout Code
@@ -154,6 +159,9 @@ jobs:
             curl_cffi
           include-package-data: |
             perplexity_webui_scraper._static
+          windows-icon-from-ico: ${{ matrix.icon }}
+          linux-icon: ${{ matrix.icon }}
+          macos-app-icon: ${{ matrix.icon }}
 
       - name: Smoke Test Executable
         shell: bash
