@@ -178,7 +178,7 @@ jobs:
         run: |
           VERSION="v${{ needs.check_version.outputs.new_version }}"
           mkdir -p release/stage
-          cp "build/nuitka/${{ matrix.executable }}" release/stage/perplexity-webui-scraper
+          cp "build/${{ matrix.executable }}" release/stage/perplexity-webui-scraper
           chmod +x release/stage/perplexity-webui-scraper
           tar -C release/stage -czf "release/perplexity-webui-scraper-${VERSION}-${{ matrix.target }}.tar.gz" perplexity-webui-scraper
 
@@ -188,7 +188,7 @@ jobs:
         run: |
           $version = "v${{ needs.check_version.outputs.new_version }}"
           New-Item -ItemType Directory -Force -Path release/stage | Out-Null
-          Copy-Item "build/nuitka/${{ matrix.executable }}" "release/stage/perplexity-webui-scraper.exe"
+          Copy-Item "build/${{ matrix.executable }}" "release/stage/perplexity-webui-scraper.exe"
           Compress-Archive -Path "release/stage/perplexity-webui-scraper.exe" -DestinationPath "release/perplexity-webui-scraper-$version-${{ matrix.target }}.zip"
 
       - name: Upload Executable Artifact
