@@ -120,12 +120,12 @@ jobs:
             target: macos-amd64
             executable: perplexity-webui-scraper
             archive: tar.gz
-            icon: docs/assets/icon.png
+            icon: docs/assets/icon.icns
           - os: macos-14
             target: macos-arm64
             executable: perplexity-webui-scraper
             archive: tar.gz
-            icon: docs/assets/icon.png
+            icon: docs/assets/icon.icns
           - os: windows-latest
             target: windows-amd64
             executable: perplexity-webui-scraper.exe
