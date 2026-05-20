@@ -116,12 +116,7 @@ jobs:
             executable: perplexity-webui-scraper
             archive: tar.gz
             icon: docs/assets/icon.png
-          - os: macos-13
-            target: macos-amd64
-            executable: perplexity-webui-scraper
-            archive: tar.gz
-            icon: docs/assets/icon.icns
-          - os: macos-14
+          - os: macos-latest
             target: macos-arm64
             executable: perplexity-webui-scraper
             archive: tar.gz
