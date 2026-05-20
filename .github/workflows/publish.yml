@@ -256,13 +256,13 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -271,7 +271,7 @@ jobs:
       - name: Docker Metadata (API official)
         if: needs.check_version.outputs.release_mode == 'official'
         id: meta_api_official
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
@@ -283,7 +283,7 @@ jobs:
 
       - name: Build and Push Docker Image (API official)
         if: needs.check_version.outputs.release_mode == 'official'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: Containerfile
@@ -297,7 +297,7 @@ jobs:
       - name: Docker Metadata (API preview)
         if: needs.check_version.outputs.release_mode == 'preview'
         id: meta_api_preview
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
@@ -305,7 +305,7 @@ jobs:
 
       - name: Build and Push Docker Image (API preview)
         if: needs.check_version.outputs.release_mode == 'preview'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: Containerfile
@@ -319,7 +319,7 @@ jobs:
       - name: Docker Metadata (MCP official)
         if: needs.check_version.outputs.release_mode == 'official'
         id: meta_mcp_official
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
@@ -329,7 +329,7 @@ jobs:
 
       - name: Build and Push Docker Image (MCP official)
         if: needs.check_version.outputs.release_mode == 'official'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: Containerfile.mcp
@@ -343,7 +343,7 @@ jobs:
       - name: Docker Metadata (MCP preview)
         if: needs.check_version.outputs.release_mode == 'preview'
         id: meta_mcp_preview
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
@@ -351,7 +351,7 @@ jobs:
 
       - name: Build and Push Docker Image (MCP preview)
         if: needs.check_version.outputs.release_mode == 'preview'
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: Containerfile.mcp
