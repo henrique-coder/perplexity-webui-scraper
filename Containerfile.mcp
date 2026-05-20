@@ -1,0 +1,14 @@
+FROM ghcr.io/astral-sh/uv:python3.14-alpine
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
+
+WORKDIR /app
+
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-install-project --no-dev --extra mcp
+
+COPY . /app/
+RUN uv sync --frozen --no-dev --extra mcp
+
+ENTRYPOINT ["uv", "run", "perplexity-webui-scraper", "mcp"]

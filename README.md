@@ -131,11 +131,24 @@ docker pull ghcr.io/henrique-coder/perplexity-webui-scraper:latest
 docker run --rm -p 8000:8000 ghcr.io/henrique-coder/perplexity-webui-scraper:latest
 ```
 
-For local development, you can still build the provided `Containerfile`:
+Optional MCP image for containerized stdio setups:
 
 ```bash
-podman build -t perplexity-api .
+# Pull the published multi-arch MCP image
+docker pull ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
+
+# Run MCP server (requires token)
+docker run --rm -e PERPLEXITY_SESSION_TOKEN=your_token ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
+```
+
+For local development, you can still build the provided container files:
+
+```bash
+podman build -t perplexity-api -f Containerfile .
 podman run --rm -it -p 8000:8000 perplexity-api
+
+podman build -t perplexity-mcp -f Containerfile.mcp .
+podman run --rm -it -e PERPLEXITY_SESSION_TOKEN=your_token perplexity-mcp
 ```
 
 ### CLI options

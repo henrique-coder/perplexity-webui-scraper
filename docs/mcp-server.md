@@ -70,6 +70,20 @@ Add to your MCP config file (no installation required via npm, handled by python
 }
 ```
 
+## Optional Docker Image
+
+For containerized stdio setups only:
+
+```bash
+# Pull published MCP image
+docker pull ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
+
+# Run MCP server (requires token)
+docker run --rm -it -e PERPLEXITY_SESSION_TOKEN=your_token ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
+```
+
+This is niche. Prefer `uvx` for normal MCP client setups.
+
 ## Available Tools
 
 Each tool uses a specific AI model. Enable only the ones you need:

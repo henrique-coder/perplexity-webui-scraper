@@ -199,7 +199,7 @@ jobs:
           if-no-files-found: error
 
   publish_container:
-    name: Publish Docker Image
+    name: Publish Docker Images
     runs-on: ubuntu-latest
     needs:
       - check_version
@@ -228,8 +228,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Docker Metadata
-        id: meta
+      - name: Docker Metadata (API)
+        id: meta_api
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
@@ -240,17 +240,39 @@ jobs:
             type=semver,pattern={{major}},value=v${{ needs.check_version.outputs.new_version }}
             type=raw,value=latest
 
-      - name: Build and Push Docker Image
+      - name: Build and Push Docker Image (API)
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Containerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta_api.outputs.tags }}
+          labels: ${{ steps.meta_api.outputs.labels }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Docker Metadata (MCP)
+        id: meta_mcp
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=mcp
+            type=raw,value=${{ needs.check_version.outputs.new_version }}-mcp
+            type=raw,value=v${{ needs.check_version.outputs.new_version }}-mcp
+
+      - name: Build and Push Docker Image (MCP)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Containerfile.mcp
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta_mcp.outputs.tags }}
+          labels: ${{ steps.meta_mcp.outputs.labels }}
+          cache-from: type=gha,scope=mcp
+          cache-to: type=gha,mode=max,scope=mcp
 
   publish_pypi:
     name: Publish PyPI
@@ -326,10 +348,18 @@ jobs:
 
           if [ "${{ github.event_name }}" != "workflow_dispatch" ] || [ "${{ inputs.skip_docker }}" != "true" ]; then
             echo "" >> release_notes.md
-            echo "### 🐳 Docker Image" >> release_notes.md
+            echo "### 🐳 Docker Images" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "#### API" >> release_notes.md
             echo "" >> release_notes.md
             echo "\`\`\`bash" >> release_notes.md
             echo "docker run --rm -p 8000:8000 ghcr.io/${{ github.repository }}:${{ needs.check_version.outputs.new_version }}" >> release_notes.md
+            echo "\`\`\`" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "#### MCP" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "\`\`\`bash" >> release_notes.md
+            echo "docker run --rm -e PERPLEXITY_SESSION_TOKEN=your_token ghcr.io/${{ github.repository }}:${{ needs.check_version.outputs.new_version }}-mcp" >> release_notes.md
             echo "\`\`\`" >> release_notes.md
           fi
 
