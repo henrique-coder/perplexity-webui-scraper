@@ -131,8 +131,18 @@ jobs:
             executable: perplexity-webui-scraper
             archive: tar.gz
             icon: docs/assets/icon.icns
+          - os: macos-26-intel
+            target: macos-26-intel
+            executable: perplexity-webui-scraper
+            archive: tar.gz
+            icon: docs/assets/icon.icns
           - os: windows-latest
             target: windows-amd64
+            executable: perplexity-webui-scraper.exe
+            archive: zip
+            icon: docs/assets/icon.ico
+          - os: windows-11-arm
+            target: windows-arm64
             executable: perplexity-webui-scraper.exe
             archive: zip
             icon: docs/assets/icon.ico
@@ -205,7 +215,7 @@ jobs:
       - check_version
       - build_package
       - build_executables
-    if: needs.check_version.outputs.version_changed == 'true' && (github.event_name != 'workflow_dispatch' || !inputs.skip_docker)
+    if: needs.check_version.outputs.version_changed == 'true' && (github.event_name != 'workflow_dispatch' || (inputs.skip_docker != true && inputs.skip_docker != 'true'))
 
     permissions:
       contents: read
@@ -280,7 +290,7 @@ jobs:
     needs:
       - check_version
       - build_package
-    if: needs.check_version.outputs.version_changed == 'true' && (github.event_name != 'workflow_dispatch' || !inputs.skip_pypi)
+    if: needs.check_version.outputs.version_changed == 'true' && (github.event_name != 'workflow_dispatch' || (inputs.skip_pypi != true && inputs.skip_pypi != 'true'))
 
     permissions:
       id-token: write
@@ -310,7 +320,7 @@ jobs:
       - check_version
       - build_package
       - build_executables
-    if: needs.check_version.outputs.version_changed == 'true' && (github.event_name != 'workflow_dispatch' || !inputs.skip_gh_releases)
+    if: needs.check_version.outputs.version_changed == 'true' && (github.event_name != 'workflow_dispatch' || (inputs.skip_gh_releases != true && inputs.skip_gh_releases != 'true'))
 
     permissions:
       contents: write
