@@ -12,10 +12,20 @@ on:
         description: "Version to release (e.g. 1.0.2). Empty = auto-detect from source."
         required: false
         type: string
-      dry_run:
-        description: "Build only, skip PyPI publish and GitHub Release"
+      skip_pypi:
+        description: "Skip PyPI publish"
         required: false
-        default: false
+        default: true
+        type: boolean
+      skip_docker:
+        description: "Skip Docker publish"
+        required: false
+        default: true
+        type: boolean
+      skip_gh_releases:
+        description: "Skip GitHub Release creation"
+        required: false
+        default: true
         type: boolean
 
 jobs:
@@ -195,7 +205,7 @@ jobs:
       - check_version
       - build_package
       - build_executables
-    if: needs.check_version.outputs.version_changed == 'true'
+    if: needs.check_version.outputs.version_changed == 'true' && (github.event_name != 'workflow_dispatch' || !inputs.skip_docker)
 
     permissions:
       contents: read
@@ -242,19 +252,46 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  release:
-    name: Publish PyPI and GitHub Release
+  publish_pypi:
+    name: Publish PyPI
+    runs-on: ubuntu-latest
+    needs:
+      - check_version
+      - build_package
+    if: needs.check_version.outputs.version_changed == 'true' && (github.event_name != 'workflow_dispatch' || !inputs.skip_pypi)
+
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Download Package Artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: python-dist
+          path: dist
+
+      - name: Publish to PyPI
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: uv publish dist/*
+
+  create_github_release:
+    name: Create GitHub Release
     runs-on: ubuntu-latest
     needs:
       - check_version
       - build_package
       - build_executables
-      - publish_container
-    if: needs.check_version.outputs.version_changed == 'true' && inputs.dry_run != true
+    if: needs.check_version.outputs.version_changed == 'true' && (github.event_name != 'workflow_dispatch' || !inputs.skip_gh_releases)
 
     permissions:
       contents: write
-      id-token: write
 
     steps:
       - name: Checkout Code
@@ -262,12 +299,6 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
 
       - name: Download Package Artifacts
         uses: actions/download-artifact@v7
@@ -282,11 +313,6 @@ jobs:
           path: release-binaries
           merge-multiple: true
 
-      - name: Publish to PyPI
-        env:
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-        run: uv publish dist/*
-
       - name: Generate Release Notes
         id: release_body
         run: |
@@ -298,12 +324,15 @@ jobs:
 
           AUTHORS=$(git log $PREVIOUS_TAG..HEAD --format='%ae' | sort -u)
 
-          echo "" >> release_notes.md
-          echo "### 🐳 Docker Image" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "\`\`\`bash" >> release_notes.md
-          echo "docker run --rm -p 8000:8000 ghcr.io/${{ github.repository }}:${{ needs.check_version.outputs.new_version }}" >> release_notes.md
-          echo "\`\`\`" >> release_notes.md
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ] || [ "${{ inputs.skip_docker }}" != "true" ]; then
+            echo "" >> release_notes.md
+            echo "### 🐳 Docker Image" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "\`\`\`bash" >> release_notes.md
+            echo "docker run --rm -p 8000:8000 ghcr.io/${{ github.repository }}:${{ needs.check_version.outputs.new_version }}" >> release_notes.md
+            echo "\`\`\`" >> release_notes.md
+          fi
+
           echo "" >> release_notes.md
           echo "### 👥 Contributors" >> release_notes.md
           echo "" >> release_notes.md
@@ -337,6 +366,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ needs.check_version.outputs.new_version }}
+          target_commitish: ${{ github.sha }}
           name: v${{ needs.check_version.outputs.new_version }}
           body: ${{ steps.release_body.outputs.notes }}
           files: |
