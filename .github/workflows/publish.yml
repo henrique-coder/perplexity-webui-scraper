@@ -240,11 +240,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Normalize image repository
+        id: repo
+        run: echo "image_repo=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
       - name: Docker Metadata (API)
         id: meta_api
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ${{ steps.repo.outputs.image_repo }}
           tags: |
             type=raw,value=v${{ needs.check_version.outputs.new_version }}
             type=raw,value=${{ needs.check_version.outputs.new_version }}
@@ -268,7 +272,7 @@ jobs:
         id: meta_mcp
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ${{ steps.repo.outputs.image_repo }}
           tags: |
             type=raw,value=mcp
             type=raw,value=${{ needs.check_version.outputs.new_version }}-mcp
@@ -352,6 +356,7 @@ jobs:
         run: |
           VERSION="v${{ needs.check_version.outputs.new_version }}"
           PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)
+          IMAGE_REPO="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
 
           awk '/^## \[/ { if (p) exit; p=1; next } p { print }' CHANGELOG.md > release_notes.md
           sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' release_notes.md
@@ -363,13 +368,13 @@ jobs:
             echo "#### API" >> release_notes.md
             echo "" >> release_notes.md
             echo "\`\`\`bash" >> release_notes.md
-            echo "docker run --rm -p 8000:8000 ghcr.io/${{ github.repository }}:${{ needs.check_version.outputs.new_version }}" >> release_notes.md
+            echo "docker run --rm -p 8000:8000 $IMAGE_REPO:${{ needs.check_version.outputs.new_version }}" >> release_notes.md
             echo "\`\`\`" >> release_notes.md
             echo "" >> release_notes.md
             echo "#### MCP" >> release_notes.md
             echo "" >> release_notes.md
             echo "\`\`\`bash" >> release_notes.md
-            echo "docker run --rm -e PERPLEXITY_SESSION_TOKEN=your_token ghcr.io/${{ github.repository }}:${{ needs.check_version.outputs.new_version }}-mcp" >> release_notes.md
+            echo "docker run --rm -e PERPLEXITY_SESSION_TOKEN=your_token $IMAGE_REPO:${{ needs.check_version.outputs.new_version }}-mcp" >> release_notes.md
             echo "\`\`\`" >> release_notes.md
           fi
 
@@ -381,7 +386,7 @@ jobs:
             curl -s "https://api.github.com/repos/${{ github.repository }}/commits/$sha" \
               -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
               | grep -oP '(?<="login": ")[^"]+' | head -1
-          done | sort -u | grep -v '^$')
+          done | sort -u | grep -v '^$' | grep -v '\[bot\]')
 
           if [ -n "$LOGINS" ]; then
             AVATARS=""
