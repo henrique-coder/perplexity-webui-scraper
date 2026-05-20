@@ -176,11 +176,6 @@ jobs:
             executable: perplexity-webui-scraper.exe
             archive: zip
             icon: docs/assets/icon.ico
-          - os: windows-11-arm
-            target: windows-arm64
-            executable: perplexity-webui-scraper.exe
-            archive: zip
-            icon: docs/assets/icon.ico
 
     steps:
       - name: Checkout Code
