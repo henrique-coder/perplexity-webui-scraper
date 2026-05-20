@@ -384,9 +384,11 @@ jobs:
           done | sort -u | grep -v '^$')
 
           if [ -n "$LOGINS" ]; then
+            AVATARS=""
             for login in $LOGINS; do
-              echo "<a href=\"https://github.com/$login\"><img src=\"https://wsrv.nl/?url=github.com/$login.png&w=40&h=40&mask=circle\" width=\"40\" height=\"40\" alt=\"@$login\" /></a>&nbsp;" >> release_notes.md
+              AVATARS="$AVATARS<a href=\"https://github.com/$login\"><img src=\"https://wsrv.nl/?url=github.com/$login.png&w=40&h=40&mask=circle\" width=\"40\" height=\"40\" alt=\"@$login\" /></a>&nbsp;"
             done
+            echo "$AVATARS" >> release_notes.md
           else
             echo "_No contributors found._" >> release_notes.md
           fi
@@ -397,7 +399,7 @@ jobs:
           echo "<details open>" >> release_notes.md
           echo "<summary><b>📦 Commits History (${PREVIOUS_TAG} &rarr; ${VERSION})</b></summary>" >> release_notes.md
           echo "" >> release_notes.md
-          git log --reverse --date=iso-strict --format="- [\`%h\`](https://github.com/${{ github.repository }}/commit/%H) - %ad - %s" $PREVIOUS_TAG..HEAD >> release_notes.md
+          git log --reverse --date=iso-strict --max-count=50 --format="- [\`%h\`](https://github.com/${{ github.repository }}/commit/%H) - %ad - %s" $PREVIOUS_TAG..HEAD >> release_notes.md
           echo "" >> release_notes.md
           echo "</details>" >> release_notes.md
           echo "" >> release_notes.md
