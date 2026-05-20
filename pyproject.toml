@@ -50,12 +50,7 @@ Issues = "https://github.com/henrique-coder/perplexity-webui-scraper/issues"
 Changelog = "https://github.com/henrique-coder/perplexity-webui-scraper/releases"
 
 [dependency-groups]
-build = [
-    "nuitka>=4.1",
-    "pillow>=12.2.0",
-    "pyinstaller>=6.20.0",
-    "zstandard>=0.25.0",
-]
+build = ["pyinstaller>=6.20.0"]
 dev = ["python-dotenv~=1.2.0"]
 docs = [
   "mkdocs~=1.6.0",

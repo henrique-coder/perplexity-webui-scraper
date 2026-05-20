@@ -136,37 +136,32 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v6
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.13"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
 
-      - name: Install Project
-        run: pip install ".[cli,mcp,api]"
+      - name: Install Dependencies
+        run: uv sync --frozen --all-extras --group build
 
-      - name: Build Executable with Nuitka
-        uses: Nuitka/Nuitka-Action@main
-        with:
-          nuitka-version: "4.0.8"
-          script-name: src/perplexity_webui_scraper/cli/__main__.py
-          mode: onefile
-          output-file: ${{ matrix.executable }}
-          include-package: |
-            perplexity_webui_scraper
-            fastmcp
-            mcp
-            uvicorn
-            curl_cffi
-          include-package-data: |
-            perplexity_webui_scraper._static
-          windows-icon-from-ico: ${{ matrix.icon }}
-          linux-icon: ${{ matrix.icon }}
-          macos-app-icon: ${{ matrix.icon }}
+      - name: Build Executable with PyInstaller
+        run: >-
+          uv run pyinstaller
+          --onefile
+          --collect-data perplexity_webui_scraper
+          --hidden-import fastmcp
+          --hidden-import mcp
+          --hidden-import uvicorn
+          --hidden-import curl_cffi
+          --icon ${{ matrix.icon }}
+          --name perplexity-webui-scraper
+          src/perplexity_webui_scraper/cli/__main__.py
 
       - name: Smoke Test Executable
         shell: bash
         run: |
-          BIN="build/${{ matrix.executable }}"
+          BIN="dist/${{ matrix.executable }}"
           chmod +x "$BIN" || true
           "$BIN" --help
           "$BIN" api --help
@@ -178,7 +173,7 @@ jobs:
         run: |
           VERSION="v${{ needs.check_version.outputs.new_version }}"
           mkdir -p release/stage
-          cp "build/${{ matrix.executable }}" release/stage/perplexity-webui-scraper
+          cp "dist/${{ matrix.executable }}" release/stage/perplexity-webui-scraper
           chmod +x release/stage/perplexity-webui-scraper
           tar -C release/stage -czf "release/perplexity-webui-scraper-${VERSION}-${{ matrix.target }}.tar.gz" perplexity-webui-scraper
 
@@ -188,7 +183,7 @@ jobs:
         run: |
           $version = "v${{ needs.check_version.outputs.new_version }}"
           New-Item -ItemType Directory -Force -Path release/stage | Out-Null
-          Copy-Item "build/${{ matrix.executable }}" "release/stage/perplexity-webui-scraper.exe"
+          Copy-Item "dist/${{ matrix.executable }}" "release/stage/perplexity-webui-scraper.exe"
           Compress-Archive -Path "release/stage/perplexity-webui-scraper.exe" -DestinationPath "release/perplexity-webui-scraper-$version-${{ matrix.target }}.zip"
 
       - name: Upload Executable Artifact
