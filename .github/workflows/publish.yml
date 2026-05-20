@@ -356,8 +356,6 @@ jobs:
           awk '/^## \[/ { if (p) exit; p=1; next } p { print }' CHANGELOG.md > release_notes.md
           sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' release_notes.md
 
-          AUTHORS=$(git log $PREVIOUS_TAG..HEAD --format='%ae' | sort -u)
-
           if [ "${{ github.event_name }}" != "workflow_dispatch" ] || [ "${{ inputs.skip_docker }}" != "true" ]; then
             echo "" >> release_notes.md
             echo "### 🐳 Docker Images" >> release_notes.md
@@ -379,12 +377,19 @@ jobs:
           echo "### 👥 Contributors" >> release_notes.md
           echo "" >> release_notes.md
 
-          for email in $AUTHORS; do
-            GH_USER=$(curl -s "https://api.github.com/search/users?q=$email" | grep -oP '"login": "\K[^"]+' | head -1)
-            if [ -n "$GH_USER" ]; then
-              echo "<a href=\"https://github.com/$GH_USER\"><img src=\"https://wsrv.nl/?url=github.com/$GH_USER.png&w=40&h=40&mask=circle\" width=\"40\" height=\"40\" alt=\"@$GH_USER\" /></a>&nbsp;" >> release_notes.md
-            fi
-          done
+          LOGINS=$(git log $PREVIOUS_TAG..HEAD --format='%H' | while read sha; do
+            curl -s "https://api.github.com/repos/${{ github.repository }}/commits/$sha" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              | grep -oP '(?<="login": ")[^"]+' | head -1
+          done | sort -u | grep -v '^$')
+
+          if [ -n "$LOGINS" ]; then
+            for login in $LOGINS; do
+              echo "<a href=\"https://github.com/$login\"><img src=\"https://wsrv.nl/?url=github.com/$login.png&w=40&h=40&mask=circle\" width=\"40\" height=\"40\" alt=\"@$login\" /></a>&nbsp;" >> release_notes.md
+            done
+          else
+            echo "_No contributors found._" >> release_notes.md
+          fi
 
           echo "" >> release_notes.md
           echo "<br>" >> release_notes.md
