@@ -9,7 +9,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-install-project --no-dev --extra api
 
 COPY . /app/
-RUN uv sync --frozen --no-dev --extra api
+RUN uv sync --frozen --no-dev --no-editable --extra api
 
 EXPOSE 8000
 
