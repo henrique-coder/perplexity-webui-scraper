@@ -59,6 +59,7 @@ Changelog = "https://github.com/henrique-coder/perplexity-webui-scraper/releases
 
 [dependency-groups]
 dev = [
+  "prek~=0.4.0",
   "python-dotenv~=1.2.0",
 ]
 docs = [
