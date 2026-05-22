@@ -6,6 +6,7 @@ Uses the email → OTP code → redirect-link → cookie extraction flow via cur
 from __future__ import annotations
 
 from typing import Annotated
+from urllib.parse import parse_qs, urlparse
 
 from curl_cffi.requests import Session
 from pyperclip import PyperclipException, copy
@@ -16,9 +17,11 @@ import typer
 
 from perplexity_webui_scraper._internal.constants import (
     API_BASE_URL,
+    API_VERSION,
     ENDPOINT_AUTH_CSRF,
     ENDPOINT_AUTH_OTP_REDIRECT,
     ENDPOINT_AUTH_SIGNIN,
+    ENDPOINT_AUTH_TOTP_CHALLENGE_VERIFY,
     SESSION_COOKIE_NAME,
 )
 
@@ -110,6 +113,7 @@ def run(
                     raise ValueError("OTP code cannot be empty.")
 
                 # Step 4: Convert OTP to redirect URL
+                redirect_url: str
                 with console.status("[bold green]Validating...", spinner="dots"):
                     if otp_code.startswith("http"):
                         redirect_url = otp_code
@@ -133,14 +137,67 @@ def run(
                             f"{API_BASE_URL}{redirect_path}" if redirect_path.startswith("/") else redirect_path
                         )
 
-                    # Step 5: Follow redirect to set session cookie
-                    session.get(redirect_url)
+                    # Step 5: Follow callback — may require TOTP 2FA
+                    callback_resp = session.get(redirect_url, allow_redirects=False)
 
-                    # Step 6: Extract session cookie
-                    session_token = session.cookies.get(SESSION_COOKIE_NAME)
+                    challenge_token: str | None = None
+                    if callback_resp.status_code in (301, 302, 307, 308):
+                        location = callback_resp.headers.get("Location", "")
 
-                    if not session_token:
-                        raise ValueError("Authentication successful, but token not found.")
+                        if "/auth/totp-challenge" in location:
+                            parsed = urlparse(location if location.startswith("http") else f"{API_BASE_URL}{location}")
+                            challenge_token = parse_qs(parsed.query).get("token", [""])[0]
+
+                            if not challenge_token:
+                                raise ValueError("TOTP challenge token not found in redirect.")
+                        else:
+                            # Normal flow — follow the redirect
+                            follow_url = location if location.startswith("http") else f"{API_BASE_URL}{location}"
+                            session.get(follow_url)
+
+                # Step 5b: Handle TOTP challenge (outside console.status so Prompt.ask works)
+                if challenge_token:
+                    console.print("\n[bold cyan]Step 3: Two-Factor Authentication[/bold cyan]")
+                    console.print("  Your account has TOTP enabled. Enter the code from your authenticator app.")
+                    totp_code = Prompt.ask("  Enter TOTP code", console=console).strip()
+
+                    if not totp_code or not totp_code.isdigit() or len(totp_code) != 6:
+                        raise ValueError("TOTP code must be a 6-digit number.")
+
+                    with console.status("[bold green]Verifying TOTP...", spinner="dots"):
+                        verify_url = (
+                            f"{API_BASE_URL}{ENDPOINT_AUTH_TOTP_CHALLENGE_VERIFY}?version={API_VERSION}&source=default"
+                        )
+                        totp_verify_response = session.post(
+                            verify_url,
+                            json={"token": challenge_token, "code": totp_code},
+                        )
+                        totp_verify_response.raise_for_status()
+
+                        # After successful TOTP verification, follow any redirect
+                        if totp_verify_response.status_code in (301, 302, 307, 308):
+                            next_location = totp_verify_response.headers.get("Location", "")
+                            if next_location:
+                                next_url = (
+                                    next_location
+                                    if next_location.startswith("http")
+                                    else f"{API_BASE_URL}{next_location}"
+                                )
+                                session.get(next_url)
+                        else:
+                            totp_data = totp_verify_response.json()
+                            next_redirect = totp_data.get("redirect", "")
+                            if next_redirect:
+                                next_url = (
+                                    f"{API_BASE_URL}{next_redirect}" if next_redirect.startswith("/") else next_redirect
+                                )
+                                session.get(next_url)
+
+                # Step 6: Extract session cookie
+                session_token = session.cookies.get(SESSION_COOKIE_NAME)
+
+                if not session_token:
+                    raise ValueError("Authentication successful, but token not found.")
 
                 console.print("\n[bold green]✅ Token generated successfully![/bold green]")
                 console.print(f"\n[bold white]Your session token:[/bold white]\n[green]{session_token}[/green]\n")
