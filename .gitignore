@@ -6,9 +6,9 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+node_modules/
 .gemini/
 .claude/
-.mom/
 .debug/
 
 # Files
@@ -23,7 +23,9 @@ example*.py
 # Build artifacts
 build/
 dist/
-*.spec
+*.build/
+*.dist/
+*.onefile-build/
 
 # MOM (generated at runtime)
 .mom/

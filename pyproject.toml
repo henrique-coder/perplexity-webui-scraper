@@ -35,9 +35,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-cli = ["pyperclip~=1.11.0", "rich~=15.0.0"]
-api = ["fastapi~=0.136.0", "uvicorn[standard]~=0.46.0"]
-mcp = ["fastmcp~=3.2.0"]
+cli = [
+  "pyperclip~=1.11.0",
+  "rich~=15.0.0",
+]
+api = [
+  "fastapi~=0.136.0",
+  "uvicorn[standard]~=0.47.0",
+]
+mcp = [
+  "fastmcp~=3.3.0",
+]
 
 [project.scripts]
 perplexity-webui-scraper = "perplexity_webui_scraper.cli.__main__:main"
@@ -50,18 +58,32 @@ Issues = "https://github.com/henrique-coder/perplexity-webui-scraper/issues"
 Changelog = "https://github.com/henrique-coder/perplexity-webui-scraper/releases"
 
 [dependency-groups]
-build = ["pyinstaller>=6.20.0"]
-dev = ["python-dotenv~=1.2.0"]
+dev = [
+  "python-dotenv~=1.2.0",
+]
 docs = [
   "mkdocs~=1.6.0",
   "mkdocs-material~=9.7.0",
   "mkdocstrings[python]~=1.0.0",
 ]
-lint = ["ruff~=0.15.0", "ty~=0.0.30"]
-test = ["httpx~=0.28.0", "pytest~=9.0.0"]
+lint = [
+  "ruff~=0.15.0",
+  "ty~=0.0.30",
+]
+test = [
+  "httpx~=0.28.0",
+  "pytest~=9.0.0",
+]
+build = [
+  "nuitka>=4.1.1",
+  "ordered-set>=4.1.0",
+  "zstandard>=0.25.0",
+]
 
 [build-system]
-requires = ["uv_build>=0.11.8,<0.12.0"]
+requires = [
+  "uv_build>=0.11.16,<0.12",
+]
 build-backend = "uv_build"
 
 [tool.ruff]

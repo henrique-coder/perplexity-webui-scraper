@@ -128,26 +128,31 @@ jobs:
             executable: perplexity-webui-scraper
             archive: tar.gz
             icon: docs/assets/icon.png
+            nuitka_icon_flag: linux-icon
           - os: ubuntu-24.04-arm
             target: linux-arm64
             executable: perplexity-webui-scraper
             archive: tar.gz
             icon: docs/assets/icon.png
+            nuitka_icon_flag: linux-icon
           - os: macos-latest
             target: macos-arm64
             executable: perplexity-webui-scraper
             archive: tar.gz
             icon: docs/assets/icon.icns
+            nuitka_icon_flag: macos-app-icon
           - os: macos-26-intel
-            target: macos-26-intel
+            target: macos-amd64
             executable: perplexity-webui-scraper
             archive: tar.gz
             icon: docs/assets/icon.icns
+            nuitka_icon_flag: macos-app-icon
           - os: windows-latest
             target: windows-amd64
             executable: perplexity-webui-scraper.exe
             archive: zip
             icon: docs/assets/icon.ico
+            nuitka_icon_flag: windows-icon-from-ico
 
     steps:
       - name: Checkout Code
@@ -162,17 +167,32 @@ jobs:
       - name: Install Dependencies
         run: uv sync --frozen --all-extras --group build
 
-      - name: Build Executable with PyInstaller
+      - name: Cache Nuitka
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/Nuitka
+            ~/AppData/Local/Nuitka/Nuitka/Cache
+            ~/Library/Caches/Nuitka
+          key: ${{ runner.os }}-nuitka-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-nuitka-
+
+      - name: Build Executable with Nuitka
         run: >-
-          uv run pyinstaller
+          uv run nuitka
+          --standalone
           --onefile
-          --collect-data perplexity_webui_scraper
-          --hidden-import fastmcp
-          --hidden-import mcp
-          --hidden-import uvicorn
-          --hidden-import curl_cffi
-          --icon ${{ matrix.icon }}
-          --name perplexity-webui-scraper
+          --lto=yes
+          --python-flag=no_asserts
+          --python-flag=no_docstrings
+          --include-package=fastmcp
+          --include-package=mcp
+          --include-package=uvicorn
+          --include-package=curl_cffi
+          --output-dir=dist
+          --output-filename=${{ matrix.executable }}
+          --${{ matrix.nuitka_icon_flag }}=${{ matrix.icon }}
           src/perplexity_webui_scraper/cli/__main__.py
 
       - name: Smoke Test Executable
@@ -309,7 +329,7 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Download Package Artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: python-dist
           path: dist
@@ -339,13 +359,13 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download Package Artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: python-dist
           path: dist
 
       - name: Download Executable Artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: binary-*
           path: release-binaries
