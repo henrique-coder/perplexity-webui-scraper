@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0).
 
+## [Unreleased]
+
+### Added
+
+- **TOTP 2FA support in session token generation:** The `get-perplexity-session-token` CLI wizard now handles Perplexity accounts with TOTP-based two-factor authentication enabled. After email OTP verification, the CLI detects the TOTP challenge redirect, prompts for the authenticator app code, and completes the login flow automatically.
+
 ## [1.0.2] - 2026-05-01
 
 ### Fixed
