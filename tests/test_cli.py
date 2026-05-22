@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import sys
+from sys import modules as sys_modules
 from types import ModuleType
 from unittest.mock import Mock, patch
 
@@ -34,7 +34,7 @@ def test_root_help_lists_subcommands() -> None:
 def test_api_subcommand_delegates_with_options() -> None:
     modules, run_api = _stub_module("perplexity_webui_scraper.api.launcher", "main")
 
-    with patch.dict(sys.modules, modules):
+    with patch.dict(sys_modules, modules):
         result = runner.invoke(
             cli,
             [
@@ -56,7 +56,7 @@ def test_api_subcommand_delegates_with_options() -> None:
 def test_mcp_subcommand_delegates() -> None:
     modules, run_mcp = _stub_module("perplexity_webui_scraper.mcp.server", "main")
 
-    with patch.dict(sys.modules, modules):
+    with patch.dict(sys_modules, modules):
         result = runner.invoke(cli, ["mcp"])
 
     assert result.exit_code == 0
@@ -66,7 +66,7 @@ def test_mcp_subcommand_delegates() -> None:
 def test_token_subcommand_delegates_with_email() -> None:
     modules, run_token = _stub_module("perplexity_webui_scraper.cli.commands.get_session_token", "run")
 
-    with patch.dict(sys.modules, modules):
+    with patch.dict(sys_modules, modules):
         result = runner.invoke(cli, ["token", "user@example.com"])
 
     assert result.exit_code == 0
