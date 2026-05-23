@@ -24,7 +24,7 @@ from rich.prompt import Confirm, Prompt
 from rich.table import Table
 from typer import Exit
 
-from perplexity_webui_scraper import ConversationConfig, Perplexity
+from perplexity_webui_scraper import ConversationConfig, Coordinates, Perplexity
 from perplexity_webui_scraper.cli.commands._token_store import (
     get_config_dir,
     get_default_model,
@@ -57,6 +57,10 @@ def run(
     citation_mode: str,
     language: str,
     files: list[str] | None,
+    timezone: str | None,
+    latitude: float | None,
+    longitude: float | None,
+    space_uuid: str | None,
     save: bool,
     copy: bool,
     raw: bool,
@@ -80,6 +84,10 @@ def run(
         console.print("Run [bold cyan]perplexity-webui-scraper chat setup[/bold cyan] to change your default model.")
         raise Exit(code=1)  # noqa: B904
 
+    coords = (
+        Coordinates(latitude=latitude, longitude=longitude) if latitude is not None and longitude is not None else None
+    )
+
     config = ConversationConfig(
         model=resolved_model,
         search_focus=cast("SearchFocus", search_focus),
@@ -87,7 +95,10 @@ def run(
         time_range=cast("TimeRange", time_range),
         citation_mode=cast("CitationMode", citation_mode),
         language=language,
+        timezone=timezone,
+        coordinates=coords,
         save_to_library=save,
+        space_uuid=space_uuid,
     )
 
     typed_files = cast("list[Any] | None", list(files) if files else None)  # FileInput accepts str
@@ -109,17 +120,20 @@ def run(
 
             current_query = query
             skip_newline = False
+
             while True:
                 if not current_query:
                     try:
                         if not raw:
                             if not skip_newline:
                                 console.print()
+
                             console.print("[bold cyan]❯[/bold cyan] ", end="")  # noqa: RUF001
                             stdout.write("\033[1;97m")
                             stdout.flush()
 
                         skip_newline = False
+
                         try:
                             current_query = input().strip()
                         finally:
@@ -136,6 +150,7 @@ def run(
                     except (KeyboardInterrupt, EOFError):
                         if not raw:
                             console.print()
+
                         break
                 elif not raw:
                     console.print(
@@ -146,8 +161,10 @@ def run(
                 if raw:
                     for _ in conversation.ask(current_query, files=typed_files, stream=True):
                         pass
+
                     if conversation.answer:
                         print(conversation.answer)  # noqa: T201
+
                     final_answer = conversation.answer
                 else:
                     console.print()

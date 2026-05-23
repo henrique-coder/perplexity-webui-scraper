@@ -58,6 +58,22 @@ def chat(
         list[str] | None,
         Option("--file", "-f", help="File attachment paths (repeatable)."),
     ] = None,
+    timezone: Annotated[
+        str | None,
+        Option("--timezone", "-tz", help="IANA timezone string for localization (e.g., 'America/Sao_Paulo')."),
+    ] = None,
+    latitude: Annotated[
+        float | None,
+        Option("--latitude", "-lat", help="Latitude for location-aware results."),
+    ] = None,
+    longitude: Annotated[
+        float | None,
+        Option("--longitude", "-lon", help="Longitude for location-aware results."),
+    ] = None,
+    space_uuid: Annotated[
+        str | None,
+        Option("--space", "-s", help="UUID of a Perplexity Space (collection) to post into."),
+    ] = None,
     save: Annotated[
         bool,
         Option("--save/--no-save", help="Save conversation to your Perplexity library."),
@@ -98,6 +114,10 @@ def chat(
         citation_mode=citation_mode,
         language=language,
         files=files,
+        timezone=timezone,
+        latitude=latitude,
+        longitude=longitude,
+        space_uuid=space_uuid,
         save=save,
         copy=copy,
         raw=raw,
