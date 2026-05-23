@@ -5,6 +5,7 @@ Uses the email → OTP code → redirect-link → cookie extraction flow via cur
 
 from __future__ import annotations
 
+from contextlib import suppress
 from typing import Annotated
 from urllib.parse import parse_qs, urlparse
 
@@ -89,7 +90,7 @@ def _send_otp(session: Session, email: str, csrf_token: str) -> None:
     """Send an OTP email to the given address."""
     with console.status("[bold green]Sending verification code...", spinner="dots"):
         response = session.post(
-            f"{API_BASE_URL}{ENDPOINT_AUTH_SIGNIN}?version=2.18&source=default",
+            f"{API_BASE_URL}{ENDPOINT_AUTH_SIGNIN}?version={API_VERSION}&source=default",
             json={
                 "email": email,
                 "csrfToken": csrf_token,
@@ -176,14 +177,12 @@ def _verify_totp(session: Session, challenge_token: str) -> None:
             try:
                 totp_verify_response.raise_for_status()
             except Exception:
-                try:
+                with suppress(Exception):
                     totp_data = totp_verify_response.json()
 
                     if "error" in totp_data:
                         console.print(f"[red]  ❌ {totp_data.get('error')}[/red]")
                         continue
-                except Exception:
-                    pass
 
                 raise
 
