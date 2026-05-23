@@ -97,45 +97,57 @@ def run(
         with Perplexity(session_token=session_token) as client:
             conversation = client.create_conversation(config)
 
-            console.print()
-            console.print(
-                Panel(
-                    f"[bold cyan]Perplexity WebUI Scraper — Chat[/bold cyan]\nModel: [green]{resolved_model}[/green]",
-                    border_style="cyan",
+            if not raw:
+                console.print()
+                console.print(
+                    Panel(
+                        "[bold cyan]Perplexity WebUI Scraper — Chat[/bold cyan]\n"
+                        f"Model: [green]{resolved_model}[/green]",
+                        border_style="cyan",
+                    )
                 )
-            )
 
             current_query = query
+            skip_newline = False
             while True:
                 if not current_query:
                     try:
-                        console.print()
-                        console.print("[bold cyan]❯[/bold cyan] ", end="")  # noqa: RUF001
+                        if not raw:
+                            if not skip_newline:
+                                console.print()
+                            console.print("[bold cyan]❯[/bold cyan] ", end="")  # noqa: RUF001
+                            stdout.write("\033[1;97m")
+                            stdout.flush()
 
-                        stdout.write("\033[1;97m")
-                        stdout.flush()
+                        skip_newline = False
                         try:
                             current_query = input().strip()
                         finally:
-                            stdout.write("\033[0m")
-                            stdout.flush()
+                            if not raw:
+                                stdout.write("\033[0m")
+                                stdout.flush()
 
                         if not current_query:
+                            if not raw:
+                                stdout.write("\033[1A\r\033[K")
+                                stdout.flush()
+                                skip_newline = True
                             continue
                     except (KeyboardInterrupt, EOFError):
-                        console.print()
+                        if not raw:
+                            console.print()
                         break
-                else:
+                elif not raw:
                     console.print(
                         f"\n[bold cyan]❯[/bold cyan] "  # noqa: RUF001
                         f"[bold bright_white]{current_query}[/bold bright_white]"
                     )
 
                 if raw:
-                    for chunk in conversation.ask(current_query, files=typed_files, stream=True):
-                        if chunk.last_chunk:
-                            print(chunk.last_chunk, end="", flush=True)  # noqa: T201
-                    print()  # noqa: T201
+                    for _ in conversation.ask(current_query, files=typed_files, stream=True):
+                        pass
+                    if conversation.answer:
+                        print(conversation.answer)  # noqa: T201
                     final_answer = conversation.answer
                 else:
                     console.print()
@@ -189,6 +201,9 @@ def run(
 
                 current_query = None
                 typed_files = None
+
+                if raw and query:
+                    break
 
     except Exception as exc:
         error_msg = str(exc)
