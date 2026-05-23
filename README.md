@@ -121,24 +121,24 @@ perplexity-webui-scraper api --host 0.0.0.0 --port 8080
 perplexity-webui-scraper api --reload
 ```
 
-### Running via Container (Podman / Docker)
+### Running via Container (Podman)
 
 ```bash
 # Pull the published multi-arch API image
-docker pull ghcr.io/henrique-coder/perplexity-webui-scraper:latest
+podman pull ghcr.io/henrique-coder/perplexity-webui-scraper:latest
 
 # Run the server (exposing port 8000)
-docker run --rm -p 8000:8000 ghcr.io/henrique-coder/perplexity-webui-scraper:latest
+podman run --rm -p 8000:8000 ghcr.io/henrique-coder/perplexity-webui-scraper:latest
 ```
 
 Optional MCP image for containerized stdio setups:
 
 ```bash
 # Pull the published multi-arch MCP image
-docker pull ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
+podman pull ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
 
 # Run MCP server (requires token)
-docker run --rm -e PERPLEXITY_SESSION_TOKEN=your_token ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
+podman run --rm -e PERPLEXITY_SESSION_TOKEN=your_token ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
 ```
 
 For local development, you can still build the provided container files:

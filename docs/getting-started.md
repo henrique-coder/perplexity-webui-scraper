@@ -33,14 +33,14 @@ uvx --from "perplexity-webui-scraper[mcp]@git+https://github.com/henrique-coder/
 uv --directory /path/to/perplexity-webui-scraper run perplexity-webui-scraper mcp
 ```
 
-Optional Docker image for containerized stdio setups:
+Optional Podman image for containerized stdio setups:
 
 ```bash
 # Pull published MCP image
-docker pull ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
+podman pull ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
 
 # Run MCP server (requires token)
-docker run --rm -it -e PERPLEXITY_SESSION_TOKEN=your_token ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
+podman run --rm -it -e PERPLEXITY_SESSION_TOKEN=your_token ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
 ```
 
 ### As API Server (OpenAI-compatible)

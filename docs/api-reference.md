@@ -266,16 +266,16 @@ perplexity-webui-scraper api
 perplexity-webui-scraper api --host 0.0.0.0 --port 8080
 ```
 
-### Running via Container (Podman / Docker)
+### Running via Container (Podman)
 
 The REST API is published as a multi-arch image on GHCR for `linux/amd64` and `linux/arm64`.
 
 ```bash
 # Pull a release image
-docker pull ghcr.io/henrique-coder/perplexity-webui-scraper:latest
+podman pull ghcr.io/henrique-coder/perplexity-webui-scraper:latest
 
 # Run the server (exposed on port 8000)
-docker run -d -p 8000:8000 --name perp-api ghcr.io/henrique-coder/perplexity-webui-scraper:latest
+podman run -d -p 8000:8000 --name perp-api ghcr.io/henrique-coder/perplexity-webui-scraper:latest
 ```
 
 For local development, use the provided `Containerfile`:
