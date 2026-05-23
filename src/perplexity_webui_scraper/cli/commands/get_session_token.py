@@ -178,11 +178,13 @@ def _verify_totp(session: Session, challenge_token: str) -> None:
             except Exception:
                 try:
                     totp_data = totp_verify_response.json()
+
                     if "error" in totp_data:
                         console.print(f"[red]  ❌ {totp_data.get('error')}[/red]")
                         continue
                 except Exception:
                     pass
+
                 raise
 
             if totp_verify_response.status_code in (301, 302, 307, 308):
