@@ -27,21 +27,42 @@ This library lets you interact with Perplexity AI programmatically using the sam
 
 ## Installation
 
+Install the package depending on your use case:
+
+### As a Core Library
+
+Install only the core python library without any extra dependencies.
+
 ```bash
-# Core library only
 uv add perplexity-webui-scraper
+```
 
-# Interactive session token generator (adds rich)
+### Full Installation (Everything)
+
+Install all optional dependencies (`cli`, `api`, `mcp`) in one go. Recommended if you want to use all tools out-of-the-box.
+
+```bash
+uv add "perplexity-webui-scraper[all]"
+```
+
+### CLI Tools
+
+Install with terminal UX dependencies to use the interactive `ask` and `token` CLI commands.
+
+```bash
 uv add "perplexity-webui-scraper[cli]"
+```
 
-# MCP Server for AI agents (adds fastmcp)
+### External Servers
+
+Install dependencies required for the MCP Server or the OpenAI-compatible REST API.
+
+```bash
+# MCP Server for AI agents
 uv add "perplexity-webui-scraper[mcp]"
 
-# OpenAI-compatible API server (adds fastapi + uvicorn)
+# OpenAI-compatible API server
 uv add "perplexity-webui-scraper[api]"
-
-# Everything at once
-uv add "perplexity-webui-scraper[cli,mcp,api]"
 ```
 
 ## Quick Start
@@ -100,11 +121,13 @@ for model in MODELS.list_all():
 
 ## Available CLI
 
-| Command                          | Extra | Description                                                                   |
-| -------------------------------- | ----- | ----------------------------------------------------------------------------- |
-| `perplexity-webui-scraper token` | `cli` | Interactive email auth wizard to generate a session token (supports TOTP 2FA) |
-| `perplexity-webui-scraper mcp`   | `mcp` | Start the MCP server                                                          |
-| `perplexity-webui-scraper api`   | `api` | Start the OpenAI-compatible REST API server                                   |
+| Command                              | Extra | Description                                                                   |
+| ------------------------------------ | ----- | ----------------------------------------------------------------------------- |
+| `perplexity-webui-scraper token`     | `cli` | Interactive email auth wizard to generate a session token (supports TOTP 2FA) |
+| `perplexity-webui-scraper ask`       | `cli` | Ask Perplexity AI questions with real-time streaming output                   |
+| `perplexity-webui-scraper ask setup` | `cli` | Configure saved token and default model for the ask command                   |
+| `perplexity-webui-scraper mcp`       | `mcp` | Start the MCP server                                                          |
+| `perplexity-webui-scraper api`       | `api` | Start the OpenAI-compatible REST API server                                   |
 
 ## OpenAI-Compatible API
 

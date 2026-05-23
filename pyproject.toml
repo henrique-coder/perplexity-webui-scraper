@@ -36,6 +36,8 @@ dependencies = [
 
 [project.optional-dependencies]
 cli = [
+  "cryptography>=47.0.0,<49.0.0",
+  "platformdirs~=4.9.0",
   "pyperclip~=1.11.0",
   "rich~=15.0.0",
 ]
@@ -45,6 +47,9 @@ api = [
 ]
 mcp = [
   "fastmcp~=3.3.0",
+]
+all = [
+  "perplexity-webui-scraper[cli,api,mcp]",
 ]
 
 [project.scripts]
@@ -83,7 +88,7 @@ build = [
 
 [build-system]
 requires = [
-  "uv_build>=0.11.16,<0.12",
+  "uv_build>=0.11.16,<0.12.0",
 ]
 build-backend = "uv_build"
 

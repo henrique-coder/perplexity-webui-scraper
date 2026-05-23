@@ -4,20 +4,121 @@ from __future__ import annotations
 
 from typing import Annotated
 
-import typer
+from typer import Argument, Context, Option, Typer
 
 
-cli = typer.Typer(
+cli = Typer(
     name="perplexity-webui-scraper",
     help="Perplexity WebUI Scraper command line tools.",
     add_completion=False,
     no_args_is_help=True,
 )
 
+chat_app = Typer(
+    name="chat",
+    help="Chat with Perplexity AI directly from the terminal.",
+    invoke_without_command=True,
+    no_args_is_help=False,
+    context_settings={"allow_interspersed_args": True},
+)
+
+
+@chat_app.callback(invoke_without_command=True)
+def chat(
+    ctx: Context,
+    query: Annotated[
+        str | None,
+        Argument(help="The initial question to ask Perplexity AI (optional)."),
+    ] = None,
+    model: Annotated[
+        str | None,
+        Argument(help="Model ID (e.g. 'perplexity/best')."),
+    ] = None,
+    search_focus: Annotated[
+        str,
+        Option("--search-focus", "-sf", help="Search mode: 'web' or 'writing'."),
+    ] = "web",
+    source_focus: Annotated[
+        str,
+        Option("--source-focus", "-SF", help="Source filter: 'web', 'academic', 'social', 'finance', 'all'."),
+    ] = "web",
+    time_range: Annotated[
+        str,
+        Option("--time-range", "-tr", help="Recency filter: 'all', 'day', 'week', 'month', 'year'."),
+    ] = "all",
+    citation_mode: Annotated[
+        str,
+        Option("--citation-mode", "-cm", help="Citation style: 'default', 'markdown', 'clean'."),
+    ] = "clean",
+    language: Annotated[
+        str,
+        Option("--language", "-l", help="Response language (BCP-47 tag, e.g. 'en-US', 'pt-BR')."),
+    ] = "en-US",
+    files: Annotated[
+        list[str] | None,
+        Option("--file", "-f", help="File attachment paths (repeatable)."),
+    ] = None,
+    save: Annotated[
+        bool,
+        Option("--save/--no-save", help="Save conversation to your Perplexity library."),
+    ] = False,
+    copy: Annotated[
+        bool,
+        Option("--copy", "-cp", help="Copy the final answer to clipboard."),
+    ] = False,
+    raw: Annotated[
+        bool,
+        Option("--raw", "-r", help="Plain text output without Rich formatting."),
+    ] = False,
+    token: Annotated[
+        str | None,
+        Option("--token", "-t", help="Session token override (skips saved token)."),
+    ] = None,
+) -> None:
+    """Ask Perplexity AI a question with real-time streaming."""
+    if ctx.invoked_subcommand is not None:
+        return
+
+    if query == "setup" and model is None:
+        from perplexity_webui_scraper.cli.commands.chat import setup as run_setup  # noqa: PLC0415
+
+        run_setup()
+        return
+
+    # Start REPL or single query if query is provided
+
+    from perplexity_webui_scraper.cli.commands.chat import run as run_chat  # noqa: PLC0415
+
+    run_chat(
+        query=query,
+        model=model,
+        search_focus=search_focus,
+        source_focus=source_focus,
+        time_range=time_range,
+        citation_mode=citation_mode,
+        language=language,
+        files=files,
+        save=save,
+        copy=copy,
+        raw=raw,
+        token=token,
+    )
+
+
+@chat_app.command()
+def setup() -> None:
+    """Interactive setup wizard — configure token and default model."""
+    from perplexity_webui_scraper.cli.commands.chat import setup as run_setup  # noqa: PLC0415
+
+    run_setup()
+
+
+cli.add_typer(chat_app)
+
 
 @cli.command(name="token")
 def token(
-    email: Annotated[str | None, typer.Argument(help="Your Perplexity account email.")] = None,
+    email: Annotated[str | None, Argument(help="Your Perplexity account email.")] = None,
 ) -> None:
     """Generate a Perplexity session token via email OTP or magic link."""
     from perplexity_webui_scraper.cli.commands.get_session_token import run  # noqa: PLC0415
@@ -29,19 +130,19 @@ def token(
 def api(
     host: Annotated[
         str,
-        typer.Option("--host", "-H", help="Host address to bind the server to."),
+        Option("--host", "-H", help="Host address to bind the server to."),
     ] = "127.0.0.1",
     port: Annotated[
         int,
-        typer.Option("--port", "-p", help="Port to listen on."),
+        Option("--port", "-p", help="Port to listen on."),
     ] = 8000,
     reload: Annotated[
         bool,
-        typer.Option("--reload", help="Enable auto-reload for development."),
+        Option("--reload", help="Enable auto-reload for development."),
     ] = False,
     log_level: Annotated[
         str,
-        typer.Option("--log-level", help="Uvicorn log level."),
+        Option("--log-level", help="Uvicorn log level."),
     ] = "info",
 ) -> None:
     """Start the OpenAI-compatible REST API server."""

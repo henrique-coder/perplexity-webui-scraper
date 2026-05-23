@@ -29,6 +29,7 @@ def test_root_help_lists_subcommands() -> None:
     assert "api" in result.output
     assert "mcp" in result.output
     assert "token" in result.output
+    assert "chat" in result.output
 
 
 def test_api_subcommand_delegates_with_options() -> None:
@@ -71,3 +72,80 @@ def test_token_subcommand_delegates_with_email() -> None:
 
     assert result.exit_code == 0
     run_token.assert_called_once_with("user@example.com")
+
+
+def test_chat_subcommand_delegates_with_defaults() -> None:
+    modules, run_chat = _stub_module("perplexity_webui_scraper.cli.commands.chat", "run")
+
+    with patch.dict(sys_modules, modules):
+        result = runner.invoke(cli, ["chat", "What is Python?"])
+
+    assert result.exit_code == 0
+    run_chat.assert_called_once_with(
+        query="What is Python?",
+        model=None,
+        search_focus="web",
+        source_focus="web",
+        time_range="all",
+        citation_mode="clean",
+        language="en-US",
+        files=None,
+        save=False,
+        copy=False,
+        raw=False,
+        token=None,
+    )
+
+
+def test_chat_subcommand_delegates_with_all_options() -> None:
+    modules, run_chat = _stub_module("perplexity_webui_scraper.cli.commands.chat", "run")
+
+    with patch.dict(sys_modules, modules):
+        result = runner.invoke(
+            cli,
+            [
+                "chat",
+                "Explain AI",
+                "perplexity/sonar-2",
+                "-sf",
+                "writing",
+                "-SF",
+                "academic",
+                "-tr",
+                "week",
+                "-cm",
+                "markdown",
+                "-l",
+                "pt-BR",
+                "--copy",
+                "--raw",
+                "-t",
+                "my-token",
+            ],
+        )
+
+    assert result.exit_code == 0
+    run_chat.assert_called_once_with(
+        query="Explain AI",
+        model="perplexity/sonar-2",
+        search_focus="writing",
+        source_focus="academic",
+        time_range="week",
+        citation_mode="markdown",
+        language="pt-BR",
+        files=None,
+        save=False,
+        copy=True,
+        raw=True,
+        token="my-token",
+    )
+
+
+def test_ask_setup_subcommand_delegates() -> None:
+    modules, run_setup = _stub_module("perplexity_webui_scraper.cli.commands.chat", "setup")
+
+    with patch.dict(sys_modules, modules):
+        result = runner.invoke(cli, ["chat", "setup"])
+
+    assert result.exit_code == 0
+    run_setup.assert_called_once_with()

@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Manual publish workflow controls:** Added `workflow_dispatch` inputs for version override plus selective publish toggles for PyPI, GHCR (Podman), and GitHub Releases.
 - **Executable branding assets:** Added packaged application icons for Windows (`.ico`) and macOS (`.icns`) release builds.
 - **TOTP 2FA support in session token generation:** The `perplexity-webui-scraper token` CLI wizard now handles Perplexity accounts with TOTP-based two-factor authentication. After email OTP verification, the CLI detects the TOTP challenge redirect, prompts for the authenticator app code, and completes the login flow automatically.
+- **`chat` CLI command:** New interactive REPL command `perplexity-webui-scraper chat "query"` for querying Perplexity AI directly from the terminal with real-time streaming token output via Rich Live panels. It maintains the conversation context until exited and features a clean, borderless UX inspired by Claude Code. Supports all `ConversationConfig` options as CLI arguments with short aliases, file attachments, clipboard copy, and raw output mode.
+- **`chat setup` subcommand:** Interactive setup wizard that configures and saves the session token (Fernet-encrypted in the platform-specific config directory) and the default model. First-time users are guided to configure their token before using `chat`.
+- **`all` optional dependency extra:** New `[all]` meta-extra that installs all optional dependencies (`cli`, `api`, `mcp`) in one go: `uv add "perplexity-webui-scraper[all]"`.
+- **Encrypted token storage:** Session tokens are now encrypted with Fernet and stored in the platform-specific config directory (`platformdirs`). The `ask` command reads from this store automatically.
 
 ### Changed
 

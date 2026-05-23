@@ -2,19 +2,37 @@
 
 ## Installation
 
+Install the package using the extra that matches your use case.
+
 ### As a Library
+
+Install only the core python library for integration into your own Python code.
 
 ```bash
 # From PyPI (stable)
 uv add perplexity-webui-scraper
 
-# With interactive CLI token tool
-uv add perplexity-webui-scraper[cli]
-
 # From GitHub prod branch (latest features and fixes)
 uv add git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod
+```
 
-# From GitHub prod branch with CLI extra
+### Full Installation (Everything)
+
+Install all optional dependencies (`cli`, `api`, `mcp`) at once. Recommended for users who want to use the CLI tools and the servers without worrying about missing packages.
+
+```bash
+uv add "perplexity-webui-scraper[all]"
+```
+
+### Command Line Tools (CLI)
+
+Install with the `cli` extra to use the `token` generator and the interactive `ask` command directly from your terminal.
+
+```bash
+# From PyPI (stable)
+uv add "perplexity-webui-scraper[cli]"
+
+# From GitHub prod branch
 uv add "perplexity-webui-scraper[cli] @ git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod"
 ```
 
