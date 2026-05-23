@@ -37,7 +37,7 @@ uv add "perplexity-webui-scraper[cli]"
 # MCP Server for AI agents (adds fastmcp)
 uv add "perplexity-webui-scraper[mcp]"
 
-# OpenAI-compatible API server (adds fastapi + uvicorn + typer)
+# OpenAI-compatible API server (adds fastapi + uvicorn)
 uv add "perplexity-webui-scraper[api]"
 
 # Everything at once
@@ -50,7 +50,7 @@ uv add "perplexity-webui-scraper[cli,mcp,api]"
 
 ```bash
 # Interactive CLI wizard — walks you through email auth
-uv run get-perplexity-session-token
+uv run perplexity-webui-scraper token
 ```
 
 Or retrieve `__Secure-next-auth.session-token` manually from your browser cookies on `perplexity.ai`.
@@ -98,13 +98,13 @@ for model in MODELS.list_all():
     print(f"{model.id:40} {model.name}")
 ```
 
-## Available CLIs
+## Available CLI
 
-| Command                        | Extra | Description                                               |
-| ------------------------------ | ----- | --------------------------------------------------------- |
-| `get-perplexity-session-token` | `cli` | Interactive email auth wizard to generate a session token |
-| `perplexity-webui-scraper-mcp` | `mcp` | Start the MCP server (used via MCP config, not directly)  |
-| `perplexity-webui-scraper-api` | `api` | Start the OpenAI-compatible REST API server               |
+| Command                          | Extra | Description                                               |
+| -------------------------------- | ----- | --------------------------------------------------------- |
+| `perplexity-webui-scraper token` | `cli` | Interactive email auth wizard to generate a session token |
+| `perplexity-webui-scraper mcp`   | `mcp` | Start the MCP server                                      |
+| `perplexity-webui-scraper api`   | `api` | Start the OpenAI-compatible REST API server               |
 
 ## OpenAI-Compatible API
 
@@ -112,28 +112,44 @@ Run a local server that accepts OpenAI-formatted requests and forwards them to P
 
 ```bash
 # Start the server (no token needed at startup)
-perplexity-webui-scraper-api
+perplexity-webui-scraper api
 
 # Custom host and port
-perplexity-webui-scraper-api --host 0.0.0.0 --port 8080
+perplexity-webui-scraper api --host 0.0.0.0 --port 8080
 
 # Development mode with auto-reload
-perplexity-webui-scraper-api --reload
+perplexity-webui-scraper api --reload
 ```
 
-### Running via Container (Podman / Docker)
-
-You can seamlessly run the REST API using the provided `Containerfile` via Podman or Docker. This is the recommended way to securely isolate the server. The project utilizes a modern Python 3.14 Alpine container powered by `uv` for lightning-fast builds.
+### Running via Container (Podman)
 
 ```bash
-# 1. Build the lightweight image
-podman build -t perplexity-api .
+# Pull the published multi-arch API image
+podman pull ghcr.io/henrique-coder/perplexity-webui-scraper:latest
 
-# 2. Run the server (exposing port 8000)
-podman run --rm -it -p 8000:8000 perplexity-api
+# Run the server (exposing port 8000)
+podman run --rm -p 8000:8000 ghcr.io/henrique-coder/perplexity-webui-scraper:latest
 ```
 
-_> You can safely replace `podman` with `docker` in the commands above as the Containerfile is fully OCI-compatible._
+Optional MCP image for containerized stdio setups:
+
+```bash
+# Pull the published multi-arch MCP image
+podman pull ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
+
+# Run MCP server (requires token)
+podman run --rm -e PERPLEXITY_SESSION_TOKEN=your_token ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
+```
+
+For local development, you can still build the provided container files:
+
+```bash
+podman build -t perplexity-api -f Containerfile .
+podman run --rm -it -p 8000:8000 perplexity-api
+
+podman build -t perplexity-mcp -f Containerfile.mcp .
+podman run --rm -it -e PERPLEXITY_SESSION_TOKEN=your_token perplexity-mcp
+```
 
 ### CLI options
 
@@ -200,7 +216,8 @@ Expose every Perplexity model as a separate tool for AI agents (Claude Desktop, 
       "args": [
         "--from",
         "perplexity-webui-scraper[mcp]@latest",
-        "perplexity-webui-scraper-mcp"
+        "perplexity-webui-scraper",
+        "mcp"
       ],
       "env": { "PERPLEXITY_SESSION_TOKEN": "your_token_here" }
     }

@@ -1,3 +1,6 @@
-# Ignore auto-generated mkdocstrings API pages
-# (prettier escapes underscores in ::: identifiers, breaking mkdocstrings paths)
+# Folders
 docs/api/
+
+# Files
+uv.lock
+pnpm-lock.yaml

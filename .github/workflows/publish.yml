@@ -1,4 +1,4 @@
-name: Publish to PyPI
+name: Publish Release
 
 on:
   push:
@@ -6,6 +6,27 @@ on:
       - prod
     paths:
       - "CHANGELOG.md"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g. 1.0.2). Empty = auto-detect from source."
+        required: false
+        type: string
+      skip_pypi:
+        description: "Skip PyPI publish"
+        required: false
+        default: true
+        type: boolean
+      skip_docker:
+        description: "Skip Docker publish"
+        required: false
+        default: true
+        type: boolean
+      skip_gh_releases:
+        description: "Skip GitHub Release creation"
+        required: false
+        default: true
+        type: boolean
 
 jobs:
   check_version:
@@ -15,6 +36,8 @@ jobs:
     outputs:
       version_changed: ${{ steps.check.outputs.version_changed }}
       new_version: ${{ steps.check.outputs.new_version }}
+      release_tag: ${{ steps.check.outputs.release_tag }}
+      artifact_version: ${{ steps.check.outputs.artifact_version }}
 
     steps:
       - name: Checkout Code
@@ -23,9 +46,36 @@ jobs:
       - name: Check if Version Changed
         id: check
         run: |
+          # Manual trigger with explicit version: use it directly
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "version_changed=true" >> $GITHUB_OUTPUT
+            echo "new_version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "release_tag=v${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "artifact_version=v${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "📦 Manual dispatch — using version ${{ inputs.version }}"
+            exit 0
+          fi
+
           CURRENT_VERSION=$(grep -oP '(?<=^## \[)\d+\.\d+\.\d+(?=\])' CHANGELOG.md | head -n 1)
           PROJECT_VERSION=$(grep -oP '(?<=^version = ")[^"]+' pyproject.toml | head -n 1)
 
+          if [ "$CURRENT_VERSION" != "$PROJECT_VERSION" ]; then
+            echo "❌ Version mismatch: CHANGELOG.md ($CURRENT_VERSION) != pyproject.toml ($PROJECT_VERSION)"
+            exit 1
+          fi
+
+          echo "release_tag=v$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "artifact_version=v$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+          # Manual dispatch auto-detected from source. Skip tag check.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version_changed=true" >> $GITHUB_OUTPUT
+            echo "new_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            echo "📦 Manual dispatch — auto-detected version $CURRENT_VERSION"
+            exit 0
+          fi
+
+          # Push to prod: verify tag doesn't already exist
           git fetch origin tag "v$CURRENT_VERSION" --no-tags || true
           if git rev-parse "v$CURRENT_VERSION" >/dev/null 2>&1; then
             echo "⏭️ Tag v$CURRENT_VERSION already exists. Skipping publish."
@@ -33,24 +83,276 @@ jobs:
             exit 0
           fi
 
-          if [ "$CURRENT_VERSION" != "$PROJECT_VERSION" ]; then
-            echo "❌ Version mismatch: CHANGELOG.md ($CURRENT_VERSION) != pyproject.toml ($PROJECT_VERSION)"
-            exit 1
-          fi
-
           echo "version_changed=true" >> $GITHUB_OUTPUT
           echo "new_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "✅ Versions match ($CURRENT_VERSION) and tag does not exist. Triggering publish pipeline."
 
-  publish:
-    name: Build & Publish
+  build_package:
+    name: Build Python Package
     runs-on: ubuntu-latest
     needs: check_version
     if: needs.check_version.outputs.version_changed == 'true'
 
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Build Package
+        run: uv build
+
+      - name: Upload Package Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: python-dist
+          path: dist/*
+          if-no-files-found: error
+
+  build_executables:
+    name: Build Executable (${{ matrix.target }})
+    needs: check_version
+    if: needs.check_version.outputs.version_changed == 'true'
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-amd64
+            executable: perplexity-webui-scraper
+            archive: tar.gz
+            icon: docs/assets/icon.png
+            nuitka_icon_flag: linux-icon
+          - os: ubuntu-24.04-arm
+            target: linux-arm64
+            executable: perplexity-webui-scraper
+            archive: tar.gz
+            icon: docs/assets/icon.png
+            nuitka_icon_flag: linux-icon
+          - os: macos-latest
+            target: macos-arm64
+            executable: perplexity-webui-scraper
+            archive: tar.gz
+            icon: docs/assets/icon.icns
+            nuitka_icon_flag: macos-app-icon
+          - os: macos-26-intel
+            target: macos-amd64
+            executable: perplexity-webui-scraper
+            archive: tar.gz
+            icon: docs/assets/icon.icns
+            nuitka_icon_flag: macos-app-icon
+          - os: windows-latest
+            target: windows-amd64
+            executable: perplexity-webui-scraper.exe
+            archive: zip
+            icon: docs/assets/icon.ico
+            nuitka_icon_flag: windows-icon-from-ico
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install Dependencies
+        run: uv sync --frozen --all-extras --group build
+
+      - name: Cache Nuitka
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/Nuitka
+            ~/AppData/Local/Nuitka/Nuitka/Cache
+            ~/Library/Caches/Nuitka
+          key: ${{ runner.os }}-nuitka-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-nuitka-
+
+      - name: Build Executable with Nuitka
+        run: >-
+          uv run nuitka
+          --standalone
+          --onefile
+          --lto=yes
+          --python-flag=no_asserts
+          --python-flag=no_docstrings
+          --include-package=fastmcp
+          --include-package=mcp
+          --include-package=uvicorn
+          --include-package=curl_cffi
+          --output-dir=dist
+          --output-filename=${{ matrix.executable }}
+          --${{ matrix.nuitka_icon_flag }}=${{ matrix.icon }}
+          src/perplexity_webui_scraper/cli/__main__.py
+
+      - name: Smoke Test Executable
+        shell: bash
+        run: |
+          BIN="dist/${{ matrix.executable }}"
+          chmod +x "$BIN" || true
+          "$BIN" --help
+          "$BIN" api --help
+          "$BIN" token --help
+
+      - name: Package Unix Executable
+        if: matrix.archive == 'tar.gz'
+        shell: bash
+        run: |
+          VERSION="${{ needs.check_version.outputs.artifact_version }}"
+          mkdir -p release/stage
+          cp "dist/${{ matrix.executable }}" release/stage/perplexity-webui-scraper
+          chmod +x release/stage/perplexity-webui-scraper
+          tar -C release/stage -czf "release/perplexity-webui-scraper-${VERSION}-${{ matrix.target }}.tar.gz" perplexity-webui-scraper
+
+      - name: Package Windows Executable
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          $version = "${{ needs.check_version.outputs.artifact_version }}"
+          New-Item -ItemType Directory -Force -Path release/stage | Out-Null
+          Copy-Item "dist/${{ matrix.executable }}" "release/stage/perplexity-webui-scraper.exe"
+          Compress-Archive -Path "release/stage/perplexity-webui-scraper.exe" -DestinationPath "release/perplexity-webui-scraper-$version-${{ matrix.target }}.zip"
+
+      - name: Upload Executable Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: binary-${{ matrix.target }}
+          path: release/*
+          if-no-files-found: error
+
+  publish_container:
+    name: Publish Docker Images
+    runs-on: ubuntu-latest
+    needs:
+      - check_version
+      - build_package
+      - build_executables
+    if: needs.check_version.outputs.version_changed == 'true' && (github.event_name != 'workflow_dispatch' || (inputs.skip_docker != true && inputs.skip_docker != 'true'))
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Normalize image repository
+        id: repo
+        run: echo "image_repo=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Docker Metadata (API)
+        id: meta_api
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.repo.outputs.image_repo }}
+          tags: |
+            type=raw,value=v${{ needs.check_version.outputs.new_version }}
+            type=raw,value=${{ needs.check_version.outputs.new_version }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ needs.check_version.outputs.new_version }}
+            type=semver,pattern={{major}},value=v${{ needs.check_version.outputs.new_version }}
+            type=raw,value=latest
+
+      - name: Build and Push Docker Image (API)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Containerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta_api.outputs.tags }}
+          labels: ${{ steps.meta_api.outputs.labels }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Docker Metadata (MCP)
+        id: meta_mcp
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.repo.outputs.image_repo }}
+          tags: |
+            type=raw,value=mcp
+            type=raw,value=${{ needs.check_version.outputs.new_version }}-mcp
+            type=raw,value=v${{ needs.check_version.outputs.new_version }}-mcp
+
+      - name: Build and Push Docker Image (MCP)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Containerfile.mcp
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta_mcp.outputs.tags }}
+          labels: ${{ steps.meta_mcp.outputs.labels }}
+          cache-from: type=gha,scope=mcp
+          cache-to: type=gha,mode=max,scope=mcp
+
+  publish_pypi:
+    name: Publish PyPI
+    runs-on: ubuntu-latest
+    needs:
+      - check_version
+      - build_package
+    if: needs.check_version.outputs.version_changed == 'true' && (github.event_name != 'workflow_dispatch' || (inputs.skip_pypi != true && inputs.skip_pypi != 'true'))
+
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Download Package Artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: python-dist
+          path: dist
+
+      - name: Publish to PyPI
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: uv publish dist/*
+
+  create_github_release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs:
+      - check_version
+      - build_package
+      - build_executables
+    if: needs.check_version.outputs.version_changed == 'true' && (github.event_name != 'workflow_dispatch' || (inputs.skip_gh_releases != true && inputs.skip_gh_releases != 'true'))
+
     permissions:
       contents: write
-      id-token: write
 
     steps:
       - name: Checkout Code
@@ -59,41 +361,65 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v7
+      - name: Download Package Artifacts
+        uses: actions/download-artifact@v8
         with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          name: python-dist
+          path: dist
 
-      - name: Build Package
-        run: uv build
-
-      - name: Publish to PyPI
-        env:
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-        run: uv publish
+      - name: Download Executable Artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: binary-*
+          path: release-binaries
+          merge-multiple: true
 
       - name: Generate Release Notes
         id: release_body
         run: |
           VERSION="v${{ needs.check_version.outputs.new_version }}"
           PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)
+          IMAGE_REPO="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
 
           awk '/^## \[/ { if (p) exit; p=1; next } p { print }' CHANGELOG.md > release_notes.md
           sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' release_notes.md
 
-          AUTHORS=$(git log $PREVIOUS_TAG..HEAD --format='%ae' | sort -u)
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ] || [ "${{ inputs.skip_docker }}" != "true" ]; then
+            echo "" >> release_notes.md
+            echo "### 🐳 Docker Images" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "#### API" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "\`\`\`bash" >> release_notes.md
+            echo "docker run --rm -p 8000:8000 $IMAGE_REPO:${{ needs.check_version.outputs.new_version }}" >> release_notes.md
+            echo "\`\`\`" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "#### MCP" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "\`\`\`bash" >> release_notes.md
+            echo "docker run --rm -e PERPLEXITY_SESSION_TOKEN=your_token $IMAGE_REPO:${{ needs.check_version.outputs.new_version }}-mcp" >> release_notes.md
+            echo "\`\`\`" >> release_notes.md
+          fi
 
           echo "" >> release_notes.md
           echo "### 👥 Contributors" >> release_notes.md
           echo "" >> release_notes.md
 
-          for email in $AUTHORS; do
-            GH_USER=$(curl -s "https://api.github.com/search/users?q=$email" | grep -oP '"login": "\K[^"]+' | head -1)
-            if [ -n "$GH_USER" ]; then
-              echo "<a href=\"https://github.com/$GH_USER\"><img src=\"https://wsrv.nl/?url=github.com/$GH_USER.png&w=40&h=40&mask=circle\" width=\"40\" height=\"40\" alt=\"@$GH_USER\" /></a>&nbsp;" >> release_notes.md
-            fi
-          done
+          LOGINS=$(git log $PREVIOUS_TAG..HEAD --format='%H' | while read sha; do
+            curl -s "https://api.github.com/repos/${{ github.repository }}/commits/$sha" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              | grep -oP '(?<="login": ")[^"]+' | head -1
+          done | sort -u | grep -v '^$' | grep -v '\[bot\]')
+
+          if [ -n "$LOGINS" ]; then
+            AVATARS=""
+            for login in $LOGINS; do
+              AVATARS="$AVATARS<a href=\"https://github.com/$login\"><img src=\"https://wsrv.nl/?url=github.com/$login.png&w=40&h=40&mask=circle\" width=\"40\" height=\"40\" alt=\"@$login\" /></a>&nbsp;"
+            done
+            echo "$AVATARS" >> release_notes.md
+          else
+            echo "_No contributors found._" >> release_notes.md
+          fi
 
           echo "" >> release_notes.md
           echo "<br>" >> release_notes.md
@@ -101,7 +427,7 @@ jobs:
           echo "<details open>" >> release_notes.md
           echo "<summary><b>📦 Commits History (${PREVIOUS_TAG} &rarr; ${VERSION})</b></summary>" >> release_notes.md
           echo "" >> release_notes.md
-          git log --reverse --date=iso-strict --format="- [\`%h\`](https://github.com/${{ github.repository }}/commit/%H) - %ad - %s" $PREVIOUS_TAG..HEAD >> release_notes.md
+          git log --reverse --date=iso-strict --max-count=50 --format="- [\`%h\`](https://github.com/${{ github.repository }}/commit/%H) - %ad - %s" $PREVIOUS_TAG..HEAD >> release_notes.md
           echo "" >> release_notes.md
           echo "</details>" >> release_notes.md
           echo "" >> release_notes.md
@@ -116,12 +442,14 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: v${{ needs.check_version.outputs.new_version }}
-          name: v${{ needs.check_version.outputs.new_version }}
+          tag_name: ${{ needs.check_version.outputs.release_tag }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ needs.check_version.outputs.release_tag }}
           body: ${{ steps.release_body.outputs.notes }}
           files: |
             dist/*.whl
             dist/*.tar.gz
+            release-binaries/*
           draft: false
           prerelease: false
         env:

@@ -16,7 +16,8 @@ Add to your MCP config file (no installation required via npm, handled by python
       "args": [
         "--from",
         "perplexity-webui-scraper[mcp]@latest",
-        "perplexity-webui-scraper-mcp"
+        "perplexity-webui-scraper",
+        "mcp"
       ],
       "env": {
         "PERPLEXITY_SESSION_TOKEN": "your_token_here"
@@ -36,7 +37,8 @@ Add to your MCP config file (no installation required via npm, handled by python
       "args": [
         "--from",
         "perplexity-webui-scraper[mcp]@git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod",
-        "perplexity-webui-scraper-mcp"
+        "perplexity-webui-scraper",
+        "mcp"
       ],
       "env": {
         "PERPLEXITY_SESSION_TOKEN": "your_token_here"
@@ -57,7 +59,8 @@ Add to your MCP config file (no installation required via npm, handled by python
         "--directory",
         "/absolute/path/to/perplexity-webui-scraper",
         "run",
-        "perplexity-webui-scraper-mcp"
+        "perplexity-webui-scraper",
+        "mcp"
       ],
       "env": {
         "PERPLEXITY_SESSION_TOKEN": "your_token_here"
@@ -66,6 +69,20 @@ Add to your MCP config file (no installation required via npm, handled by python
   }
 }
 ```
+
+## Optional Podman Image
+
+For containerized stdio setups only:
+
+```bash
+# Pull published MCP image
+podman pull ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
+
+# Run MCP server (requires token)
+podman run --rm -it -e PERPLEXITY_SESSION_TOKEN=your_token ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
+```
+
+This is niche. Prefer `uvx` for normal MCP client setups.
 
 ## Available Tools
 

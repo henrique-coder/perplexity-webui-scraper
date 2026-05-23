@@ -3,16 +3,19 @@ default:
 
 install:
     uv sync --upgrade --all-extras --all-groups
+    pnpm update
 
 format:
-    npx prettier --write .
-    uv run ruff format
     uv run ruff check --fix
+    uv run ruff format
+    pnpm prettier --write .
+    pnpm taplo format *.toml
 
 lint:
-    npx prettier --check .
     uv run ruff check
     uv run ty check
+    pnpm prettier --check .
+    pnpm taplo lint *.toml
 
 test:
     uv run pytest

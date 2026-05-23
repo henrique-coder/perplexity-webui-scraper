@@ -1,10 +1,20 @@
-# Normalize line endings for text files
+# Force LF line endings for all text files
 * text=auto eol=lf
 
-# Binary files - do not modify
+# Treat graphics, icons, and documents as binary files
 *.png binary
 *.jpg binary
 *.jpeg binary
+*.webp binary
 *.gif binary
 *.ico binary
-*.webp binary
+*.icns binary
+*.pdf binary
+
+# Maintain native CRLF line endings for Windows batch scripts
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Collapse auto-generated package lockfiles in GitHub pull requests
+uv.lock linguist-generated=true
+pnpm-lock.yaml linguist-generated=true

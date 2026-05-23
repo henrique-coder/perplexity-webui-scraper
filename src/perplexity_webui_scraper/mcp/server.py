@@ -36,7 +36,7 @@ def _get_client() -> Perplexity:
             raise RuntimeError(
                 "PERPLEXITY_SESSION_TOKEN environment variable is not set. "
                 "Set it before starting the MCP server:\n\n"
-                "  PERPLEXITY_SESSION_TOKEN=<token> perplexity-webui-scraper-mcp"
+                "  PERPLEXITY_SESSION_TOKEN=<token> perplexity-webui-scraper mcp"
             )
 
         _client = Perplexity(token, config=ClientConfig())
