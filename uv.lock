@@ -1165,11 +1165,22 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+all = [
+    { name = "cryptography" },
+    { name = "fastapi" },
+    { name = "fastmcp" },
+    { name = "platformdirs" },
+    { name = "pyperclip" },
+    { name = "rich" },
+    { name = "uvicorn", extra = ["standard"] },
+]
 api = [
     { name = "fastapi" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 cli = [
+    { name = "cryptography" },
+    { name = "platformdirs" },
     { name = "pyperclip" },
     { name = "rich" },
 ]
@@ -1203,18 +1214,21 @@ test = [
 
 [package.metadata]
 requires-dist = [
+    { name = "cryptography", marker = "extra == 'cli'", specifier = ">=47.0.0,<49.0.0" },
     { name = "curl-cffi", specifier = "~=0.15.0" },
     { name = "fastapi", marker = "extra == 'api'", specifier = "~=0.136.0" },
     { name = "fastmcp", marker = "extra == 'mcp'", specifier = "~=3.3.0" },
     { name = "loguru", specifier = "~=0.7.0" },
     { name = "orjson", specifier = "~=3.11.0" },
+    { name = "perplexity-webui-scraper", extras = ["cli", "api", "mcp"], marker = "extra == 'all'" },
+    { name = "platformdirs", marker = "extra == 'cli'", specifier = "~=4.9.0" },
     { name = "pydantic", specifier = ">=2.10.0,<3.0.0" },
     { name = "pyperclip", marker = "extra == 'cli'", specifier = "~=1.11.0" },
     { name = "rich", marker = "extra == 'cli'", specifier = "~=15.0.0" },
     { name = "typer", specifier = "~=0.25.0" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'api'", specifier = "~=0.47.0" },
 ]
-provides-extras = ["cli", "api", "mcp"]
+provides-extras = ["cli", "api", "mcp", "all"]
 
 [package.metadata.requires-dev]
 build = [
