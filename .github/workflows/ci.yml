@@ -35,9 +35,9 @@ jobs:
       - name: Install Dependencies
         run: just install
 
-      - name: Run Linter (Ruff, Ty, Prettier, Taplo)
+      - name: Run Linter & Formatter
         run: |
-          uv run ruff format --check
+          just format
           just lint
 
       - name: Run Tests (Pytest)
