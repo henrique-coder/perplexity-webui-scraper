@@ -43,6 +43,9 @@ ENDPOINT_AUTH_SIGNIN: Final[str] = "/api/auth/signin/email"
 ENDPOINT_AUTH_OTP_REDIRECT: Final[str] = "/api/auth/otp-redirect-link"
 """Endpoint to convert an OTP code into a redirect URL."""
 
+ENDPOINT_AUTH_TOTP_CHALLENGE_VERIFY: Final[str] = "/api/auth/totp/challenge-verify"
+"""Endpoint to verify a TOTP code during 2FA challenge."""
+
 # ---------------------------------------------------------------------------
 # Authentication
 # ---------------------------------------------------------------------------

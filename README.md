@@ -100,11 +100,11 @@ for model in MODELS.list_all():
 
 ## Available CLI
 
-| Command                          | Extra | Description                                               |
-| -------------------------------- | ----- | --------------------------------------------------------- |
-| `perplexity-webui-scraper token` | `cli` | Interactive email auth wizard to generate a session token |
-| `perplexity-webui-scraper mcp`   | `mcp` | Start the MCP server                                      |
-| `perplexity-webui-scraper api`   | `api` | Start the OpenAI-compatible REST API server               |
+| Command                          | Extra | Description                                                                   |
+| -------------------------------- | ----- | ----------------------------------------------------------------------------- |
+| `perplexity-webui-scraper token` | `cli` | Interactive email auth wizard to generate a session token (supports TOTP 2FA) |
+| `perplexity-webui-scraper mcp`   | `mcp` | Start the MCP server                                                          |
+| `perplexity-webui-scraper api`   | `api` | Start the OpenAI-compatible REST API server                                   |
 
 ## OpenAI-Compatible API
 
