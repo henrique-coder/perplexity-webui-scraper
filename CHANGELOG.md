@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **CI Workflows:** Updated `ci.yml` to use `pnpm/action-setup`, restrict `uv sync` to the `test` and `lint` groups with `--frozen`, and execute `just format` and `just lint` directly.
+- **Tooling:** Reordered `Justfile` formatting tasks to run `ruff check --fix` before `ruff format`.
 - **CLI surface simplified:** Replaced the legacy `get-perplexity-session-token`, `perplexity-webui-scraper-api`, and `perplexity-webui-scraper-mcp` scripts with one canonical `perplexity-webui-scraper` command exposing `token`, `api`, and `mcp` subcommands.
 - **Dependency layout:** Moved `typer` into base dependencies so the unified root CLI is always available.
 - **MCP startup guidance:** Updated missing-token runtime messaging to reference `PERPLEXITY_SESSION_TOKEN=<token> perplexity-webui-scraper mcp`.
