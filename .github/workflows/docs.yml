@@ -2,12 +2,8 @@ name: Deploy Documentation
 
 on:
   push:
-    branches:
-      - prod
-    paths:
-      - "docs/**"
-      - "mkdocs.yml"
-      - "README.md"
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions:
