@@ -6,8 +6,8 @@ install:
     pnpm update
 
 format:
-    uv run ruff format
     uv run ruff check --fix
+    uv run ruff format
     pnpm prettier --write .
     pnpm taplo format *.toml
 
