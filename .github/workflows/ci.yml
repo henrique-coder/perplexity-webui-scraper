@@ -33,7 +33,9 @@ jobs:
           run_install: false
 
       - name: Install Dependencies
-        run: just install
+        run: |
+          uv sync --frozen --only-group test --only-group lint
+          pnpm install --frozen-lockfile
 
       - name: Run Linter & Formatter
         run: |
