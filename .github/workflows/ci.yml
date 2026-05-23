@@ -27,7 +27,10 @@ jobs:
         uses: extractions/setup-just@v4
 
       - name: Install pnpm
-        run: npm install -g pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
 
       - name: Install Dependencies
         run: just install
