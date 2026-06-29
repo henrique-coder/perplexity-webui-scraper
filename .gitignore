@@ -26,9 +26,3 @@ dist/
 *.build/
 *.dist/
 *.onefile-build/
-
-# MOM (generated at runtime)
-.mom/
-.mcp.json
-.claude/
-CLAUDE.md
