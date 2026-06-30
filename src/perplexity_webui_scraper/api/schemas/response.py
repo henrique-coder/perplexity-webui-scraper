@@ -6,7 +6,7 @@ from time import time
 from typing import Literal
 from uuid import uuid4
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ModelObject(BaseModel):
@@ -110,7 +110,7 @@ class ChatCompletionResponse(BaseModel):
     created: int
     model: str
     choices: list[ChatCompletionChoice]
-    usage: ChatCompletionUsage = ChatCompletionUsage()
+    usage: ChatCompletionUsage = Field(default_factory=ChatCompletionUsage)
     perplexity: PerplexityResponseExtensions | None = None
 
     @classmethod

@@ -2,7 +2,16 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict
+
+
+type ModelTier = Literal["pro", "max"]
+"""Minimum Perplexity subscription tier required by a model."""
+
+type ModelMode = Literal["copilot", "search", "research"]
+"""Internal Perplexity request mode used for a model."""
 
 
 class Model(BaseModel):
@@ -20,12 +29,12 @@ class Model(BaseModel):
             ``"search"``, ``"research"``).
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     id: str
     name: str
     description: str
     identifier: str
     tool_name: str
-    min_tier: str
-    mode: str = "copilot"
+    min_tier: ModelTier
+    mode: ModelMode = "copilot"

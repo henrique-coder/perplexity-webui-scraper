@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from perplexity_webui_scraper._internal.types import Coordinates
 
@@ -53,13 +53,8 @@ class Response(BaseModel):
     """
 
     answer: str | None = None
-    chunks: list[str] = []
+    chunks: list[str] = Field(default_factory=list)
     last_chunk: str | None = None
-    search_results: list[SearchResultItem] = []
+    search_results: list[SearchResultItem] = Field(default_factory=list)
     conversation_uuid: str | None = None
-    raw_data: dict[str, Any] = {}
-
-    model_config = ConfigDict(
-        # Allow mutable defaults (lists/dicts) per-instance via copy-on-init
-        # handled by Pydantic v2's default_factory behaviour for mutable fields.
-    )
+    raw_data: dict[str, Any] = Field(default_factory=dict)

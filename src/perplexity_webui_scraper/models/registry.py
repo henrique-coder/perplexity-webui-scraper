@@ -26,18 +26,46 @@ class ModelRegistry:
 
     _models: dict[str, Model]
 
-    def __init__(self) -> None:
+    def __init__(self, raw_models: list[dict[str, object]] | None = None) -> None:
         """Load models from the bundled ``models.json`` static asset."""
-        self._models = {}
+        self._models = self._load(raw_models if raw_models is not None else self._read_static_models())
+
+    @staticmethod
+    def _read_static_models() -> list[dict[str, object]]:
+        """Read and deserialize the bundled static model registry."""
         static_pkg = files("perplexity_webui_scraper._static")
         models_file = static_pkg.joinpath("models.json")
 
         raw: bytes = models_file.read_bytes()  # type: ignore[arg-type]
-        data: list[dict[str, object]] = loads(raw)
+        data = loads(raw)
 
-        for item in data:
+        if not isinstance(data, list):
+            raise TypeError("models.json must contain a list of model definitions")
+
+        if not all(isinstance(item, dict) for item in data):
+            raise TypeError("models.json must contain only object entries")
+
+        return data
+
+    @staticmethod
+    def _load(raw_models: list[dict[str, object]]) -> dict[str, Model]:
+        """Validate raw model data and return a model mapping keyed by ID."""
+        models: dict[str, Model] = {}
+        tool_names: set[str] = set()
+
+        for item in raw_models:
             model = Model.model_validate(item)
-            self._models[model.id] = model
+
+            if model.id in models:
+                raise ValueError(f"Duplicate model id in models.json: {model.id!r}")
+
+            if model.tool_name in tool_names:
+                raise ValueError(f"Duplicate MCP tool name in models.json: {model.tool_name!r}")
+
+            models[model.id] = model
+            tool_names.add(model.tool_name)
+
+        return models
 
     def resolve(self, model_id: str) -> Model:
         """Look up a model by its canonical string ID.
