@@ -3,10 +3,20 @@
     "id": "perplexity/best",
     "name": "Best",
     "description": "Perplexity Best (Auto-select).",
-    "identifier": "default",
+    "identifier": "turbo",
+    "identifier_by_tier": {
+      "free": "turbo",
+      "pro": "pplx_pro_upgraded",
+      "max": "pplx_pro_upgraded"
+    },
     "tool_name": "pplx_best",
     "min_tier": "free",
-    "mode": "search"
+    "mode": "copilot",
+    "mode_by_tier": {
+      "free": "copilot",
+      "pro": "copilot",
+      "max": "copilot"
+    }
   },
   {
     "id": "perplexity/deep-research",

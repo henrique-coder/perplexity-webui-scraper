@@ -157,7 +157,7 @@ def test_conversation_checks_session_before_prompt_request() -> None:
     assert fake_http.stream_called is False
 
 
-def test_best_model_uses_default_identifier_for_free_account() -> None:
+def test_best_model_uses_turbo_copilot_for_free_account() -> None:
     fake_http = _FakeHTTP(_free_session_payload())
     conversation = Conversation(
         cast("HTTPClient", fake_http),
@@ -168,10 +168,11 @@ def test_best_model_uses_default_identifier_for_free_account() -> None:
 
     assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, False)]
     assert fake_http.ask_payload is not None
-    assert fake_http.ask_payload["params"]["model_preference"] == "default"
+    assert fake_http.ask_payload["params"]["model_preference"] == "turbo"
+    assert fake_http.ask_payload["params"]["mode"] == "copilot"
 
 
-def test_best_model_uses_default_identifier_for_pro_account() -> None:
+def test_best_model_uses_pro_upgraded_copilot_for_pro_account() -> None:
     fake_http = _FakeHTTP(_session_payload("pro"))
     conversation = Conversation(
         cast("HTTPClient", fake_http),
@@ -182,7 +183,8 @@ def test_best_model_uses_default_identifier_for_pro_account() -> None:
 
     assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, False)]
     assert fake_http.ask_payload is not None
-    assert fake_http.ask_payload["params"]["model_preference"] == "default"
+    assert fake_http.ask_payload["params"]["model_preference"] == "pplx_pro_upgraded"
+    assert fake_http.ask_payload["params"]["mode"] == "copilot"
 
 
 def test_unknown_session_tier_falls_back_to_user_settings() -> None:
@@ -199,7 +201,8 @@ def test_unknown_session_tier_falls_back_to_user_settings() -> None:
 
     assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, False), (ENDPOINT_USER_SETTINGS, False)]
     assert fake_http.ask_payload is not None
-    assert fake_http.ask_payload["params"]["model_preference"] == "default"
+    assert fake_http.ask_payload["params"]["model_preference"] == "turbo"
+    assert fake_http.ask_payload["params"]["mode"] == "copilot"
 
 
 def test_free_account_cannot_send_files() -> None:

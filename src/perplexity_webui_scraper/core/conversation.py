@@ -12,6 +12,7 @@ from perplexity_webui_scraper.core.account import (
     AccountSettings,
     ensure_file_access,
     ensure_model_access,
+    model_for_account,
 )
 from perplexity_webui_scraper.core.files import _FileInfo, upload_file, validate_files
 from perplexity_webui_scraper.core.parser import parse_sse_line, process_sse_data
@@ -122,7 +123,7 @@ class Conversation:
         """
         model_id = model or self._config.model or _DEFAULT_MODEL
         resolved_model = MODELS.resolve(model_id)
-        self._validate_request_access(resolved_model, has_files=bool(files))
+        resolved_model = self._validate_request_access(resolved_model, has_files=bool(files))
         self._citation_mode = citation_mode if citation_mode is not None else self._config.citation_mode
 
         self._execute(query, resolved_model, files, stream=stream)
@@ -180,7 +181,7 @@ class Conversation:
         else:
             self._complete(payload)
 
-    def _validate_request_access(self, model: Model, has_files: bool) -> None:
+    def _validate_request_access(self, model: Model, has_files: bool) -> Model:
         """Ensure the account can use the selected model and attachments."""
         response = self._http.get(ENDPOINT_AUTH_SESSION, rate_limited=False)
         session = AccountSession.model_validate(response.json())
@@ -195,6 +196,7 @@ class Conversation:
         effective_session = AccountSession.model_validate({"user": {"subscription_tier": account_tier}})
         ensure_model_access(effective_session, model)
         ensure_file_access(account_tier, has_files)
+        return model_for_account(model, account_tier)
 
     def _reset_state(self) -> None:
         """Reset all mutable response state before a new query."""

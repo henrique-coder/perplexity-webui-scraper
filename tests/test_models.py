@@ -30,7 +30,12 @@ def test_bundled_model_registry_is_valid() -> None:
     assert len(tool_names) == len(set(tool_names))
     assert MODELS.resolve("perplexity/best").id == "perplexity/best"
     assert MODELS.resolve("perplexity/best").min_tier == "free"
-    assert MODELS.resolve("perplexity/best").identifier == "default"
+    assert MODELS.resolve("perplexity/best").identifier == "turbo"
+    assert MODELS.resolve("perplexity/best").identifier_by_tier["free"] == "turbo"
+    assert MODELS.resolve("perplexity/best").identifier_by_tier["pro"] == "pplx_pro_upgraded"
+    assert MODELS.resolve("perplexity/best").mode == "copilot"
+    assert MODELS.resolve("perplexity/best").mode_by_tier["free"] == "copilot"
+    assert MODELS.resolve("perplexity/best").mode_by_tier["pro"] == "copilot"
 
 
 def test_model_rejects_unknown_fields() -> None:

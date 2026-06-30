@@ -165,6 +165,29 @@ def ensure_model_access(session: AccountSession, model: Model) -> None:
         raise ModelAccessError(model.id, required_tier, account_tier)
 
 
+def model_for_account(model: Model, account_tier: AccountTier) -> Model:
+    """Return a model copy with tier-specific internal fields applied."""
+    identifier = _select_tier_value(model.identifier_by_tier, account_tier) or model.identifier
+    mode = _select_tier_value(model.mode_by_tier, account_tier) or model.mode
+
+    if identifier == model.identifier and mode == model.mode:
+        return model
+
+    return model.model_copy(update={"identifier": identifier, "mode": mode})
+
+
+def _select_tier_value[T](values_by_tier: dict[ModelTier, T], account_tier: AccountTier) -> T | None:
+    """Select the highest eligible tier-specific value."""
+    account_rank = TIER_RANK.get(account_tier, -1)
+    candidates = ((TIER_RANK[tier], value) for tier, value in values_by_tier.items() if TIER_RANK[tier] <= account_rank)
+    best = max(candidates, default=None, key=lambda item: item[0])
+
+    if best is None:
+        return None
+
+    return best[1]
+
+
 def ensure_file_access(account_tier: AccountTier, has_files: bool) -> None:
     """Raise if file attachments are not available for *account_tier*."""
     if has_files and account_tier == "free":
