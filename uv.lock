@@ -1220,9 +1220,6 @@ lint = [
     { name = "ruff" },
     { name = "ty" },
 ]
-pre-commit = [
-    { name = "prek" },
-]
 test = [
     { name = "httpx" },
     { name = "pytest" },
@@ -1248,9 +1245,9 @@ provides-extras = ["cli", "api", "mcp", "all"]
 
 [package.metadata.requires-dev]
 build = [
-    { name = "nuitka", specifier = ">=4.1.3" },
-    { name = "ordered-set", specifier = ">=4.1.0" },
-    { name = "zstandard", specifier = ">=0.25.0" },
+    { name = "nuitka", specifier = "~=4.1.3" },
+    { name = "ordered-set", specifier = "~=4.1.0" },
+    { name = "zstandard", specifier = "~=0.25.0" },
 ]
 dev = [
     { name = "prek", specifier = "~=0.4.0" },
@@ -1265,7 +1262,6 @@ lint = [
     { name = "ruff", specifier = "~=0.15.0" },
     { name = "ty", specifier = "~=0.0.30" },
 ]
-pre-commit = [{ name = "prek", specifier = ">=0.4.5" }]
 test = [
     { name = "httpx", specifier = "~=0.28.0" },
     { name = "pytest", specifier = "~=9.1.0" },
