@@ -5,7 +5,7 @@
     "description": "Perplexity Best (Auto-select).",
     "identifier": "default",
     "tool_name": "pplx_best",
-    "min_tier": "pro",
+    "min_tier": "free",
     "mode": "search"
   },
   {

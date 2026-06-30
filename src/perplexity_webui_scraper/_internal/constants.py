@@ -34,14 +34,17 @@ ENDPOINT_SEARCH_INIT: Final[str] = "/search/new"
 ENDPOINT_UPLOAD: Final[str] = "/rest/uploads/batch_create_upload_urls"
 """Endpoint for file upload URL generation."""
 
-ENDPOINT_USER_SETTINGS: Final[str] = "/rest/user/settings"
-"""Endpoint for account profile, subscription, connector, and usage settings."""
-
 ENDPOINT_AUTH_CSRF: Final[str] = "/api/auth/csrf"
 """Endpoint to obtain a CSRF token for authentication."""
 
 ENDPOINT_AUTH_SIGNIN: Final[str] = "/api/auth/signin/email"
 """Endpoint to send an email verification code."""
+
+ENDPOINT_AUTH_SESSION: Final[str] = "/api/auth/session"
+"""Endpoint to read the authenticated account session."""
+
+ENDPOINT_USER_SETTINGS: Final[str] = "/rest/user/settings"
+"""Endpoint to read authenticated user settings and subscription metadata."""
 
 ENDPOINT_AUTH_OTP_REDIRECT: Final[str] = "/api/auth/otp-redirect-link"
 """Endpoint to convert an OTP code into a redirect URL."""

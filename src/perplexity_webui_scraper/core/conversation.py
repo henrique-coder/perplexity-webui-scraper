@@ -5,6 +5,14 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Any
 
+from perplexity_webui_scraper._internal.constants import ENDPOINT_AUTH_SESSION, ENDPOINT_USER_SETTINGS
+from perplexity_webui_scraper.core.account import (
+    AccountProfile,
+    AccountSession,
+    AccountSettings,
+    ensure_file_access,
+    ensure_model_access,
+)
 from perplexity_webui_scraper.core.files import _FileInfo, upload_file, validate_files
 from perplexity_webui_scraper.core.parser import parse_sse_line, process_sse_data
 from perplexity_webui_scraper.core.payload import build_payload
@@ -114,6 +122,7 @@ class Conversation:
         """
         model_id = model or self._config.model or _DEFAULT_MODEL
         resolved_model = MODELS.resolve(model_id)
+        self._validate_request_access(resolved_model, has_files=bool(files))
         self._citation_mode = citation_mode if citation_mode is not None else self._config.citation_mode
 
         self._execute(query, resolved_model, files, stream=stream)
@@ -170,6 +179,22 @@ class Conversation:
             self._stream_generator = self._stream(payload)
         else:
             self._complete(payload)
+
+    def _validate_request_access(self, model: Model, has_files: bool) -> None:
+        """Ensure the account can use the selected model and attachments."""
+        response = self._http.get(ENDPOINT_AUTH_SESSION, rate_limited=False)
+        session = AccountSession.model_validate(response.json())
+        settings: AccountSettings | None = None
+
+        if session.account_tier == "unknown":
+            settings_response = self._http.get(ENDPOINT_USER_SETTINGS, rate_limited=False)
+            settings = AccountSettings.model_validate(settings_response.json())
+
+        profile = AccountProfile(session=session, settings=settings)
+        account_tier = profile.account_tier
+        effective_session = AccountSession.model_validate({"user": {"subscription_tier": account_tier}})
+        ensure_model_access(effective_session, model)
+        ensure_file_access(account_tier, has_files)
 
     def _reset_state(self) -> None:
         """Reset all mutable response state before a new query."""

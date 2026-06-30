@@ -90,7 +90,7 @@ Each tool uses a specific AI model. Enable only the ones you need:
 
 | Tool                           | Model ID                               | Name                         | Description                              | Min. Tier |
 | ------------------------------ | -------------------------------------- | ---------------------------- | ---------------------------------------- | --------- |
-| `pplx_best`                    | `perplexity/best`                      | Best                         | Perplexity Best (Auto-select).           | pro       |
+| `pplx_best`                    | `perplexity/best`                      | Best                         | Perplexity Best (Auto-select).           | free      |
 | `pplx_deep_research`           | `perplexity/deep-research`             | Deep research                | Perplexity Deep Research.                | pro       |
 | `pplx_sonar`                   | `perplexity/sonar-2`                   | Sonar 2                      | Perplexity Sonar 2.                      | pro       |
 | `pplx_gpt54`                   | `openai/gpt-5.4`                       | GPT-5.4                      | OpenAI GPT-5.4.                          | pro       |

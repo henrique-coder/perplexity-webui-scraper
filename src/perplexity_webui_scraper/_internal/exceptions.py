@@ -10,9 +10,11 @@ from __future__ import annotations
 
 __all__: list[str] = [
     "AuthenticationError",
+    "FileAccessError",
     "FileUploadError",
     "FileValidationError",
     "HTTPError",
+    "ModelAccessError",
     "PerplexityError",
     "RateLimitError",
     "ResearchClarifyingQuestionsError",
@@ -76,6 +78,24 @@ class RateLimitError(HTTPError):
             message or "Rate limit exceeded (429). Please wait before retrying.",
             status_code=429,
         )
+
+
+class ModelAccessError(PerplexityError):
+    """Raised when the authenticated account cannot use a selected model."""
+
+    def __init__(self, model_id: str, required_tier: str, account_tier: str) -> None:
+        self.model_id = model_id
+        self.required_tier = required_tier
+        self.account_tier = account_tier
+        super().__init__(f"Model {model_id!r} requires a {required_tier} account, but this session is {account_tier}.")
+
+
+class FileAccessError(PerplexityError):
+    """Raised when the authenticated account cannot use file attachments."""
+
+    def __init__(self, account_tier: str) -> None:
+        self.account_tier = account_tier
+        super().__init__("File attachments require a paid Perplexity account; this session is free.")
 
 
 class FileUploadError(PerplexityError):

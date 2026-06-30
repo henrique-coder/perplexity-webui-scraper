@@ -228,12 +228,18 @@ class HTTPClient:
     # Public request methods
     # ------------------------------------------------------------------
 
-    def get(self, endpoint: str, params: dict[str, Any] | None = None) -> CurlResponse:
+    def get(
+        self,
+        endpoint: str,
+        params: dict[str, Any] | None = None,
+        rate_limited: bool = True,
+    ) -> CurlResponse:
         """Make a GET request with retry and rate limiting.
 
         Args:
             endpoint: Relative path (e.g. ``"/search/new"``) or full URL.
             params: Optional query parameters.
+            rate_limited: Whether to apply the configured request rate limiter.
 
         Returns:
             The curl-cffi response object.
@@ -248,7 +254,8 @@ class HTTPClient:
         log_request("GET", url, params=params)
 
         def _do_get() -> CurlResponse:
-            self._throttle()
+            if rate_limited:
+                self._throttle()
             t0 = monotonic()
             response = self._session.get(url, params=params)
             log_response("GET", url, response.status_code, elapsed_ms=(monotonic() - t0) * 1000)

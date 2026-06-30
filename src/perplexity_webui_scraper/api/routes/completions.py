@@ -115,14 +115,12 @@ async def chat_completions(
         conversation = client.create_conversation(config)
 
     if request.stream:
+        conversation.ask(query, files=files or None, stream=True)
         return StreamingResponse(
             _stream_response(
                 conversation,
-                query,
-                files,
                 request.model,
                 token,
-                is_new=thread_uuid is None,
             ),
             media_type="text/event-stream",
             headers={
@@ -151,21 +149,15 @@ async def chat_completions(
 
 async def _stream_response(
     conversation: Conversation,
-    query: str,
-    files: list[FileInput],
     model_id: str,
     token: str,
-    is_new: bool,
 ) -> AsyncGenerator[str, None]:
     """Yield SSE lines for a streaming chat completion.
 
     Args:
-        conversation: Active ``Conversation`` to query.
-        query: User query text.
-        files: File attachments.
+        conversation: Active streaming ``Conversation`` to iterate.
         model_id: Model identifier for response envelope.
         token: Session token for cache keying.
-        is_new: ``True`` when this is a brand-new conversation.
     """
     completion_id = f"chatcmpl-{uuid4().hex}"
     created = int(time())
@@ -179,8 +171,6 @@ async def _stream_response(
     ).to_sse_line()
 
     try:
-        conversation.ask(query, files=files or None, stream=True)
-
         for response in conversation:
             current = response.last_chunk or response.answer or ""
 

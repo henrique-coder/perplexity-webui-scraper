@@ -53,6 +53,8 @@ print(conversation.answer)
 
 ## File Attachments (`FileInput`)
 
+File attachments require a paid Perplexity account. Free accounts can use text prompts, but file uploads are blocked before any upload request is attempted.
+
 The `ask()` method accepts files in multiple formats natively via the `FileInput` protocol:
 
 ```python

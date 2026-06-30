@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from perplexity_webui_scraper._internal.exceptions import FileAccessError, ModelAccessError
 from perplexity_webui_scraper.config.conversation import ConversationConfig
 from perplexity_webui_scraper.core.response import Coordinates
 
@@ -61,7 +62,22 @@ def _ask(
     )
 
     conversation = client.create_conversation(config)
-    conversation.ask(query)
+    try:
+        conversation.ask(query)
+    except ModelAccessError as exc:
+        return {
+            "error": str(exc),
+            "error_type": "model_access_denied",
+            "model": exc.model_id,
+            "required_tier": exc.required_tier,
+            "account_tier": exc.account_tier,
+        }
+    except FileAccessError as exc:
+        return {
+            "error": str(exc),
+            "error_type": "file_access_denied",
+            "account_tier": exc.account_tier,
+        }
 
     results = [{"title": r.title, "url": r.url, "snippet": r.snippet} for r in conversation.search_results]
 

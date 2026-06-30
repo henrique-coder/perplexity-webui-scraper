@@ -6,6 +6,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from perplexity_webui_scraper._internal.exceptions import FileAccessError, ModelAccessError
 from perplexity_webui_scraper.api.routes.completions import router as completions_router
 from perplexity_webui_scraper.api.routes.models import router as models_router
 from perplexity_webui_scraper.api.schemas.errors import ErrorDetail, ErrorResponse
@@ -58,6 +59,40 @@ def create_app() -> FastAPI:
                     message=str(exc.detail),
                     type="invalid_request_error",
                     code=str(exc.status_code),
+                )
+            ).model_dump(),
+        )
+
+    @application.exception_handler(ModelAccessError)
+    async def _model_access_exception_handler(
+        _request: Request,
+        exc: ModelAccessError,
+    ) -> JSONResponse:
+        """Return model-tier denials in OpenAI-compatible format."""
+        return JSONResponse(
+            status_code=403,
+            content=ErrorResponse(
+                error=ErrorDetail(
+                    message=str(exc),
+                    type="invalid_request_error",
+                    code="model_access_denied",
+                )
+            ).model_dump(),
+        )
+
+    @application.exception_handler(FileAccessError)
+    async def _file_access_exception_handler(
+        _request: Request,
+        exc: FileAccessError,
+    ) -> JSONResponse:
+        """Return file-attachment denials in OpenAI-compatible format."""
+        return JSONResponse(
+            status_code=403,
+            content=ErrorResponse(
+                error=ErrorDetail(
+                    message=str(exc),
+                    type="invalid_request_error",
+                    code="file_access_denied",
                 )
             ).model_dump(),
         )

@@ -84,6 +84,8 @@ from perplexity_webui_scraper import Perplexity
 client = Perplexity(session_token="YOUR_TOKEN")
 conversation = client.create_conversation()
 
+print(client.get_account_profile().account_tier)
+
 conversation.ask("What is quantum computing?")
 print(conversation.answer)
 
@@ -91,6 +93,8 @@ print(conversation.answer)
 conversation.ask("Explain it simpler")
 print(conversation.answer)
 ```
+
+Before each prompt, the library checks `/api/auth/session` and raises `ModelAccessError` if the selected model requires a higher tier than the authenticated account. When the session payload does not expose enough subscription data, it falls back to `/rest/user/settings`. Free accounts can use text prompts, but file attachments raise `FileAccessError`.
 
 ### 3. Streaming
 

@@ -25,13 +25,30 @@ client = Perplexity(
 
 ### Methods
 
-| Method                         | Returns        | Description                                                      |
-| ------------------------------ | -------------- | ---------------------------------------------------------------- |
-| `create_conversation(config?)` | `Conversation` | Create a new conversation                                        |
-| `get_user_settings()`          | `UserSettings` | Fetch typed account, subscription, connector, and quota settings |
-| `close()`                      | `None`         | Close the HTTP session                                           |
+| Method                         | Returns           | Description                                           |
+| ------------------------------ | ----------------- | ----------------------------------------------------- |
+| `create_conversation(config?)` | `Conversation`    | Create a new conversation                             |
+| `get_account_session()`        | `AccountSession`  | Read typed account/session data                       |
+| `get_account_settings()`       | `AccountSettings` | Read typed user settings and subscription metadata    |
+| `get_account_profile()`        | `AccountProfile`  | Read session data, falling back to settings if needed |
+| `close()`                      | `None`            | Close the HTTP session                                |
 
 Supports context manager (`with` statement) — closes automatically on exit.
+
+---
+
+## Account Profile
+
+`client.get_account_session()` reads Perplexity's `/api/auth/session` endpoint and returns a typed Pydantic object. `client.get_account_settings()` reads `/rest/user/settings`. `client.get_account_profile()` combines both, using settings only when the session response does not expose enough subscription data.
+
+The normalized `account_tier` is one of `free`, `pro`, `max`, or `unknown`.
+
+```python
+profile = client.get_account_profile()
+
+print(profile.account_tier)
+print(profile.session.user.email if profile.session.user else None)
+```
 
 ---
 
@@ -47,22 +64,6 @@ conversation = client.create_conversation(ConversationConfig(model="perplexity/b
 
 ---
 
-## `client.get_user_settings()`
-
-Fetches `/rest/user/settings` and returns a typed `UserSettings` Pydantic object.
-
-```python
-settings = client.get_user_settings()
-
-print(settings.account_tier)        # "free", "pro", "max", or "unknown"
-print(settings.subscription_tier)   # Raw Perplexity value, e.g. "yearly"
-print(settings.query_count)
-```
-
-`subscription_tier` is the raw WebUI value. In observed responses it can be a billing plan/cadence such as `"yearly"` rather than the normalized product tier. Use `account_tier` for the library's best-effort `free`/`pro`/`max` classification.
-
----
-
 ## `Conversation.ask(query, model?, files?, citation_mode?, stream?)`
 
 | Parameter       | Type                      | Default                      | Description                  |
@@ -74,6 +75,8 @@ print(settings.query_count)
 | `stream`        | `bool`                    | `False`                      | Yield chunks as they arrive  |
 
 Returns `self` (the `Conversation`) for method chaining or streaming iteration.
+
+Before every prompt request, the library performs a fast `/api/auth/session` check and blocks models that require a higher tier than the authenticated account. If the session response is incomplete, it falls back to `/rest/user/settings`. For example, a Pro account receives `ModelAccessError` before a Max-only model is sent to Perplexity. Free accounts receive `FileAccessError` before file uploads are attempted.
 
 ### Conversation Properties
 
@@ -96,7 +99,7 @@ conversation.ask("...", model="google/gemini-3.1-pro-thinking-low")
 
 | Model ID                                 | Name                         | Description                              | Min. Tier |
 | ---------------------------------------- | ---------------------------- | ---------------------------------------- | --------- |
-| `"perplexity/best"`                      | Best                         | Perplexity Best (Auto-select).           | pro       |
+| `"perplexity/best"`                      | Best                         | Perplexity Best (Auto-select).           | free      |
 | `"perplexity/deep-research"`             | Deep research                | Perplexity Deep Research.                | pro       |
 | `"perplexity/sonar-2"`                   | Sonar 2                      | Perplexity Sonar 2.                      | pro       |
 | `"openai/gpt-5.4"`                       | GPT-5.4                      | OpenAI GPT-5.4.                          | pro       |

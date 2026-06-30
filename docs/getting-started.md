@@ -78,7 +78,7 @@ Authentication is done per-request via `Authorization: Bearer <session_token>`, 
 
 ## Requirements
 
-- **Perplexity Pro or Max account**
+- **Perplexity account**: free accounts can use `perplexity/best`; Pro/Max-only models require the matching paid tier.
 - **Session token** (`__Secure-next-auth.session-token` cookie)
 
 ## Getting Your Session Token

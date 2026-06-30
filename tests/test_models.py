@@ -29,6 +29,8 @@ def test_bundled_model_registry_is_valid() -> None:
     assert len(ids) == len(set(ids))
     assert len(tool_names) == len(set(tool_names))
     assert MODELS.resolve("perplexity/best").id == "perplexity/best"
+    assert MODELS.resolve("perplexity/best").min_tier == "free"
+    assert MODELS.resolve("perplexity/best").identifier == "default"
 
 
 def test_model_rejects_unknown_fields() -> None:

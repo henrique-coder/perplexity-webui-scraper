@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to release (e.g. 1.0.2). Empty = auto-detect from source."
+        description: "Version to release. Empty = auto-detect from source."
         required: false
         type: string
       skip_pypi:

@@ -26,6 +26,10 @@ class _FakeSession:
     def __init__(self) -> None:
         self.calls = 0
 
+    def get(self, url: str, params: dict[str, Any] | None = None) -> _FakeResponse:
+        self.calls += 1
+        return _FakeResponse(200)
+
     def post(self, url: str, json: dict[str, Any] | None = None, stream: bool = False) -> _FakeResponse:
         self.calls += 1
         return _FakeResponse(429 if self.calls == 1 else 200)
@@ -51,3 +55,23 @@ def test_http_client_retries_translated_rate_limit_error() -> None:
 
     assert response.status_code == 200
     assert fake_session.calls == 2
+
+
+def test_http_get_can_skip_rate_limiter() -> None:
+    client = HTTPClient(
+        "token",
+        max_retries=0,
+        retry_base_delay=0,
+        retry_jitter=0,
+        rotate_fingerprint=False,
+        requests_per_second=1,
+    )
+    client.close()
+    fake_session = _FakeSession()
+    client._session = cast("Any", fake_session)
+    client._rate_limiter = cast("Any", None)
+
+    response = client.get("/api/auth/session", rate_limited=False)
+
+    assert response.status_code == 200
+    assert fake_session.calls == 1

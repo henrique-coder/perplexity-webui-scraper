@@ -77,6 +77,7 @@ nav:
   - Home: index.md
   - Getting Started: getting-started.md
   - Usage Guide: usage.md
+  - CLI Reference: cli.md
   - API Reference:
       - Overview: api-reference.md
       - Python API:

@@ -11,7 +11,6 @@ Public API surface — import everything from here::
         Model,
         Response,
         SearchResultItem,
-        UserSettings,
         Coordinates,
         FileInput,
         CitationMode,
@@ -23,9 +22,11 @@ Public API surface — import everything from here::
         HTTPError,
         AuthenticationError,
         RateLimitError,
+        FileAccessError,
         FileUploadError,
         FileValidationError,
         ResearchClarifyingQuestionsError,
+        ModelAccessError,
         ResponseParsingError,
         StreamingError,
     )
@@ -37,9 +38,11 @@ from importlib.metadata import version
 
 from perplexity_webui_scraper._internal.exceptions import (
     AuthenticationError,
+    FileAccessError,
     FileUploadError,
     FileValidationError,
     HTTPError,
+    ModelAccessError,
     PerplexityError,
     RateLimitError,
     ResearchClarifyingQuestionsError,
@@ -56,10 +59,16 @@ from perplexity_webui_scraper._internal.types import (
 )
 from perplexity_webui_scraper.config.client import ClientConfig
 from perplexity_webui_scraper.config.conversation import ConversationConfig
+from perplexity_webui_scraper.core.account import (
+    AccountProfile,
+    AccountSession,
+    AccountSettings,
+    AccountTier,
+    AccountUser,
+)
 from perplexity_webui_scraper.core.client import Perplexity
 from perplexity_webui_scraper.core.conversation import Conversation
 from perplexity_webui_scraper.core.response import Coordinates, Response, SearchResultItem
-from perplexity_webui_scraper.core.user_settings import UserSettings
 from perplexity_webui_scraper.models.registry import MODELS
 from perplexity_webui_scraper.models.types import Model
 
@@ -68,18 +77,25 @@ __version__: str = version("perplexity-webui-scraper")
 
 __all__: list[str] = [
     "MODELS",
+    "AccountProfile",
+    "AccountSession",
+    "AccountSettings",
+    "AccountTier",
+    "AccountUser",
     "AuthenticationError",
     "CitationMode",
     "ClientConfig",
     "Conversation",
     "ConversationConfig",
     "Coordinates",
+    "FileAccessError",
     "FileInput",
     "FileUploadError",
     "FileValidationError",
     "HTTPError",
     "LogLevel",
     "Model",
+    "ModelAccessError",
     "Perplexity",
     "PerplexityError",
     "RateLimitError",
@@ -91,5 +107,4 @@ __all__: list[str] = [
     "SourceFocus",
     "StreamingError",
     "TimeRange",
-    "UserSettings",
 ]

@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from perplexity_webui_scraper._internal.constants import ENDPOINT_USER_SETTINGS
+from perplexity_webui_scraper._internal.constants import ENDPOINT_AUTH_SESSION, ENDPOINT_USER_SETTINGS
 from perplexity_webui_scraper._internal.logging import configure_logging, get_logger
 from perplexity_webui_scraper.config.client import ClientConfig
 from perplexity_webui_scraper.config.conversation import ConversationConfig
+from perplexity_webui_scraper.core.account import AccountProfile, AccountSession, AccountSettings
 from perplexity_webui_scraper.core.conversation import Conversation
-from perplexity_webui_scraper.core.user_settings import UserSettings
 from perplexity_webui_scraper.http.client import HTTPClient
 
 
@@ -82,15 +82,25 @@ class Perplexity:
         """
         return Conversation(self._http, config or ConversationConfig())
 
-    def get_user_settings(self) -> UserSettings:
-        """Fetch typed account, subscription, connector, and usage settings.
+    def get_account_session(self) -> AccountSession:
+        """Return typed account/session information for the current token.
 
-        Returns:
-            A :class:`~perplexity_webui_scraper.UserSettings` object parsed
-            from Perplexity's ``/rest/user/settings`` endpoint.
+        This reads Perplexity's ``/api/auth/session`` endpoint and normalizes
+        the account tier into ``free``, ``pro``, ``max``, or ``unknown``.
         """
-        response = self._http.get(ENDPOINT_USER_SETTINGS)
-        return UserSettings.model_validate(response.json())
+        response = self._http.get(ENDPOINT_AUTH_SESSION, rate_limited=False)
+        return AccountSession.model_validate(response.json())
+
+    def get_account_settings(self) -> AccountSettings:
+        """Return typed user settings for the current token."""
+        response = self._http.get(ENDPOINT_USER_SETTINGS, rate_limited=False)
+        return AccountSettings.model_validate(response.json())
+
+    def get_account_profile(self) -> AccountProfile:
+        """Return combined account data, using settings when session tier is incomplete."""
+        session = self.get_account_session()
+        settings = self.get_account_settings() if session.account_tier == "unknown" else None
+        return AccountProfile(session=session, settings=settings)
 
     def close(self) -> None:
         """Close the HTTP session and release all underlying resources."""

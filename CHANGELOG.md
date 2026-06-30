@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Typed user settings API:** Added `Perplexity.get_user_settings()` and Pydantic models for `/rest/user/settings`, including a normalized `account_tier` helper.
 - **GLM 5.2 model:** Added Z.ai GLM 5.2 to the JSON-backed model registry and MCP/API documentation.
+- **Typed account profile API:** Added `Perplexity.get_account_session()`, `get_account_settings()`, and `get_account_profile()` plus Pydantic account models backed by Perplexity's `/api/auth/session` and `/rest/user/settings` endpoints.
 - **Model registry integrity tests:** Added coverage that validates the bundled JSON model registry, rejects duplicate model IDs, rejects duplicate MCP tool names, and forbids unexpected model fields.
 - **Container build context hygiene:** Added `.dockerignore` to keep local virtualenvs, debug files, caches, build outputs, and Node dependencies out of container build contexts.
 - **Unified CLI test coverage:** Added `tests/test_cli.py` to verify root help output and lazy delegation for `token`, `api`, and `mcp` subcommands.
@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CLI validation:** The `chat` command now rejects partial coordinates and renders streaming `last_chunk` content when a final `answer` is not yet available.
 - **Build dependencies:** Replaced open-ended build dependency lower bounds with compatible-release ranges and removed the duplicate `pre-commit` dependency group.
 - **Documentation:** Updated README and MkDocs pages to use `chat`/`chat setup`, current MCP tool names, current model IDs, and the explicit API/MCP Containerfile split.
+- **Model tier enforcement:** Prompt requests now perform a fast account-session check before sending the prompt, fall back to user settings when needed, and raise `ModelAccessError` when a model requires a higher tier. REST API, CLI, MCP, and Python usage now surface the same tier-denial rule.
+- **Free account attachment guard:** File attachments are blocked with `FileAccessError` before upload when the authenticated account is free.
+- **Best model default:** `perplexity/best` is now available to free and paid accounts using Perplexity's internal `default` model preference.
 - **CI Workflows:** Updated `ci.yml` to use `pnpm/action-setup`, restrict `uv sync` to the `test` and `lint` groups with `--frozen`, and execute `just format` and `just lint` directly.
 - **CLI surface simplified:** Replaced the legacy `get-perplexity-session-token`, `perplexity-webui-scraper-api`, and `perplexity-webui-scraper-mcp` scripts with one canonical `perplexity-webui-scraper` command exposing `token`, `api`, and `mcp` subcommands.
 - **Dependency layout:** Moved `typer` into base dependencies so the unified root CLI is always available.

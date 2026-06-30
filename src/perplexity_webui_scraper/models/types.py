@@ -7,7 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 
-type ModelTier = Literal["pro", "max"]
+type ModelTier = Literal["free", "pro", "max"]
 """Minimum Perplexity subscription tier required by a model."""
 
 type ModelMode = Literal["copilot", "search", "research"]

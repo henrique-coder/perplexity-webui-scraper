@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 from pytest import fixture
 
+from perplexity_webui_scraper._internal.exceptions import FileAccessError, ModelAccessError
 from perplexity_webui_scraper.api.app import app
 from perplexity_webui_scraper.core import Conversation
 
@@ -84,6 +85,50 @@ def test_invalid_model(client: TestClient) -> None:
     )
     assert response.status_code == 400
     assert "Unknown model" in response.json()["error"]["message"]
+
+
+@patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create")
+def test_model_access_error_returns_403(mock_get_or_create: MagicMock, client: TestClient) -> None:
+    """Model tier failures should return an OpenAI-compatible 403 error."""
+    mock_client_instance = MagicMock()
+    mock_conv = _make_mock_conversation()
+    mock_conv.ask.side_effect = ModelAccessError("anthropic/claude-opus-4.7", "max", "pro")
+    mock_client_instance.create_conversation.return_value = mock_conv
+    mock_get_or_create.return_value = mock_client_instance
+
+    response = client.post(
+        "/v1/chat/completions",
+        json={"model": MODEL_ID, "messages": [{"role": "user", "content": "Hello"}]},
+        headers={"Authorization": AUTH_HEADER},
+    )
+
+    body = response.json()
+
+    assert response.status_code == 403
+    assert body["error"]["code"] == "model_access_denied"
+    assert "requires a max account" in body["error"]["message"]
+
+
+@patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create")
+def test_file_access_error_returns_403(mock_get_or_create: MagicMock, client: TestClient) -> None:
+    """Free-tier file failures should return an OpenAI-compatible 403 error."""
+    mock_client_instance = MagicMock()
+    mock_conv = _make_mock_conversation()
+    mock_conv.ask.side_effect = FileAccessError("free")
+    mock_client_instance.create_conversation.return_value = mock_conv
+    mock_get_or_create.return_value = mock_client_instance
+
+    response = client.post(
+        "/v1/chat/completions",
+        json={"model": MODEL_ID, "messages": [{"role": "user", "content": "Hello"}]},
+        headers={"Authorization": AUTH_HEADER},
+    )
+
+    body = response.json()
+
+    assert response.status_code == 403
+    assert body["error"]["code"] == "file_access_denied"
+    assert "File attachments require a paid Perplexity account" in body["error"]["message"]
 
 
 @patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create")

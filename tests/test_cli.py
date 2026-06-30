@@ -4,14 +4,21 @@ from __future__ import annotations
 
 from sys import modules as sys_modules
 from types import ModuleType
+from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock, patch
 
 from pytest import raises
 from typer import Exit
 from typer.testing import CliRunner
 
+from perplexity_webui_scraper import ResponseParsingError
 from perplexity_webui_scraper.cli.__main__ import cli
 from perplexity_webui_scraper.cli.commands.chat import run as run_chat
+
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from typing import Self
 
 
 runner = CliRunner()
@@ -180,6 +187,105 @@ def test_chat_rejects_partial_coordinates() -> None:
             save=False,
             copy=False,
             raw=False,
+            token="test-token",
+        )
+
+    assert exc_info.value.exit_code == 1
+
+
+def test_chat_retries_best_as_writing_on_processing_failure() -> None:
+    class _Conversation:
+        def __init__(self, fail: bool) -> None:
+            self.fail = fail
+            self.answer: str | None = None
+
+        def ask(self, query: str, files: list[Any] | None = None, stream: bool = False) -> Iterator[object]:
+            if self.fail:
+                raise ResponseParsingError("Query processing failed: Error in processing query.")
+
+            self.answer = "ok"
+            return iter(())
+
+    class _Client:
+        def __init__(self, session_token: str) -> None:
+            self.configs: list[Any] = []
+            self.calls = 0
+
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def create_conversation(self, config: Any) -> _Conversation:
+            self.configs.append(config)
+            self.calls += 1
+            return _Conversation(fail=self.calls == 1)
+
+    fake_client = _Client("token")
+
+    with patch("perplexity_webui_scraper.cli.commands.chat.Perplexity", return_value=fake_client):
+        run_chat(
+            query="oi",
+            model="perplexity/best",
+            search_focus="web",
+            source_focus="web",
+            time_range="all",
+            citation_mode="clean",
+            language="en-US",
+            files=None,
+            timezone=None,
+            latitude=None,
+            longitude=None,
+            space_uuid=None,
+            save=False,
+            copy=False,
+            raw=True,
+            token="test-token",
+        )
+
+    assert len(fake_client.configs) == 2
+    assert fake_client.configs[0].search_focus == "web"
+    assert fake_client.configs[1].search_focus == "writing"
+
+
+def test_chat_formats_response_parsing_error_without_traceback() -> None:
+    class _Conversation:
+        answer = None
+
+        def ask(self, query: str, files: list[Any] | None = None, stream: bool = False) -> Iterator[object]:
+            raise ResponseParsingError("Query processing failed: Error in processing query.")
+
+    class _Client:
+        def __init__(self, session_token: str) -> None:
+            return None
+
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def create_conversation(self, config: Any) -> _Conversation:
+            return _Conversation()
+
+    with patch("perplexity_webui_scraper.cli.commands.chat.Perplexity", _Client), raises(Exit) as exc_info:
+        run_chat(
+            query="oi",
+            model="perplexity/sonar-2",
+            search_focus="web",
+            source_focus="web",
+            time_range="all",
+            citation_mode="clean",
+            language="en-US",
+            files=None,
+            timezone=None,
+            latitude=None,
+            longitude=None,
+            space_uuid=None,
+            save=False,
+            copy=False,
+            raw=True,
             token="test-token",
         )
 
