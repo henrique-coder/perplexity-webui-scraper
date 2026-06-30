@@ -13,12 +13,9 @@ from fastapi.testclient import TestClient
 from orjson import loads
 from pytest import fixture
 
-from perplexity_webui_scraper.api.server import (
-    _CachedConversation,
-    _clients,
-    _conversations,
-    app,
-)
+from perplexity_webui_scraper.api.app import app
+from perplexity_webui_scraper.api.conversation_cache import _CachedConversation
+from perplexity_webui_scraper.api.routes.completions import _client_pool, _conversation_cache
 from perplexity_webui_scraper.core import Conversation
 
 
@@ -43,7 +40,7 @@ class _MockModelRegistry:
     def resolve(self, item: str) -> MagicMock:
         return MagicMock(id=MODEL_ID)
 
-    def _all(self) -> list[MagicMock]:
+    def list_all(self) -> list[MagicMock]:
         return [MagicMock(id=MODEL_ID)]
 
 
@@ -88,14 +85,14 @@ def _make_mock_client(conv: MagicMock | None = None) -> MagicMock:
 @fixture(autouse=True)
 def _clean_caches():
     """Clear all caches and patch MODELS before each test."""
-    _conversations.clear()
-    _clients.clear()
+    _conversation_cache._store.clear()
+    _client_pool._clients.clear()
 
-    with patch("perplexity_webui_scraper.api.server.MODELS", _mock_models):
+    with patch("perplexity_webui_scraper.api.routes.completions.MODELS", _mock_models):
         yield
 
-    _conversations.clear()
-    _clients.clear()
+    _conversation_cache._store.clear()
+    _client_pool._clients.clear()
 
 
 @fixture
@@ -112,7 +109,7 @@ def test_new_conversation_returns_thread_uuid(http_client: TestClient) -> None:
     mock_conv = _make_mock_conversation()
     mock_client = _make_mock_client(mock_conv)
 
-    with patch("perplexity_webui_scraper.api.server._get_client", return_value=mock_client):
+    with patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=mock_client):
         resp = http_client.post(
             "/v1/chat/completions",
             json={
@@ -138,9 +135,9 @@ def test_followup_with_thread_uuid(http_client: TestClient) -> None:
     mock_client = _make_mock_client(mock_conv)
 
     # Pre-populate the cache
-    _conversations[(TOKEN, THREAD_UUID)] = _CachedConversation(conversation=mock_conv)
+    _conversation_cache._store[(TOKEN, THREAD_UUID)] = _CachedConversation(conversation=mock_conv)
 
-    with patch("perplexity_webui_scraper.api.server._get_client", return_value=mock_client):
+    with patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=mock_client):
         resp = http_client.post(
             "/v1/chat/completions",
             json={
@@ -179,7 +176,7 @@ def test_invalid_thread_uuid_returns_404(http_client: TestClient) -> None:
     """A request with an uncached thread_uuid should return a 404 error with a clear message."""
     mock_client = _make_mock_client()
 
-    with patch("perplexity_webui_scraper.api.server._get_client", return_value=mock_client):
+    with patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=mock_client):
         resp = http_client.post(
             "/v1/chat/completions",
             json={
@@ -208,7 +205,7 @@ def test_streaming_new_conversation_includes_thread_uuid(http_client: TestClient
     mock_response.answer = "Streamed answer"
     mock_conv.__iter__ = MagicMock(return_value=iter([mock_response]))
 
-    with patch("perplexity_webui_scraper.api.server._get_client", return_value=mock_client):
+    with patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=mock_client):
         resp = http_client.post(
             "/v1/chat/completions",
             json={
@@ -249,9 +246,9 @@ def test_space_uuid_and_thread_uuid_together(http_client: TestClient) -> None:
     mock_client = _make_mock_client(mock_conv)
 
     # Pre-populate the cache
-    _conversations[(TOKEN, THREAD_UUID)] = _CachedConversation(conversation=mock_conv)
+    _conversation_cache._store[(TOKEN, THREAD_UUID)] = _CachedConversation(conversation=mock_conv)
 
-    with patch("perplexity_webui_scraper.api.server._get_client", return_value=mock_client):
+    with patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=mock_client):
         resp = http_client.post(
             "/v1/chat/completions",
             json={
@@ -284,12 +281,12 @@ def test_expired_conversation_is_evicted(http_client: TestClient) -> None:
     mock_client = _make_mock_client(mock_conv)
 
     # Pre-populate with an expired entry (last_access 31 minutes ago)
-    _conversations[(TOKEN, THREAD_UUID)] = _CachedConversation(
+    _conversation_cache._store[(TOKEN, THREAD_UUID)] = _CachedConversation(
         conversation=mock_conv,
         last_access=time() - (31 * 60),
     )
 
-    with patch("perplexity_webui_scraper.api.server._get_client", return_value=mock_client):
+    with patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=mock_client):
         resp = http_client.post(
             "/v1/chat/completions",
             json={
@@ -312,7 +309,7 @@ def test_no_perplexity_block_works_as_before(http_client: TestClient) -> None:
     mock_conv = _make_mock_conversation()
     mock_client = _make_mock_client(mock_conv)
 
-    with patch("perplexity_webui_scraper.api.server._get_client", return_value=mock_client):
+    with patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=mock_client):
         resp = http_client.post(
             "/v1/chat/completions",
             json={
