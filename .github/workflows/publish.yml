@@ -185,6 +185,7 @@ jobs:
           uv run nuitka
           --standalone
           --onefile
+          --assume-yes-for-downloads
           --lto=yes
           --python-flag=no_asserts
           --python-flag=no_docstrings
