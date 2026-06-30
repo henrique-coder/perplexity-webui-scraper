@@ -8,7 +8,9 @@ build-backend = "uv_build"
 name = "perplexity-webui-scraper"
 version = "1.0.2"
 description = "An advanced, high-performance Python client, MCP server, and REST API for reverse-engineering Perplexity AI's WebUI."
-authors = [{ name = "Henrique Moreira", email = "github@henriquecoder.com" }]
+authors = [
+   { name = "Henrique Moreira", email = "78804989+henrique-coder@users.noreply.github.com" },
+]
 license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.12, <3.15"
