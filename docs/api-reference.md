@@ -78,6 +78,8 @@ Returns `self` (the `Conversation`) for method chaining or streaming iteration.
 
 Before every prompt request, the library performs a fast `/api/auth/session` check and blocks models that require a higher tier than the authenticated account. If the session response is incomplete, it falls back to `/rest/user/settings`. For example, a Pro account receives `ModelAccessError` before a Max-only model is sent to Perplexity. Free accounts receive `FileAccessError` before file uploads are attempted.
 
+`perplexity/best` adapts to the authenticated account: free accounts use Perplexity's internal `turbo` preference, while Pro/Max accounts use `pplx_pro_upgraded`; both use `copilot` mode.
+
 ### Conversation Properties
 
 | Property         | Type                     | Description                      |

@@ -82,6 +82,8 @@ perplexity-webui-scraper chat "Descreva esta imagem" --file .debug/img1.jpg
 
 File attachments require a paid Perplexity account. Free accounts can still use text prompts with `perplexity/best`.
 
+`perplexity/best` adapts to the authenticated account: free accounts use Perplexity's internal `turbo` preference, while Pro/Max accounts use `pplx_pro_upgraded`; both use `copilot` mode.
+
 Useful options:
 
 | Option                       | Values                                        | Description                                        |
@@ -133,6 +135,6 @@ The MCP server reads the token from `PERPLEXITY_SESSION_TOKEN` and registers one
 
 `ResponseParsingError: Query processing failed` means Perplexity accepted the request but its backend returned a failed SSE status. Try `--search-focus writing`, a shorter prompt, or a different model.
 
-`ModelAccessError` means the selected model requires a higher Perplexity account tier. Use `perplexity/best` for the default model that works on free and paid accounts, or choose a model available to your account.
+`ModelAccessError` means the selected model requires a higher Perplexity account tier. Use `perplexity/best` for the adaptive default model that works on free and paid accounts, or choose a model available to your account.
 
 `FileAccessError` means the current session is a free account and the request included file attachments. Upgrade the account or send a text-only prompt.

@@ -34,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Documentation:** Updated README and MkDocs pages to use `chat`/`chat setup`, current MCP tool names, current model IDs, and the explicit API/MCP Containerfile split.
 - **Model tier enforcement:** Prompt requests now perform a fast account-session check before sending the prompt, fall back to user settings when needed, and raise `ModelAccessError` when a model requires a higher tier. REST API, CLI, MCP, and Python usage now surface the same tier-denial rule.
 - **Free account attachment guard:** File attachments are blocked with `FileAccessError` before upload when the authenticated account is free.
-- **Best model default:** `perplexity/best` is now available to free and paid accounts using Perplexity's internal `default` model preference.
+- **Best model default:** `perplexity/best` now resolves by account tier: free accounts use Perplexity's internal `turbo` preference, while Pro/Max accounts use `pplx_pro_upgraded`; both use `copilot` mode.
 - **CI Workflows:** Updated `ci.yml` to use `pnpm/action-setup`, restrict `uv sync` to the `test` and `lint` groups with `--frozen`, and execute `just format` and `just lint` directly.
 - **CLI surface simplified:** Replaced the legacy `get-perplexity-session-token`, `perplexity-webui-scraper-api`, and `perplexity-webui-scraper-mcp` scripts with one canonical `perplexity-webui-scraper` command exposing `token`, `api`, and `mcp` subcommands.
 - **Dependency layout:** Moved `typer` into base dependencies so the unified root CLI is always available.

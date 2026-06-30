@@ -96,6 +96,8 @@ print(conversation.answer)
 
 Before each prompt, the library checks `/api/auth/session` and raises `ModelAccessError` if the selected model requires a higher tier than the authenticated account. When the session payload does not expose enough subscription data, it falls back to `/rest/user/settings`. Free accounts can use text prompts, but file attachments raise `FileAccessError`.
 
+`perplexity/best` adapts to the account tier: free accounts use Perplexity's internal `turbo` preference, while Pro/Max accounts use `pplx_pro_upgraded`; both use `copilot` mode.
+
 ### 3. Streaming
 
 ```python
