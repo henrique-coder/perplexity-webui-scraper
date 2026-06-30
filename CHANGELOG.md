@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Typed user settings API:** Added `Perplexity.get_user_settings()` and Pydantic models for `/rest/user/settings`, including a normalized `account_tier` helper.
 - **GLM 5.2 model:** Added Z.ai GLM 5.2 to the JSON-backed model registry and MCP/API documentation.
 - **Model registry integrity tests:** Added coverage that validates the bundled JSON model registry, rejects duplicate model IDs, rejects duplicate MCP tool names, and forbids unexpected model fields.
 - **Container build context hygiene:** Added `.dockerignore` to keep local virtualenvs, debug files, caches, build outputs, and Node dependencies out of container build contexts.

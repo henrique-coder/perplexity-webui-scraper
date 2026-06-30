@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from perplexity_webui_scraper.core.client import Perplexity
 from perplexity_webui_scraper.core.conversation import Conversation
+from perplexity_webui_scraper.core.user_settings import UserSettings
 
 
-__all__: list[str] = ["Conversation", "Perplexity"]
+__all__: list[str] = ["Conversation", "Perplexity", "UserSettings"]

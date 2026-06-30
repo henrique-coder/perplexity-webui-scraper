@@ -34,6 +34,9 @@ ENDPOINT_SEARCH_INIT: Final[str] = "/search/new"
 ENDPOINT_UPLOAD: Final[str] = "/rest/uploads/batch_create_upload_urls"
 """Endpoint for file upload URL generation."""
 
+ENDPOINT_USER_SETTINGS: Final[str] = "/rest/user/settings"
+"""Endpoint for account profile, subscription, connector, and usage settings."""
+
 ENDPOINT_AUTH_CSRF: Final[str] = "/api/auth/csrf"
 """Endpoint to obtain a CSRF token for authentication."""
 

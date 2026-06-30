@@ -25,10 +25,11 @@ client = Perplexity(
 
 ### Methods
 
-| Method                         | Returns        | Description               |
-| ------------------------------ | -------------- | ------------------------- |
-| `create_conversation(config?)` | `Conversation` | Create a new conversation |
-| `close()`                      | `None`         | Close the HTTP session    |
+| Method                         | Returns        | Description                                                      |
+| ------------------------------ | -------------- | ---------------------------------------------------------------- |
+| `create_conversation(config?)` | `Conversation` | Create a new conversation                                        |
+| `get_user_settings()`          | `UserSettings` | Fetch typed account, subscription, connector, and quota settings |
+| `close()`                      | `None`         | Close the HTTP session                                           |
 
 Supports context manager (`with` statement) — closes automatically on exit.
 
@@ -43,6 +44,22 @@ from perplexity_webui_scraper import ConversationConfig
 
 conversation = client.create_conversation(ConversationConfig(model="perplexity/best"))
 ```
+
+---
+
+## `client.get_user_settings()`
+
+Fetches `/rest/user/settings` and returns a typed `UserSettings` Pydantic object.
+
+```python
+settings = client.get_user_settings()
+
+print(settings.account_tier)        # "free", "pro", "max", or "unknown"
+print(settings.subscription_tier)   # Raw Perplexity value, e.g. "yearly"
+print(settings.query_count)
+```
+
+`subscription_tier` is the raw WebUI value. In observed responses it can be a billing plan/cadence such as `"yearly"` rather than the normalized product tier. Use `account_tier` for the library's best-effort `free`/`pro`/`max` classification.
 
 ---
 

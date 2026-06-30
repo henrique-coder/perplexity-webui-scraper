@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from perplexity_webui_scraper._internal.constants import ENDPOINT_USER_SETTINGS
 from perplexity_webui_scraper._internal.logging import configure_logging, get_logger
 from perplexity_webui_scraper.config.client import ClientConfig
 from perplexity_webui_scraper.config.conversation import ConversationConfig
 from perplexity_webui_scraper.core.conversation import Conversation
+from perplexity_webui_scraper.core.user_settings import UserSettings
 from perplexity_webui_scraper.http.client import HTTPClient
 
 
@@ -79,6 +81,16 @@ class Perplexity:
             ready to receive queries.
         """
         return Conversation(self._http, config or ConversationConfig())
+
+    def get_user_settings(self) -> UserSettings:
+        """Fetch typed account, subscription, connector, and usage settings.
+
+        Returns:
+            A :class:`~perplexity_webui_scraper.UserSettings` object parsed
+            from Perplexity's ``/rest/user/settings`` endpoint.
+        """
+        response = self._http.get(ENDPOINT_USER_SETTINGS)
+        return UserSettings.model_validate(response.json())
 
     def close(self) -> None:
         """Close the HTTP session and release all underlying resources."""

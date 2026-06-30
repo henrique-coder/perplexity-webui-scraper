@@ -11,6 +11,7 @@ Public API surface — import everything from here::
         Model,
         Response,
         SearchResultItem,
+        UserSettings,
         Coordinates,
         FileInput,
         CitationMode,
@@ -58,6 +59,7 @@ from perplexity_webui_scraper.config.conversation import ConversationConfig
 from perplexity_webui_scraper.core.client import Perplexity
 from perplexity_webui_scraper.core.conversation import Conversation
 from perplexity_webui_scraper.core.response import Coordinates, Response, SearchResultItem
+from perplexity_webui_scraper.core.user_settings import UserSettings
 from perplexity_webui_scraper.models.registry import MODELS
 from perplexity_webui_scraper.models.types import Model
 
@@ -89,4 +91,5 @@ __all__: list[str] = [
     "SourceFocus",
     "StreamingError",
     "TimeRange",
+    "UserSettings",
 ]
