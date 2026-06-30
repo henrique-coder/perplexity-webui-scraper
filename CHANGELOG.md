@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Model registry integrity tests:** Added coverage that validates the bundled JSON model registry, rejects duplicate model IDs, rejects duplicate MCP tool names, and forbids unexpected model fields.
+- **Container build context hygiene:** Added `.dockerignore` to keep local virtualenvs, debug files, caches, build outputs, and Node dependencies out of container build contexts.
 - **Unified CLI test coverage:** Added `tests/test_cli.py` to verify root help output and lazy delegation for `token`, `api`, and `mcp` subcommands.
 - **Native executable release pipeline:** Added GitHub Actions matrix builds that package standalone, optimized executables for Linux AMD64, Linux ARM64, macOS ARM64, and Windows AMD64 using Nuitka.
 - **Optional MCP container image:** Added `Containerfile.mcp` plus GHCR publishing for explicit MCP tags (`mcp`, `X.Y.Z-mcp`, `vX.Y.Z-mcp`) alongside the default API image.
@@ -18,10 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`chat` CLI command:** New interactive REPL command `perplexity-webui-scraper chat "query"` for querying Perplexity AI directly from the terminal with real-time streaming token output via Rich Live panels. It maintains the conversation context until exited and features a clean, borderless UX inspired by Claude Code. Supports all `ConversationConfig` options as CLI arguments with short aliases, file attachments, clipboard copy, and raw output mode.
 - **`chat setup` subcommand:** Interactive setup wizard that configures and saves the session token (Fernet-encrypted in the platform-specific config directory) and the default model. First-time users are guided to configure their token before using `chat`.
 - **`all` optional dependency extra:** New `[all]` meta-extra that installs all optional dependencies (`cli`, `api`, `mcp`) in one go: `uv add "perplexity-webui-scraper[all]"`.
-- **Encrypted token storage:** Session tokens are now encrypted with Fernet and stored in the platform-specific config directory (`platformdirs`). The `ask` command reads from this store automatically.
+- **Encrypted token storage:** Session tokens are now encrypted with Fernet and stored in the platform-specific config directory (`platformdirs`). The `chat` command reads from this store automatically.
 
 ### Changed
 
+- **API server consolidation:** Removed the duplicated legacy API implementation and standardized the package on `api.app`, `api.routes.*`, `api.schemas.*`, `api.helpers`, `api.auth`, and `api.conversation_cache`.
+- **Model typing:** Hardened JSON-backed model metadata with explicit tier/mode literals, immutable strict Pydantic validation, duplicate detection, and field factories for mutable response defaults.
+- **HTTP resilience:** Translated HTTP status failures inside the retry loop so 429 responses are retried as `RateLimitError`, and switched retry jitter to `random.uniform`.
+- **CLI validation:** The `chat` command now rejects partial coordinates and renders streaming `last_chunk` content when a final `answer` is not yet available.
+- **Build dependencies:** Replaced open-ended build dependency lower bounds with compatible-release ranges and removed the duplicate `pre-commit` dependency group.
+- **Documentation:** Updated README and MkDocs pages to use `chat`/`chat setup`, current MCP tool names, current model IDs, and the explicit API/MCP Containerfile split.
 - **CI Workflows:** Updated `ci.yml` to use `pnpm/action-setup`, restrict `uv sync` to the `test` and `lint` groups with `--frozen`, and execute `just format` and `just lint` directly.
 - **CLI surface simplified:** Replaced the legacy `get-perplexity-session-token`, `perplexity-webui-scraper-api`, and `perplexity-webui-scraper-mcp` scripts with one canonical `perplexity-webui-scraper` command exposing `token`, `api`, and `mcp` subcommands.
 - **Dependency layout:** Moved `typer` into base dependencies so the unified root CLI is always available.
@@ -34,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- **Legacy API modules:** Removed `perplexity_webui_scraper.api.server`, `perplexity_webui_scraper.api.models`, and `perplexity_webui_scraper.api.cli`.
 - **Legacy console scripts:** Dropped generation and documentation of the three previous standalone command entry points.
 
 ## [1.0.2] - 2026-05-01

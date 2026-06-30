@@ -47,7 +47,7 @@ uv add "perplexity-webui-scraper[all]"
 
 ### CLI Tools
 
-Install with terminal UX dependencies to use the interactive `ask` and `token` CLI commands.
+Install with terminal UX dependencies to use the interactive `chat` and `token` CLI commands.
 
 ```bash
 uv add "perplexity-webui-scraper[cli]"
@@ -121,13 +121,13 @@ for model in MODELS.list_all():
 
 ## Available CLI
 
-| Command                              | Extra | Description                                                                   |
-| ------------------------------------ | ----- | ----------------------------------------------------------------------------- |
-| `perplexity-webui-scraper token`     | `cli` | Interactive email auth wizard to generate a session token (supports TOTP 2FA) |
-| `perplexity-webui-scraper ask`       | `cli` | Ask Perplexity AI questions with real-time streaming output                   |
-| `perplexity-webui-scraper ask setup` | `cli` | Configure saved token and default model for the ask command                   |
-| `perplexity-webui-scraper mcp`       | `mcp` | Start the MCP server                                                          |
-| `perplexity-webui-scraper api`       | `api` | Start the OpenAI-compatible REST API server                                   |
+| Command                               | Extra | Description                                                                   |
+| ------------------------------------- | ----- | ----------------------------------------------------------------------------- |
+| `perplexity-webui-scraper token`      | `cli` | Interactive email auth wizard to generate a session token (supports TOTP 2FA) |
+| `perplexity-webui-scraper chat`       | `cli` | Ask Perplexity AI questions with real-time streaming output                   |
+| `perplexity-webui-scraper chat setup` | `cli` | Configure saved token and default model for the chat command                  |
+| `perplexity-webui-scraper mcp`        | `mcp` | Start the MCP server                                                          |
+| `perplexity-webui-scraper api`        | `api` | Start the OpenAI-compatible REST API server                                   |
 
 ## OpenAI-Compatible API
 
@@ -167,9 +167,11 @@ podman run --rm -e PERPLEXITY_SESSION_TOKEN=your_token ghcr.io/henrique-coder/pe
 For local development, you can still build the provided container files:
 
 ```bash
+# API image: installs the `api` extra, exposes port 8000, and starts the REST server.
 podman build -t perplexity-api -f Containerfile .
 podman run --rm -it -p 8000:8000 perplexity-api
 
+# MCP image: installs the `mcp` extra and starts the stdio MCP server. It does not expose an HTTP port.
 podman build -t perplexity-mcp -f Containerfile.mcp .
 podman run --rm -it -e PERPLEXITY_SESSION_TOKEN=your_token perplexity-mcp
 ```

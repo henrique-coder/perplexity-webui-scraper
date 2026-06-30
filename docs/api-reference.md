@@ -77,23 +77,23 @@ ConversationConfig(model="perplexity/best")
 conversation.ask("...", model="google/gemini-3.1-pro-thinking-low")
 ```
 
-| Model ID                                | Name                         | Description                                         | Min. Tier |
-| --------------------------------------- | ---------------------------- | --------------------------------------------------- | --------- |
-| `"perplexity/best"`                     | Pro                          | Perplexity Pro (Auto-select). Tier: Pro.            | pro       |
-| `"perplexity/deep-research"`            | Deep research                | Perplexity Deep Research. Tier: Pro.                | pro       |
-| `"perplexity/sonar-2"`                  | Sonar 2                      | Perplexity Sonar 2. Tier: Pro.                      | pro       |
-| `"openai/gpt-5.4"`                      | GPT-5.4                      | OpenAI GPT-5.4. Tier: Pro.                          | pro       |
-| `"openai/gpt-5.4-thinking"`             | GPT-5.4 Thinking             | OpenAI GPT-5.4 (Thinking). Tier: Pro.               | pro       |
-| `"openai/gpt-5.5-thinking"`             | GPT-5.5 Thinking             | OpenAI GPT-5.5 (Thinking). Tier: Max.               | max       |
-| `"google/gemini-3.1-pro-thinking-low"`  | Gemini 3.1 Pro Thinking Low  | Google Gemini 3.1 Pro (Thinking Low). Tier: Pro.    | pro       |
-| `"google/gemini-3.1-pro-thinking-high"` | Gemini 3.1 Pro Thinking High | Google Gemini 3.1 Pro (Thinking High). Tier: Pro.   | pro       |
-| `"anthropic/claude-opus-4.6"`           | Claude Opus 4.6              | Anthropic Claude Opus 4.6. Tier: Max.               | max       |
-| `"anthropic/claude-opus-4.6-thinking"`  | Claude Opus 4.6 Thinking     | Anthropic Claude Opus 4.6 (Thinking). Tier: Max.    | max       |
-| `"anthropic/claude-opus-4.7"`           | Claude Opus 4.7              | Anthropic Claude Opus 4.7. Tier: Max.               | max       |
-| `"anthropic/claude-opus-4.7-thinking"`  | Claude Opus 4.7 Thinking     | Anthropic Claude Opus 4.7 (Thinking). Tier: Max.    | max       |
-| `"moonshot/kimi-k2.6-instant"`          | Kimi K2.6 Instant            | Moonshot AI Kimi K2.6 Instant. Tier: Pro.           | pro       |
-| `"moonshot/kimi-k2.6-thinking"`         | Kimi K2.6 Thinking           | Moonshot AI Kimi K2.6 (Thinking). Tier: Pro.        | pro       |
-| `"nvidia/nemotron-3-super-thinking"`    | Nemotron 3 Super Thinking    | NVIDIA Nemotron 3 Super 120B (Thinking). Tier: Pro. | pro       |
+| Model ID                                 | Name                         | Description                              | Min. Tier |
+| ---------------------------------------- | ---------------------------- | ---------------------------------------- | --------- |
+| `"perplexity/best"`                      | Best                         | Perplexity Best (Auto-select).           | pro       |
+| `"perplexity/deep-research"`             | Deep research                | Perplexity Deep Research.                | pro       |
+| `"perplexity/sonar-2"`                   | Sonar 2                      | Perplexity Sonar 2.                      | pro       |
+| `"openai/gpt-5.4"`                       | GPT-5.4                      | OpenAI GPT-5.4.                          | pro       |
+| `"openai/gpt-5.4-thinking"`              | GPT-5.4 Thinking             | OpenAI GPT-5.4 (Thinking).               | pro       |
+| `"openai/gpt-5.5-thinking"`              | GPT-5.5 Thinking             | OpenAI GPT-5.5 (Thinking).               | max       |
+| `"google/gemini-3.1-pro-thinking-low"`   | Gemini 3.1 Pro Thinking Low  | Google Gemini 3.1 Pro (Thinking Low).    | pro       |
+| `"google/gemini-3.1-pro-thinking-high"`  | Gemini 3.1 Pro Thinking High | Google Gemini 3.1 Pro (Thinking High).   | pro       |
+| `"anthropic/claude-sonnet-4.6"`          | Claude Sonnet 4.6            | Anthropic Claude Sonnet 4.6.             | pro       |
+| `"anthropic/claude-sonnet-4.6-thinking"` | Claude Sonnet 4.6 Thinking   | Anthropic Claude Sonnet 4.6 (Thinking).  | pro       |
+| `"anthropic/claude-opus-4.7"`            | Claude Opus 4.7              | Anthropic Claude Opus 4.7.               | max       |
+| `"anthropic/claude-opus-4.7-thinking"`   | Claude Opus 4.7 Thinking     | Anthropic Claude Opus 4.7 (Thinking).    | max       |
+| `"moonshot/kimi-k2.6-instant"`           | Kimi K2.6 Instant            | Moonshot AI Kimi K2.6 Instant.           | pro       |
+| `"moonshot/kimi-k2.6-thinking"`          | Kimi K2.6 Thinking           | Moonshot AI Kimi K2.6 (Thinking).        | pro       |
+| `"nvidia/nemotron-3-super-thinking"`     | Nemotron 3 Super Thinking    | NVIDIA Nemotron 3 Super 120B (Thinking). | pro       |
 
 Inspect models programmatically:
 
@@ -278,11 +278,16 @@ podman pull ghcr.io/henrique-coder/perplexity-webui-scraper:latest
 podman run -d -p 8000:8000 --name perp-api ghcr.io/henrique-coder/perplexity-webui-scraper:latest
 ```
 
-For local development, use the provided `Containerfile`:
+For local development, use the provided container files:
 
 ```bash
-podman build -t perplexity-api .
-podman run -d -p 8000:8000 --name perp-api perplexity-api
+# Containerfile: installs the `api` extra, exposes port 8000, and starts the REST server.
+podman build -t perplexity-api -f Containerfile .
+podman run --rm -p 8000:8000 --name perp-api perplexity-api
+
+# Containerfile.mcp: installs the `mcp` extra and starts the stdio MCP server.
+podman build -t perplexity-mcp -f Containerfile.mcp .
+podman run --rm -e PERPLEXITY_SESSION_TOKEN=your_token perplexity-mcp
 ```
 
 ### Authentication

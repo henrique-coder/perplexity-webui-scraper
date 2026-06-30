@@ -26,7 +26,7 @@ uv add "perplexity-webui-scraper[all]"
 
 ### Command Line Tools (CLI)
 
-Install with the `cli` extra to use the `token` generator and the interactive `ask` command directly from your terminal.
+Install with the `cli` extra to use the `token` generator and the interactive `chat` command directly from your terminal.
 
 ```bash
 # From PyPI (stable)
