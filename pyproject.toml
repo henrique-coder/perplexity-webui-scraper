@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-  "uv_build>=0.11.25,<0.12.0",
+   "uv_build>=0.11.25,<0.12.0",
 ]
 build-backend = "uv_build"
 
@@ -13,73 +13,73 @@ license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.12, <3.15"
 keywords = [
-  "perplexity",
-  "ai",
-  "scraper",
-  "mcp",
-  "fastapi",
-  "openai-compatible",
+   "perplexity",
+   "ai",
+   "scraper",
+   "mcp",
+   "fastapi",
+   "openai-compatible",
 ]
 classifiers = [
-  "Development Status :: 5 - Production/Stable",
-  "Intended Audience :: Developers",
-  "Operating System :: OS Independent",
-  "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
-  "Programming Language :: Python :: 3.14",
-  "Topic :: Internet :: WWW/HTTP",
-  "Topic :: Software Development :: Libraries :: Python Modules",
-  "Typing :: Typed",
+   "Development Status :: 5 - Production/Stable",
+   "Intended Audience :: Developers",
+   "Operating System :: OS Independent",
+   "Programming Language :: Python :: 3",
+   "Programming Language :: Python :: 3.12",
+   "Programming Language :: Python :: 3.13",
+   "Programming Language :: Python :: 3.14",
+   "Topic :: Internet :: WWW/HTTP",
+   "Topic :: Software Development :: Libraries :: Python Modules",
+   "Typing :: Typed",
 ]
 dependencies = [
-  "curl-cffi~=0.15.0",
-  "loguru~=0.7.0",
-  "orjson~=3.11.0",
-  "pydantic>=2.13.0, <3.0.0",
-  "typer~=0.26.0",
+   "curl-cffi~=0.15.0",
+   "loguru~=0.7.0",
+   "orjson~=3.11.0",
+   "pydantic>=2.13.0, <3.0.0",
+   "typer~=0.26.0",
 ]
 
 [project.optional-dependencies]
 cli = [
-  "cryptography>=49.0.0, <50.0.0",
-  "platformdirs~=4.10.0",
-  "pyperclip~=1.11.0",
-  "rich~=15.0.0",
+   "cryptography>=49.0.0, <50.0.0",
+   "platformdirs~=4.10.0",
+   "pyperclip~=1.11.0",
+   "rich~=15.0.0",
 ]
 api = [
-  "fastapi~=0.138.0",
-  "uvicorn[standard]~=0.49.0",
+   "fastapi~=0.138.0",
+   "uvicorn[standard]~=0.49.0",
 ]
 mcp = [
-  "fastmcp~=3.4.0",
+   "fastmcp~=3.4.0",
 ]
 all = [
-  "perplexity-webui-scraper[cli,api,mcp]",
+   "perplexity-webui-scraper[cli,api,mcp]",
 ]
 
 [dependency-groups]
 dev = [
-  "prek~=0.4.0",
-  "python-dotenv~=1.2.0",
+   "prek~=0.4.0",
+   "python-dotenv~=1.2.0",
 ]
 docs = [
-  "mkdocs~=1.6.0",
-  "mkdocs-material~=9.7.0",
-  "mkdocstrings[python]~=1.0.0",
+   "mkdocs~=1.6.0",
+   "mkdocs-material~=9.7.0",
+   "mkdocstrings[python]~=1.0.0",
 ]
 lint = [
-  "ruff~=0.15.0",
-  "ty~=0.0.30",
+   "ruff~=0.15.0",
+   "ty~=0.0.30",
 ]
 test = [
-  "httpx~=0.28.0",
-  "pytest~=9.1.0",
+   "httpx~=0.28.0",
+   "pytest~=9.1.0",
 ]
 build = [
-  "nuitka~=4.1.3",
-  "ordered-set~=4.1.0",
-  "zstandard~=0.25.0",
+   "nuitka~=4.1.3",
+   "ordered-set~=4.1.0",
+   "zstandard~=0.25.0",
 ]
 
 [project.scripts]
@@ -99,56 +99,56 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = [
-  "F",
-  "E",
-  "W",
-  "I",
-  "N",
-  "UP",
-  "ANN",
-  "FA",
-  "ICN",
-  "B",
-  "SIM",
-  "C4",
-  "PIE",
-  "ISC",
-  "RSE",
-  "RET",
-  "PTH",
-  "T20",
-  "TCH",
-  "G",
-  "LOG",
-  "TRY",
-  "ERA",
-  "PERF",
-  "FURB",
-  "PL",
-  "RUF",
-  "D",
+   "F",
+   "E",
+   "W",
+   "I",
+   "N",
+   "UP",
+   "ANN",
+   "FA",
+   "ICN",
+   "B",
+   "SIM",
+   "C4",
+   "PIE",
+   "ISC",
+   "RSE",
+   "RET",
+   "PTH",
+   "T20",
+   "TCH",
+   "G",
+   "LOG",
+   "TRY",
+   "ERA",
+   "PERF",
+   "FURB",
+   "PL",
+   "RUF",
+   "D",
 ]
 ignore = [
-  "ISC001",
-  "TRY003",
-  "TRY301",
-  "G004",
-  "PLE1205",
-  "PLR0912",
-  "PLR0913",
-  "PLR0915",
-  "PLR2004",
-  "D100",
-  "D101",
-  "D102",
-  "D103",
-  "D104",
-  "D105",
-  "D106",
-  "D107",
-  "D203",
-  "D213",
-  "ANN401",
+   "ISC001",
+   "TRY003",
+   "TRY301",
+   "G004",
+   "PLE1205",
+   "PLR0912",
+   "PLR0913",
+   "PLR0915",
+   "PLR2004",
+   "D100",
+   "D101",
+   "D102",
+   "D103",
+   "D104",
+   "D105",
+   "D106",
+   "D107",
+   "D203",
+   "D213",
+   "ANN401",
 ]
 fixable = ["ALL"]
 unfixable = []
