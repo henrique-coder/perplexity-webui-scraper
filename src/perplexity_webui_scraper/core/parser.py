@@ -19,6 +19,7 @@ from perplexity_webui_scraper._internal.constants import (
     JSON_OBJECT_PATTERN,
 )
 from perplexity_webui_scraper._internal.exceptions import (
+    RateLimitError,
     ResearchClarifyingQuestionsError,
     ResponseParsingError,
 )
@@ -79,7 +80,21 @@ def process_sse_data(
         ResponseParsingError: If the response has an unexpected structure or
             signals a failure status.
     """
-    if data.get("status") == "FAILED":
+    status = str(data.get("status", "")).upper()
+    error_code = data.get("error_code")
+
+    if error_code is not None:
+        message = str(data.get("text") or error_code)
+
+        if "RATE_LIMIT" in str(error_code).upper():
+            raise RateLimitError(message)
+
+        raise ResponseParsingError(
+            f"Query processing failed: {message}",
+            raw_data=str(data),
+        )
+
+    if status == "FAILED":
         raise ResponseParsingError(
             f"Query processing failed: {data.get('text', 'Unknown error')}",
             raw_data=str(data),
