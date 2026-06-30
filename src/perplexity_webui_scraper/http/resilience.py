@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from random import uniform
 from threading import Lock
 from time import monotonic, sleep
 from typing import TYPE_CHECKING, TypeVar
@@ -122,7 +123,7 @@ def retry_with_backoff[T](
 
             delay = min(config.base_delay * (2 ** (attempt - 1)), config.max_delay)
             jitter_amount = delay * config.jitter
-            wait = max(0.0, delay + jitter_amount * (2 * (monotonic() % 1) - 1))
+            wait = max(0.0, delay + uniform(-jitter_amount, jitter_amount))
 
             if on_retry is not None:
                 on_retry(attempt, exc, wait)

@@ -6,9 +6,12 @@ from sys import modules as sys_modules
 from types import ModuleType
 from unittest.mock import Mock, patch
 
+from pytest import raises
+from typer import Exit
 from typer.testing import CliRunner
 
 from perplexity_webui_scraper.cli.__main__ import cli
+from perplexity_webui_scraper.cli.commands.chat import run as run_chat
 
 
 runner = CliRunner()
@@ -157,3 +160,27 @@ def test_ask_setup_subcommand_delegates() -> None:
 
     assert result.exit_code == 0
     run_setup.assert_called_once_with()
+
+
+def test_chat_rejects_partial_coordinates() -> None:
+    with raises(Exit) as exc_info:
+        run_chat(
+            query="Hello",
+            model="perplexity/best",
+            search_focus="web",
+            source_focus="web",
+            time_range="all",
+            citation_mode="clean",
+            language="en-US",
+            files=None,
+            timezone=None,
+            latitude=1.0,
+            longitude=None,
+            space_uuid=None,
+            save=False,
+            copy=False,
+            raw=False,
+            token="test-token",
+        )
+
+    assert exc_info.value.exit_code == 1

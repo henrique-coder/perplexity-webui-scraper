@@ -217,6 +217,13 @@ class HTTPClient:
             case _:
                 raise PerplexityError(f"{context}{error!s}") from error
 
+    def _raise_for_status(self, response: CurlResponse, context: str) -> None:
+        """Raise typed project exceptions for non-success HTTP responses."""
+        try:
+            response.raise_for_status()
+        except Exception as error:
+            self._handle_error(error, context)
+
     # ------------------------------------------------------------------
     # Public request methods
     # ------------------------------------------------------------------
@@ -245,7 +252,7 @@ class HTTPClient:
             t0 = monotonic()
             response = self._session.get(url, params=params)
             log_response("GET", url, response.status_code, elapsed_ms=(monotonic() - t0) * 1000)
-            response.raise_for_status()
+            self._raise_for_status(response, f"GET {endpoint}: ")
             return response
 
         try:
@@ -291,7 +298,7 @@ class HTTPClient:
             t0 = monotonic()
             response = self._session.post(url, json=json, stream=stream)
             log_response("POST", url, response.status_code, elapsed_ms=(monotonic() - t0) * 1000)
-            response.raise_for_status()
+            self._raise_for_status(response, f"POST {endpoint}: ")
             return response
 
         try:

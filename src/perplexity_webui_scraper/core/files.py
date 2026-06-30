@@ -232,20 +232,21 @@ def upload_file(file_info: _FileInfo, http: HTTPClient) -> str:
 
         mime = CurlMime()
 
-        for field_name, field_value in fields.items():
-            mime.addpart(name=field_name, data=field_value.encode("utf-8"))
+        try:
+            for field_name, field_value in fields.items():
+                mime.addpart(name=field_name, data=field_value.encode("utf-8"))
 
-        mime.addpart(
-            name="file",
-            content_type=file_info.mimetype,
-            filename=display_name,
-            data=file_content,
-        )
+            mime.addpart(
+                name="file",
+                content_type=file_info.mimetype,
+                filename=display_name,
+                data=file_content,
+            )
 
-        with Session() as s3_session:
-            upload_response = s3_session.post(s3_bucket_url, multipart=mime)
-
-        mime.close()
+            with Session() as s3_session:
+                upload_response = s3_session.post(s3_bucket_url, multipart=mime)
+        finally:
+            mime.close()
 
         if upload_response.status_code not in (200, 201, 204):
             raise FileUploadError(

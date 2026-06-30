@@ -84,6 +84,10 @@ def run(
         console.print("Run [bold cyan]perplexity-webui-scraper chat setup[/bold cyan] to change your default model.")
         raise Exit(code=1)  # noqa: B904
 
+    if (latitude is None) != (longitude is None):
+        console.print("[red]⛔ Latitude and longitude must be provided together.[/red]")
+        raise Exit(code=1)
+
     coords = (
         Coordinates(latitude=latitude, longitude=longitude) if latitude is not None and longitude is not None else None
     )
@@ -196,9 +200,10 @@ def run(
                             try:
                                 msg_type, msg_data = q.get(timeout=0.1)
                                 if msg_type == "chunk":
-                                    if msg_data.answer:
+                                    rendered = msg_data.answer or msg_data.last_chunk
+                                    if rendered:
                                         first_chunk_received = True
-                                        live.update(Markdown(msg_data.answer))
+                                        live.update(Markdown(rendered))
                                 elif msg_type == "error":
                                     raise msg_data
                                 elif msg_type == "done":
