@@ -96,6 +96,7 @@ Each tool uses a specific AI model. Enable only the ones you need:
 | `pplx_gpt54`                   | `openai/gpt-5.4`                       | GPT-5.4                      | OpenAI GPT-5.4.                          | pro       |
 | `pplx_gpt54_thinking`          | `openai/gpt-5.4-thinking`              | GPT-5.4 Thinking             | OpenAI GPT-5.4 (Thinking).               | pro       |
 | `pplx_gpt55_thinking`          | `openai/gpt-5.5-thinking`              | GPT-5.5 Thinking             | OpenAI GPT-5.5 (Thinking).               | max       |
+| `pplx_glm52`                   | `z-ai/glm-5.2`                         | GLM 5.2                      | Z.ai's most advanced model.              | pro       |
 | `pplx_gemini31_pro_think_low`  | `google/gemini-3.1-pro-thinking-low`   | Gemini 3.1 Pro Thinking Low  | Google Gemini 3.1 Pro (Thinking Low).    | pro       |
 | `pplx_gemini31_pro_think_high` | `google/gemini-3.1-pro-thinking-high`  | Gemini 3.1 Pro Thinking High | Google Gemini 3.1 Pro (Thinking High).   | pro       |
 | `pplx_claude_s46`              | `anthropic/claude-sonnet-4.6`          | Claude Sonnet 4.6            | Anthropic Claude Sonnet 4.6.             | pro       |

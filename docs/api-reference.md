@@ -85,6 +85,7 @@ conversation.ask("...", model="google/gemini-3.1-pro-thinking-low")
 | `"openai/gpt-5.4"`                       | GPT-5.4                      | OpenAI GPT-5.4.                          | pro       |
 | `"openai/gpt-5.4-thinking"`              | GPT-5.4 Thinking             | OpenAI GPT-5.4 (Thinking).               | pro       |
 | `"openai/gpt-5.5-thinking"`              | GPT-5.5 Thinking             | OpenAI GPT-5.5 (Thinking).               | max       |
+| `"z-ai/glm-5.2"`                         | GLM 5.2                      | Z.ai's most advanced model.              | pro       |
 | `"google/gemini-3.1-pro-thinking-low"`   | Gemini 3.1 Pro Thinking Low  | Google Gemini 3.1 Pro (Thinking Low).    | pro       |
 | `"google/gemini-3.1-pro-thinking-high"`  | Gemini 3.1 Pro Thinking High | Google Gemini 3.1 Pro (Thinking High).   | pro       |
 | `"anthropic/claude-sonnet-4.6"`          | Claude Sonnet 4.6            | Anthropic Claude Sonnet 4.6.             | pro       |

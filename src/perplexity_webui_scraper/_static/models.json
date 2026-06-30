@@ -54,6 +54,15 @@
     "mode": "copilot"
   },
   {
+    "id": "z-ai/glm-5.2",
+    "name": "GLM 5.2",
+    "description": "Z.ai's most advanced model.",
+    "identifier": "glm_5_2",
+    "tool_name": "pplx_glm52",
+    "min_tier": "pro",
+    "mode": "copilot"
+  },
+  {
     "id": "google/gemini-3.1-pro-thinking-low",
     "name": "Gemini 3.1 Pro Thinking Low",
     "description": "Google Gemini 3.1 Pro (Thinking Low).",
