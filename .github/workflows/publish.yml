@@ -203,33 +203,21 @@ jobs:
           "$BIN" --help
           "$BIN" api --help
           "$BIN" token --help
-          "$BIN" api --host 127.0.0.1 --port 18000 > server.log 2>&1 &
-          PID=$!
-          sleep 5
-          if ! kill -0 "$PID" 2>/dev/null; then
-            cat server.log
-            exit 1
-          fi
-          kill "$PID"
-          wait "$PID" || true
+          "$BIN" doctor
 
       - name: Install 7-Zip
-        shell: bash
-        run: |
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            sudo apt-get update
-            sudo apt-get install -y p7zip-full || sudo apt-get install -y 7zip
-          elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            brew list sevenzip >/dev/null 2>&1 || brew install sevenzip
-          fi
+        uses: milliewalky/setup-7-zip@v2
+        with:
+          tag: "26.02"
 
-          command -v 7z || command -v 7zz
+      - name: Check 7-Zip
+        shell: bash
+        run: 7z
 
       - name: Package Executable
         shell: bash
         run: |
           VERSION="${{ needs.check_version.outputs.artifact_version }}"
-          SEVENZIP="$(command -v 7z || command -v 7zz)"
 
           mkdir -p release/stage
           if [[ "${{ matrix.executable }}" == *.exe ]]; then
@@ -241,7 +229,7 @@ jobs:
           fi
 
           pushd release/stage
-          "$SEVENZIP" a \
+          7z a \
             -t7z \
             -mx=9 \
             -m0=lzma2 \
