@@ -176,13 +176,31 @@ jobs:
             ${{ runner.os }}-${{ matrix.target }}-nuitka-
             ${{ runner.os }}-nuitka-
 
+      - name: Set up ccache
+        if: runner.os != 'Windows'
+        uses: hendrikmuhs/ccache-action@v1.2.23
+        with:
+          key: ${{ matrix.target }}-${{ hashFiles('uv.lock') }}
+          restore-keys: |
+            ${{ matrix.target }}-
+          max-size: 1G
+          create-symlink: true
+          verbose: 1
+
+      - name: Check ccache
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          ccache --version
+          ccache --zero-stats
+
       - name: Build Executable with Nuitka
         run: >-
-          uv run nuitka
+          uv run python -m nuitka
           --standalone
           --onefile
           --assume-yes-for-downloads
-          --lto=yes
+          --lto=no
           --python-flag=no_asserts
           --python-flag=no_docstrings
           --include-package=fastmcp
@@ -244,8 +262,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: binary-${{ matrix.target }}
-          path: release/*
+          path: release/*.7z
           if-no-files-found: error
+          compression-level: 0
 
   publish_container:
     name: Publish Docker Images
