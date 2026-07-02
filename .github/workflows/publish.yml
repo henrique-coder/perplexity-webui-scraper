@@ -46,21 +46,9 @@ jobs:
       - name: Check if Version Changed
         id: check
         run: |
-          require_release_tag() {
-            local tag="$1"
-
-            if [ "${{ github.event_name }}" != "workflow_dispatch" ] || [ "${{ inputs.skip_gh_releases }}" != "true" ]; then
-              if ! git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then
-                echo "::error::Release tag $tag does not exist on origin. Create and push the tag before running this workflow; repository rules block GitHub Actions from creating release tags."
-                exit 1
-              fi
-            fi
-          }
-
           # Manual trigger with explicit version: use it directly
           if [ -n "${{ inputs.version }}" ]; then
             RELEASE_TAG="v${{ inputs.version }}"
-            require_release_tag "$RELEASE_TAG"
 
             echo "version_changed=true" >> $GITHUB_OUTPUT
             echo "new_version=${{ inputs.version }}" >> $GITHUB_OUTPUT
@@ -81,8 +69,6 @@ jobs:
           echo "release_tag=v$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "artifact_version=v$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
-          require_release_tag "v$CURRENT_VERSION"
-
           # Manual dispatch auto-detected from source.
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "version_changed=true" >> $GITHUB_OUTPUT
@@ -91,9 +77,16 @@ jobs:
             exit 0
           fi
 
+          if git ls-remote --exit-code --tags origin "refs/tags/v$CURRENT_VERSION" >/dev/null; then
+            echo "version_changed=false" >> $GITHUB_OUTPUT
+            echo "new_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            echo "⏭️ Version $CURRENT_VERSION already has a release tag. Skipping publish pipeline."
+            exit 0
+          fi
+
           echo "version_changed=true" >> $GITHUB_OUTPUT
           echo "new_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-          echo "✅ Versions match ($CURRENT_VERSION) and release tag exists. Triggering publish pipeline."
+          echo "✅ Versions match ($CURRENT_VERSION) and release tag is missing. Triggering publish pipeline."
 
   build_package:
     name: Build Python Package
@@ -404,6 +397,23 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Ensure Release Tag
+        shell: bash
+        run: |
+          TAG="${{ needs.check_version.outputs.release_tag }}"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            git fetch origin "refs/tags/$TAG:refs/tags/$TAG" --force
+            echo "Release tag $TAG already exists at $(git rev-list -n 1 "$TAG")"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" "${{ github.sha }}" -m "$TAG"
+          git push origin "refs/tags/$TAG"
+          echo "Created release tag $TAG at ${{ github.sha }}"
+
       - name: Download Package Artifacts
         uses: actions/download-artifact@v8
         with:
@@ -416,19 +426,6 @@ jobs:
           pattern: binary-*
           path: release-binaries
           merge-multiple: true
-
-      - name: Verify Release Tag
-        shell: bash
-        run: |
-          TAG="${{ needs.check_version.outputs.release_tag }}"
-
-          if ! git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
-            echo "::error::Release tag $TAG does not exist on origin. Create and push the tag before running this workflow; repository rules block GitHub Actions from creating release tags."
-            exit 1
-          fi
-
-          git fetch origin "refs/tags/$TAG:refs/tags/$TAG" --force
-          echo "Release tag $TAG exists at $(git rev-list -n 1 "$TAG")"
 
       - name: Generate Release Notes
         id: release_body
