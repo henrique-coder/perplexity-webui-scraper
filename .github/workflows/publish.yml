@@ -46,11 +46,25 @@ jobs:
       - name: Check if Version Changed
         id: check
         run: |
+          require_release_tag() {
+            local tag="$1"
+
+            if [ "${{ github.event_name }}" != "workflow_dispatch" ] || [ "${{ inputs.skip_gh_releases }}" != "true" ]; then
+              if ! git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then
+                echo "::error::Release tag $tag does not exist on origin. Create and push the tag before running this workflow; repository rules block GitHub Actions from creating release tags."
+                exit 1
+              fi
+            fi
+          }
+
           # Manual trigger with explicit version: use it directly
           if [ -n "${{ inputs.version }}" ]; then
+            RELEASE_TAG="v${{ inputs.version }}"
+            require_release_tag "$RELEASE_TAG"
+
             echo "version_changed=true" >> $GITHUB_OUTPUT
             echo "new_version=${{ inputs.version }}" >> $GITHUB_OUTPUT
-            echo "release_tag=v${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
             echo "artifact_version=v${{ inputs.version }}" >> $GITHUB_OUTPUT
             echo "📦 Manual dispatch — using version ${{ inputs.version }}"
             exit 0
@@ -67,7 +81,9 @@ jobs:
           echo "release_tag=v$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "artifact_version=v$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
-          # Manual dispatch auto-detected from source. Skip tag check.
+          require_release_tag "v$CURRENT_VERSION"
+
+          # Manual dispatch auto-detected from source.
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "version_changed=true" >> $GITHUB_OUTPUT
             echo "new_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
@@ -75,17 +91,9 @@ jobs:
             exit 0
           fi
 
-          # Push to prod: verify tag doesn't already exist
-          git fetch origin tag "v$CURRENT_VERSION" --no-tags || true
-          if git rev-parse "v$CURRENT_VERSION" >/dev/null 2>&1; then
-            echo "⏭️ Tag v$CURRENT_VERSION already exists. Skipping publish."
-            echo "version_changed=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
           echo "version_changed=true" >> $GITHUB_OUTPUT
           echo "new_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-          echo "✅ Versions match ($CURRENT_VERSION) and tag does not exist. Triggering publish pipeline."
+          echo "✅ Versions match ($CURRENT_VERSION) and release tag exists. Triggering publish pipeline."
 
   build_package:
     name: Build Python Package
