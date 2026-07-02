@@ -6,7 +6,7 @@ build-backend = "uv_build"
 
 [project]
 name = "perplexity-webui-scraper"
-version = "1.1.0"
+version = "1.1.1"
 description = "An advanced, high-performance Python client, MCP server, and REST API for reverse-engineering Perplexity AI's WebUI."
 authors = [
    { name = "Henrique Moreira", email = "78804989+henrique-coder@users.noreply.github.com" },
@@ -50,7 +50,7 @@ cli = [
    "rich~=15.0.0",
 ]
 api = [
-   "fastapi~=0.138.0",
+   "fastapi~=0.139.0",
    "uvicorn[standard]~=0.49.0",
 ]
 mcp = [

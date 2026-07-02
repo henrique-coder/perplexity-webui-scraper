@@ -409,6 +409,19 @@ jobs:
           path: release-binaries
           merge-multiple: true
 
+      - name: Verify Release Tag
+        shell: bash
+        run: |
+          TAG="${{ needs.check_version.outputs.release_tag }}"
+
+          if ! git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            echo "::error::Release tag $TAG does not exist on origin. Create and push the tag before running this workflow; repository rules block GitHub Actions from creating release tags."
+            exit 1
+          fi
+
+          git fetch origin "refs/tags/$TAG:refs/tags/$TAG" --force
+          echo "Release tag $TAG exists at $(git rev-list -n 1 "$TAG")"
+
       - name: Generate Release Notes
         id: release_body
         run: |
