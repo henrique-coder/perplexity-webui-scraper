@@ -1,0 +1,49 @@
+name: Feature request
+description: Suggest an improvement or new capability.
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What limitation or workflow does this feature improve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior or API you would like to see.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What workarounds or other designs did you consider?
+    validations:
+      required: false
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Target surface
+      multiple: true
+      options:
+        - Python API
+        - CLI
+        - REST API
+        - MCP server
+        - Container
+        - Documentation
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I searched existing issues and discussions first.
+          required: true
+        - label: This is not a request to bypass Perplexity account, tier, or usage restrictions.
+          required: true

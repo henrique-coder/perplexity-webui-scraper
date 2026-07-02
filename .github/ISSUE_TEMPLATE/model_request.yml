@@ -1,0 +1,54 @@
+name: Model request
+description: Request a model addition or metadata correction.
+title: "models: "
+labels: ["models"]
+body:
+  - type: input
+    id: model_id
+    attributes:
+      label: Model ID
+      description: Internal or project model ID, if known.
+      placeholder: "perplexity/example"
+    validations:
+      required: false
+  - type: input
+    id: label
+    attributes:
+      label: Display label
+      placeholder: "Example Model"
+    validations:
+      required: false
+  - type: textarea
+    id: source
+    attributes:
+      label: Evidence
+      description: Describe where this model appears. Redact tokens, cookies, request headers, account IDs, and private data.
+    validations:
+      required: true
+  - type: dropdown
+    id: tier
+    attributes:
+      label: Required tier, if known
+      options:
+        - Unknown
+        - Free
+        - Pro
+        - Max
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Include mode, provider, reasoning behavior, file support, or other metadata if known.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I removed all tokens, cookies, request headers, account IDs, and private data.
+          required: true
+        - label: I searched existing model requests first.
+          required: true
