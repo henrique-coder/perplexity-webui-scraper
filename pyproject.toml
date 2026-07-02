@@ -87,6 +87,9 @@ Homepage = "https://github.com/henrique-coder/perplexity-webui-scraper"
 Documentation = "https://github.com/henrique-coder/perplexity-webui-scraper#readme"
 Repository = "https://github.com/henrique-coder/perplexity-webui-scraper.git"
 Issues = "https://github.com/henrique-coder/perplexity-webui-scraper/issues"
+Discussions = "https://github.com/henrique-coder/perplexity-webui-scraper/discussions"
+Funding = "https://github.com/sponsors/henrique-coder"
+Security = "https://github.com/henrique-coder/perplexity-webui-scraper/security/policy"
 Changelog = "https://github.com/henrique-coder/perplexity-webui-scraper/releases"
 
 [tool.ruff]
