@@ -37,7 +37,7 @@ jobs:
         run: uv sync --only-group docs --no-install-project
 
       - name: Build MkDocs
-        run: uv run mkdocs build
+        run: uv run mkdocs build --strict
 
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v5

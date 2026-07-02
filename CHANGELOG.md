@@ -7,15 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.1] - 2026-07-02
 
-### Added
-
-- **CLI diagnostics:** Added `perplexity-webui-scraper doctor` to verify that bundled static model data can be loaded by installed packages and standalone executables.
-
 ### Fixed
 
-- **Executable releases:** Bundled `models.json` in Nuitka onefile builds, switched binary release assets to `.7z`, uploaded only final archives, and added executable smoke tests that validate the model registry.
-- **Release workflow:** Improved executable build caching, disabled expensive LTO linking, and made GitHub releases require an existing tag so repository tag rules fail before assets are uploaded.
+- **Release workflow:** Removed the unstable native executable build matrix and simplified releases to publish only the Python wheel, source distribution, and optional GHCR container images.
+- **Release ordering:** GitHub Releases are created before PyPI publishing, and Docker images are published only after PyPI succeeds.
+- **CI caching:** Added explicit pnpm store caching to CI and kept Docker layer caching on the remaining container publish jobs.
 - **API dependency:** Updated the optional FastAPI extra to the `0.139.x` series.
+
+### Removed
+
+- **Native binary distribution:** Removed Nuitka-based standalone executable builds, `.7z` release assets, executable smoke tests, and the build-only dependency group.
+- **CLI diagnostics:** Removed the temporary `perplexity-webui-scraper doctor` command that existed only to validate standalone executable bundles.
 
 ## [1.1.0] - 2026-06-30
 

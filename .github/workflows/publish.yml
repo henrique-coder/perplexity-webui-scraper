@@ -28,6 +28,10 @@ on:
         default: true
         type: boolean
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check_version:
     name: Check Version
@@ -37,7 +41,6 @@ jobs:
       version_changed: ${{ steps.check.outputs.version_changed }}
       new_version: ${{ steps.check.outputs.new_version }}
       release_tag: ${{ steps.check.outputs.release_tag }}
-      artifact_version: ${{ steps.check.outputs.artifact_version }}
 
     steps:
       - name: Checkout Code
@@ -53,7 +56,6 @@ jobs:
             echo "version_changed=true" >> $GITHUB_OUTPUT
             echo "new_version=${{ inputs.version }}" >> $GITHUB_OUTPUT
             echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
-            echo "artifact_version=v${{ inputs.version }}" >> $GITHUB_OUTPUT
             echo "📦 Manual dispatch — using version ${{ inputs.version }}"
             exit 0
           fi
@@ -67,7 +69,6 @@ jobs:
           fi
 
           echo "release_tag=v$CURRENT_VERSION" >> $GITHUB_OUTPUT
-          echo "artifact_version=v$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
           # Manual dispatch auto-detected from source.
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -114,158 +115,6 @@ jobs:
           name: python-dist
           path: dist/*
           if-no-files-found: error
-
-  build_executables:
-    name: Build Executable (${{ matrix.target }})
-    needs: check_version
-    if: needs.check_version.outputs.version_changed == 'true'
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: linux-amd64
-            executable: perplexity-webui-scraper
-            icon: docs/assets/icon.png
-            nuitka_icon_flag: linux-icon
-          - os: ubuntu-24.04-arm
-            target: linux-arm64
-            executable: perplexity-webui-scraper
-            icon: docs/assets/icon.png
-            nuitka_icon_flag: linux-icon
-          - os: macos-latest
-            target: macos-arm64
-            executable: perplexity-webui-scraper
-            icon: docs/assets/icon.icns
-            nuitka_icon_flag: macos-app-icon
-          - os: macos-26-intel
-            target: macos-amd64
-            executable: perplexity-webui-scraper
-            icon: docs/assets/icon.icns
-            nuitka_icon_flag: macos-app-icon
-          - os: windows-latest
-            target: windows-amd64
-            executable: perplexity-webui-scraper.exe
-            icon: docs/assets/icon.ico
-            nuitka_icon_flag: windows-icon-from-ico
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v7
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          version: "latest"
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-
-      - name: Install Dependencies
-        run: uv sync --frozen --all-extras --group build
-
-      - name: Cache Nuitka
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cache/Nuitka
-            ~/AppData/Local/Nuitka/Nuitka/Cache
-            ~/Library/Caches/Nuitka
-          key: ${{ runner.os }}-${{ matrix.target }}-nuitka-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.target }}-nuitka-
-            ${{ runner.os }}-nuitka-
-
-      - name: Set up ccache
-        if: runner.os != 'Windows'
-        uses: hendrikmuhs/ccache-action@v1.2.23
-        with:
-          key: ${{ matrix.target }}-${{ hashFiles('uv.lock') }}
-          restore-keys: |
-            ${{ matrix.target }}-
-          max-size: 1G
-          create-symlink: true
-          verbose: 1
-
-      - name: Check ccache
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          ccache --version
-          ccache --zero-stats
-
-      - name: Build Executable with Nuitka
-        run: >-
-          uv run python -m nuitka
-          --standalone
-          --onefile
-          --assume-yes-for-downloads
-          --lto=no
-          --python-flag=no_asserts
-          --python-flag=no_docstrings
-          --include-package=fastmcp
-          --include-package=mcp
-          --include-package=uvicorn
-          --include-package=curl_cffi
-          --include-package-data=perplexity_webui_scraper._static
-          --output-dir=dist
-          --output-filename=${{ matrix.executable }}
-          --${{ matrix.nuitka_icon_flag }}=${{ matrix.icon }}
-          src/perplexity_webui_scraper/cli/__main__.py
-
-      - name: Smoke Test Executable
-        shell: bash
-        run: |
-          BIN="dist/${{ matrix.executable }}"
-          chmod +x "$BIN" || true
-          "$BIN" --help
-          "$BIN" api --help
-          "$BIN" token --help
-          "$BIN" doctor
-
-      - name: Install 7-Zip
-        uses: milliewalky/setup-7-zip@v2
-        with:
-          tag: "26.02"
-
-      - name: Check 7-Zip
-        shell: bash
-        run: 7z
-
-      - name: Package Executable
-        shell: bash
-        run: |
-          VERSION="${{ needs.check_version.outputs.artifact_version }}"
-
-          mkdir -p release/stage
-          if [[ "${{ matrix.executable }}" == *.exe ]]; then
-            cp "dist/${{ matrix.executable }}" release/stage/perplexity-webui-scraper.exe
-            chmod +x release/stage/perplexity-webui-scraper.exe || true
-          else
-            cp "dist/${{ matrix.executable }}" release/stage/perplexity-webui-scraper
-            chmod +x release/stage/perplexity-webui-scraper
-          fi
-
-          pushd release/stage
-          7z a \
-            -t7z \
-            -mx=9 \
-            -m0=lzma2 \
-            -mfb=273 \
-            -md=1536m \
-            -ms=on \
-            "../perplexity-webui-scraper-${VERSION}-${{ matrix.target }}.7z" \
-            ./*
-          popd
-
-      - name: Upload Executable Artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: binary-${{ matrix.target }}
-          path: release/*.7z
-          if-no-files-found: error
-          compression-level: 0
 
   publish_container:
     name: Publish Docker Images
@@ -352,7 +201,6 @@ jobs:
     needs:
       - check_version
       - build_package
-      - build_executables
       - create_github_release
     if: needs.check_version.outputs.version_changed == 'true' && needs.create_github_release.result == 'success' && (github.event_name != 'workflow_dispatch' || (inputs.skip_pypi != true && inputs.skip_pypi != 'true'))
 
@@ -384,7 +232,6 @@ jobs:
     needs:
       - check_version
       - build_package
-      - build_executables
     if: needs.check_version.outputs.version_changed == 'true' && (github.event_name != 'workflow_dispatch' || (inputs.skip_gh_releases != true && inputs.skip_gh_releases != 'true'))
 
     permissions:
@@ -419,13 +266,6 @@ jobs:
         with:
           name: python-dist
           path: dist
-
-      - name: Download Executable Artifacts
-        uses: actions/download-artifact@v8
-        with:
-          pattern: binary-*
-          path: release-binaries
-          merge-multiple: true
 
       - name: Generate Release Notes
         id: release_body
@@ -502,7 +342,6 @@ jobs:
           files: |
             dist/*.whl
             dist/*.tar.gz
-            release-binaries/*
           draft: false
           prerelease: false
         env:

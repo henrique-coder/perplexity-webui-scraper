@@ -179,20 +179,6 @@ def mcp() -> None:
     run_mcp()
 
 
-@cli.command(name="doctor")
-def doctor() -> None:
-    """Run local installation checks."""
-    from typer import echo  # noqa: PLC0415
-
-    from perplexity_webui_scraper.models.registry import MODELS  # noqa: PLC0415
-
-    models = MODELS.list_all()
-    if not models:
-        raise RuntimeError("Model registry is empty.")
-
-    echo(f"OK: loaded {len(models)} models")
-
-
 def main() -> None:
     """Console script entry point."""
     cli()

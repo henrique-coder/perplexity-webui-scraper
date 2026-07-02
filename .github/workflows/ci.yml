@@ -8,6 +8,10 @@ on:
     branches:
       - prod
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint_and_test:
     name: Code Quality & Tests
@@ -33,10 +37,22 @@ jobs:
           version: 11
           run_install: false
 
+      - name: Get pnpm store path
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v6
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
       - name: Install Dependencies
         run: |
           uv sync --frozen --all-extras --group test --group lint
-          pnpm install --frozen-lockfile
+          pnpm install --frozen-lockfile --prefer-offline
 
       - name: Run Linter & Formatter
         run: |

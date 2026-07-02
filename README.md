@@ -29,6 +29,8 @@ This library lets you interact with Perplexity AI programmatically using the sam
 
 Install the package depending on your use case:
 
+This project is distributed as a Python package on PyPI and as optional container images on GHCR. GitHub Releases contain the Python wheel and source distribution; native standalone executables are not published.
+
 ### As a Core Library
 
 Install only the core python library without any extra dependencies.

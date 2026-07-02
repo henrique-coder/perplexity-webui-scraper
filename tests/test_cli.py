@@ -40,7 +40,6 @@ def test_root_help_lists_subcommands() -> None:
     assert "mcp" in result.output
     assert "token" in result.output
     assert "chat" in result.output
-    assert "doctor" in result.output
 
 
 def test_api_subcommand_delegates_with_options() -> None:
@@ -83,13 +82,6 @@ def test_token_subcommand_delegates_with_email() -> None:
 
     assert result.exit_code == 0
     run_token.assert_called_once_with("user@example.com")
-
-
-def test_doctor_loads_model_registry() -> None:
-    result = runner.invoke(cli, ["doctor"])
-
-    assert result.exit_code == 0
-    assert "OK: loaded" in result.output
 
 
 def test_chat_subcommand_delegates_with_defaults() -> None:
