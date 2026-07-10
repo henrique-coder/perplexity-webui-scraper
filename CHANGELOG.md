@@ -7,13 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-07-10
+
 ### Added
 
 - **Community health files:** Added code of conduct, contributing guide, security policy, support guide, funding metadata, issue forms, and pull request template.
+- **Current Perplexity UI models:** Added GPT-5.6 Terra, GPT-5.6 Terra Thinking, GPT-5.6 Sol, GPT-5.6 Sol Thinking, Claude Sonnet 5, Claude Sonnet 5 Thinking, Claude Opus 4.8, Claude Opus 4.8 Thinking, and Nemotron 3 Ultra to the JSON-backed model registry.
 
 ### Changed
 
 - **Project metadata:** Added README community links and PyPI project URLs for discussions, funding, and security policy.
+- **Model metadata:** Updated bundled model descriptions, display names, API docs, MCP tool tables, README model count, usage examples, and registry tests to match the current Perplexity model configuration.
+
+### Removed
+
+- **Retired UI models:** Removed GPT-5.4, GPT-5.4 Thinking, GPT-5.5 Thinking, Claude Sonnet 4.6, Claude Sonnet 4.6 Thinking, Claude Opus 4.7, and Claude Opus 4.7 Thinking from the bundled registry and documentation because they no longer appear in the Perplexity UI picker.
 
 ## [1.1.1] - 2026-07-02
 
