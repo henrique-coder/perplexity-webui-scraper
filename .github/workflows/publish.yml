@@ -274,8 +274,17 @@ jobs:
           PREVIOUS_TAG=$(git describe --tags --abbrev=0 "${VERSION}^" 2>/dev/null || git rev-list --max-parents=0 HEAD)
           IMAGE_REPO="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
 
-          awk '/^## \[/ { if (p) exit; p=1; next } p { print }' CHANGELOG.md > release_notes.md
+          awk -v heading="## [${VERSION#v}]" '
+            index($0, heading) == 1 { found=1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > release_notes.md
           sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' release_notes.md
+
+          if [ ! -s release_notes.md ]; then
+            echo "::error::No changelog section found for ${VERSION}"
+            exit 1
+          fi
 
           if [ "${{ github.event_name }}" != "workflow_dispatch" ] || [ "${{ inputs.skip_docker }}" != "true" ]; then
             echo "" >> release_notes.md
@@ -298,7 +307,7 @@ jobs:
           echo "### 👥 Contributors" >> release_notes.md
           echo "" >> release_notes.md
 
-          LOGINS=$(git log "$PREVIOUS_TAG"..HEAD --format='%H' | while read -r sha; do
+          LOGINS=$(git log "$PREVIOUS_TAG".."$VERSION" --format='%H' | while read -r sha; do
             curl -s "https://api.github.com/repos/${{ github.repository }}/commits/$sha" \
               -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
               | grep -oP '(?<="login": ")[^"]+' | head -1
@@ -320,7 +329,7 @@ jobs:
           echo "<details open>" >> release_notes.md
           echo "<summary><b>📦 Commits History (${PREVIOUS_TAG} &rarr; ${VERSION})</b></summary>" >> release_notes.md
           echo "" >> release_notes.md
-          git log --reverse --date=iso-strict --max-count=50 --format="- [\`%h\`](https://github.com/${{ github.repository }}/commit/%H) - %ad - %s" "$PREVIOUS_TAG"..HEAD >> release_notes.md
+          git log --reverse --date=iso-strict --max-count=50 --format="- [\`%h\`](https://github.com/${{ github.repository }}/commit/%H) - %ad - %s" "$PREVIOUS_TAG".."$VERSION" >> release_notes.md
           echo "" >> release_notes.md
           echo "</details>" >> release_notes.md
           echo "" >> release_notes.md
