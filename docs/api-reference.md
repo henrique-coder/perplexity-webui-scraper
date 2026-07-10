@@ -99,24 +99,26 @@ ConversationConfig(model="perplexity/best")
 conversation.ask("...", model="google/gemini-3.1-pro-thinking-low")
 ```
 
-| Model ID                                 | Name                         | Description                              | Min. Tier |
-| ---------------------------------------- | ---------------------------- | ---------------------------------------- | --------- |
-| `"perplexity/best"`                      | Best                         | Perplexity Best (Auto-select).           | free      |
-| `"perplexity/deep-research"`             | Deep research                | Perplexity Deep Research.                | pro       |
-| `"perplexity/sonar-2"`                   | Sonar 2                      | Perplexity Sonar 2.                      | pro       |
-| `"openai/gpt-5.4"`                       | GPT-5.4                      | OpenAI GPT-5.4.                          | pro       |
-| `"openai/gpt-5.4-thinking"`              | GPT-5.4 Thinking             | OpenAI GPT-5.4 (Thinking).               | pro       |
-| `"openai/gpt-5.5-thinking"`              | GPT-5.5 Thinking             | OpenAI GPT-5.5 (Thinking).               | max       |
-| `"z-ai/glm-5.2"`                         | GLM 5.2                      | Z.ai's most advanced model.              | pro       |
-| `"google/gemini-3.1-pro-thinking-low"`   | Gemini 3.1 Pro Thinking Low  | Google Gemini 3.1 Pro (Thinking Low).    | pro       |
-| `"google/gemini-3.1-pro-thinking-high"`  | Gemini 3.1 Pro Thinking High | Google Gemini 3.1 Pro (Thinking High).   | pro       |
-| `"anthropic/claude-sonnet-4.6"`          | Claude Sonnet 4.6            | Anthropic Claude Sonnet 4.6.             | pro       |
-| `"anthropic/claude-sonnet-4.6-thinking"` | Claude Sonnet 4.6 Thinking   | Anthropic Claude Sonnet 4.6 (Thinking).  | pro       |
-| `"anthropic/claude-opus-4.7"`            | Claude Opus 4.7              | Anthropic Claude Opus 4.7.               | max       |
-| `"anthropic/claude-opus-4.7-thinking"`   | Claude Opus 4.7 Thinking     | Anthropic Claude Opus 4.7 (Thinking).    | max       |
-| `"moonshot/kimi-k2.6-instant"`           | Kimi K2.6 Instant            | Moonshot AI Kimi K2.6 Instant.           | pro       |
-| `"moonshot/kimi-k2.6-thinking"`          | Kimi K2.6 Thinking           | Moonshot AI Kimi K2.6 (Thinking).        | pro       |
-| `"nvidia/nemotron-3-super-thinking"`     | Nemotron 3 Super Thinking    | NVIDIA Nemotron 3 Super 120B (Thinking). | pro       |
+| Model ID                                | Name                     | Description                                    | Min. Tier |
+| --------------------------------------- | ------------------------ | ---------------------------------------------- | --------- |
+| `"perplexity/best"`                     | Best                     | Adapts to each query.                          | free      |
+| `"perplexity/deep-research"`            | Deep research            | Fast and thorough for routine research.        | pro       |
+| `"perplexity/sonar-2"`                  | Sonar 2                  | Perplexity's latest in-house model.            | pro       |
+| `"openai/gpt-5.6-terra"`                | GPT-5.6 Terra            | OpenAI's versatile model.                      | pro       |
+| `"openai/gpt-5.6-terra-thinking"`       | GPT-5.6 Terra Thinking   | OpenAI's versatile model with thinking.        | pro       |
+| `"openai/gpt-5.6-sol"`                  | GPT-5.6 Sol              | OpenAI's most powerful model.                  | max       |
+| `"openai/gpt-5.6-sol-thinking"`         | GPT-5.6 Sol Thinking     | OpenAI's most powerful model with thinking.    | max       |
+| `"anthropic/claude-sonnet-5"`           | Claude Sonnet 5          | Anthropic's fast model.                        | pro       |
+| `"anthropic/claude-sonnet-5-thinking"`  | Claude Sonnet 5 Thinking | Anthropic's newest reasoning model.            | pro       |
+| `"anthropic/claude-opus-4.8"`           | Claude Opus 4.8          | Anthropic's most advanced model.               | max       |
+| `"anthropic/claude-opus-4.8-thinking"`  | Claude Opus 4.8 Thinking | Anthropic's most advanced model with thinking. | max       |
+| `"z-ai/glm-5.2"`                        | GLM 5.2                  | Z.ai's most advanced model.                    | pro       |
+| `"google/gemini-3.1-pro-thinking-low"`  | Gemini 3.1 Pro           | Google's latest model.                         | pro       |
+| `"google/gemini-3.1-pro-thinking-high"` | Gemini 3.1 Pro Thinking  | Google's latest model with thinking.           | pro       |
+| `"moonshot/kimi-k2.6-instant"`          | Kimi K2.6                | Moonshot AI's latest model.                    | pro       |
+| `"moonshot/kimi-k2.6-thinking"`         | Kimi K2.6 Thinking       | Moonshot AI's latest model with Thinking.      | pro       |
+| `"nvidia/nemotron-3-super-thinking"`    | Nemotron 3 Super         | NVIDIA's Nemotron 3 Super 120B model.          | pro       |
+| `"nvidia/nemotron-3-ultra-thinking"`    | Nemotron 3 Ultra         | NVIDIA's Nemotron 3 Ultra 550B model.          | pro       |
 
 Inspect models programmatically:
 

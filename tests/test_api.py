@@ -13,7 +13,7 @@ from perplexity_webui_scraper.core import Conversation
 # Constants
 TOKEN = "test-session-token"
 AUTH_HEADER = f"Bearer {TOKEN}"
-MODEL_ID = "gpt-5.4"
+MODEL_ID = "openai/gpt-5.6-terra"
 
 
 class _MockModelRegistry:
@@ -92,7 +92,7 @@ def test_model_access_error_returns_403(mock_get_or_create: MagicMock, client: T
     """Model tier failures should return an OpenAI-compatible 403 error."""
     mock_client_instance = MagicMock()
     mock_conv = _make_mock_conversation()
-    mock_conv.ask.side_effect = ModelAccessError("anthropic/claude-opus-4.7", "max", "pro")
+    mock_conv.ask.side_effect = ModelAccessError("anthropic/claude-opus-4.8", "max", "pro")
     mock_client_instance.create_conversation.return_value = mock_conv
     mock_get_or_create.return_value = mock_client_instance
 

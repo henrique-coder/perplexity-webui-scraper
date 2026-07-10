@@ -88,23 +88,25 @@ This is niche. Prefer `uvx` for normal MCP client setups.
 
 Each tool uses a specific AI model. Enable only the ones you need:
 
-| Tool                           | Model ID                               | Name                         | Description                              | Min. Tier |
-| ------------------------------ | -------------------------------------- | ---------------------------- | ---------------------------------------- | --------- |
-| `pplx_best`                    | `perplexity/best`                      | Best                         | Perplexity Best (Auto-select).           | free      |
-| `pplx_deep_research`           | `perplexity/deep-research`             | Deep research                | Perplexity Deep Research.                | pro       |
-| `pplx_sonar`                   | `perplexity/sonar-2`                   | Sonar 2                      | Perplexity Sonar 2.                      | pro       |
-| `pplx_gpt54`                   | `openai/gpt-5.4`                       | GPT-5.4                      | OpenAI GPT-5.4.                          | pro       |
-| `pplx_gpt54_thinking`          | `openai/gpt-5.4-thinking`              | GPT-5.4 Thinking             | OpenAI GPT-5.4 (Thinking).               | pro       |
-| `pplx_gpt55_thinking`          | `openai/gpt-5.5-thinking`              | GPT-5.5 Thinking             | OpenAI GPT-5.5 (Thinking).               | max       |
-| `pplx_glm52`                   | `z-ai/glm-5.2`                         | GLM 5.2                      | Z.ai's most advanced model.              | pro       |
-| `pplx_gemini31_pro_think_low`  | `google/gemini-3.1-pro-thinking-low`   | Gemini 3.1 Pro Thinking Low  | Google Gemini 3.1 Pro (Thinking Low).    | pro       |
-| `pplx_gemini31_pro_think_high` | `google/gemini-3.1-pro-thinking-high`  | Gemini 3.1 Pro Thinking High | Google Gemini 3.1 Pro (Thinking High).   | pro       |
-| `pplx_claude_s46`              | `anthropic/claude-sonnet-4.6`          | Claude Sonnet 4.6            | Anthropic Claude Sonnet 4.6.             | pro       |
-| `pplx_claude_s46_think`        | `anthropic/claude-sonnet-4.6-thinking` | Claude Sonnet 4.6 Thinking   | Anthropic Claude Sonnet 4.6 (Thinking).  | pro       |
-| `pplx_claude_o47`              | `anthropic/claude-opus-4.7`            | Claude Opus 4.7              | Anthropic Claude Opus 4.7.               | max       |
-| `pplx_claude_o47_think`        | `anthropic/claude-opus-4.7-thinking`   | Claude Opus 4.7 Thinking     | Anthropic Claude Opus 4.7 (Thinking).    | max       |
-| `pplx_kimi_k26_instant`        | `moonshot/kimi-k2.6-instant`           | Kimi K2.6 Instant            | Moonshot AI Kimi K2.6 Instant.           | pro       |
-| `pplx_kimi_k26_thinking`       | `moonshot/kimi-k2.6-thinking`          | Kimi K2.6 Thinking           | Moonshot AI Kimi K2.6 (Thinking).        | pro       |
-| `pplx_nemotron3_super_think`   | `nvidia/nemotron-3-super-thinking`     | Nemotron 3 Super Thinking    | NVIDIA Nemotron 3 Super 120B (Thinking). | pro       |
+| Tool                           | Model ID                              | Name                     | Description                                    | Min. Tier |
+| ------------------------------ | ------------------------------------- | ------------------------ | ---------------------------------------------- | --------- |
+| `pplx_best`                    | `perplexity/best`                     | Best                     | Adapts to each query.                          | free      |
+| `pplx_deep_research`           | `perplexity/deep-research`            | Deep research            | Fast and thorough for routine research.        | pro       |
+| `pplx_sonar`                   | `perplexity/sonar-2`                  | Sonar 2                  | Perplexity's latest in-house model.            | pro       |
+| `pplx_gpt56_terra`             | `openai/gpt-5.6-terra`                | GPT-5.6 Terra            | OpenAI's versatile model.                      | pro       |
+| `pplx_gpt56_terra_thinking`    | `openai/gpt-5.6-terra-thinking`       | GPT-5.6 Terra Thinking   | OpenAI's versatile model with thinking.        | pro       |
+| `pplx_gpt56_sol`               | `openai/gpt-5.6-sol`                  | GPT-5.6 Sol              | OpenAI's most powerful model.                  | max       |
+| `pplx_gpt56_sol_thinking`      | `openai/gpt-5.6-sol-thinking`         | GPT-5.6 Sol Thinking     | OpenAI's most powerful model with thinking.    | max       |
+| `pplx_claude_s50`              | `anthropic/claude-sonnet-5`           | Claude Sonnet 5          | Anthropic's fast model.                        | pro       |
+| `pplx_claude_s50_think`        | `anthropic/claude-sonnet-5-thinking`  | Claude Sonnet 5 Thinking | Anthropic's newest reasoning model.            | pro       |
+| `pplx_claude_o48`              | `anthropic/claude-opus-4.8`           | Claude Opus 4.8          | Anthropic's most advanced model.               | max       |
+| `pplx_claude_o48_think`        | `anthropic/claude-opus-4.8-thinking`  | Claude Opus 4.8 Thinking | Anthropic's most advanced model with thinking. | max       |
+| `pplx_glm52`                   | `z-ai/glm-5.2`                        | GLM 5.2                  | Z.ai's most advanced model.                    | pro       |
+| `pplx_gemini31_pro_think_low`  | `google/gemini-3.1-pro-thinking-low`  | Gemini 3.1 Pro           | Google's latest model.                         | pro       |
+| `pplx_gemini31_pro_think_high` | `google/gemini-3.1-pro-thinking-high` | Gemini 3.1 Pro Thinking  | Google's latest model with thinking.           | pro       |
+| `pplx_kimi_k26_instant`        | `moonshot/kimi-k2.6-instant`          | Kimi K2.6                | Moonshot AI's latest model.                    | pro       |
+| `pplx_kimi_k26_thinking`       | `moonshot/kimi-k2.6-thinking`         | Kimi K2.6 Thinking       | Moonshot AI's latest model with Thinking.      | pro       |
+| `pplx_nemotron3_super_think`   | `nvidia/nemotron-3-super-thinking`    | Nemotron 3 Super         | NVIDIA's Nemotron 3 Super 120B model.          | pro       |
+| `pplx_nemotron3_ultra_think`   | `nvidia/nemotron-3-ultra-thinking`    | Nemotron 3 Ultra         | NVIDIA's Nemotron 3 Ultra 550B model.          | pro       |
 
 **All tools support `source_focus`:** `web`, `academic`, `social`, `finance`, `all`

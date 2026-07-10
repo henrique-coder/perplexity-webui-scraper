@@ -90,7 +90,7 @@ client = Perplexity(session_token="YOUR_TOKEN")
 
 conversation = client.create_conversation(
     ConversationConfig(
-        model="gpt-5.4",
+        model="openai/gpt-5.6-terra",
         space_uuid="12345678-1234-1234-1234-123456789abc",  # your Space UUID
     )
 )

@@ -23,7 +23,7 @@ Python scraper to extract AI responses from [Perplexity's](https://www.perplexit
 This library lets you interact with Perplexity AI programmatically using the same web endpoints as the browser — no official API key required. It supports conversations, file uploads, streaming, an MCP server for AI agents, and a drop-in OpenAI-compatible REST API.
 
 - **Requirements:** A Perplexity account and your browser session token. Free accounts support text prompts; paid tiers are required for Pro/Max models and file uploads.
-- **Key Features:** 15 models (GPT-5.4, Claude Opus, Gemini, Deep Research…), file attachments (images, PDFs, …), streaming, MCP Server for AI agents, OpenAI-compatible REST API, multi-turn conversation thread continuation.
+- **Key Features:** 18 models (GPT-5.6 Terra, Claude Sonnet 5, Claude Opus, Gemini, Deep Research…), file attachments (images, PDFs, …), streaming, MCP Server for AI agents, OpenAI-compatible REST API, multi-turn conversation thread continuation.
 
 ## Community
 

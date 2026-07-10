@@ -24,12 +24,12 @@ from perplexity_webui_scraper.core import Conversation
 TOKEN = "test-session-token"
 AUTH_HEADER = f"Bearer {TOKEN}"
 THREAD_UUID = "test-thread-uuid-1234"
-MODEL_ID = "gpt-5.4"
+MODEL_ID = "openai/gpt-5.6-terra"
 
 
 # Model validation mock
 # The existing MODELS registry uses Pydantic iteration which yields
-# (field_name, Model) tuples, making ``"gpt-5.4" in MODELS`` always False.
+# (field_name, Model) tuples, making model ID membership checks always False.
 # We mock the ``resolve`` method and bypass the ``in`` check so tests can
 # focus on the thread continuation logic.
 

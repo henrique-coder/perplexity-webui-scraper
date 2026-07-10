@@ -133,12 +133,12 @@ def test_account_settings_detects_free_tier_and_default_model() -> None:
 
 def test_ensure_model_access_blocks_max_model_for_pro_session() -> None:
     session = AccountSession.model_validate(_session_payload("pro"))
-    model = MODELS.resolve("anthropic/claude-opus-4.7")
+    model = MODELS.resolve("anthropic/claude-opus-4.8")
 
     with raises(ModelAccessError) as exc_info:
         ensure_model_access(session, model)
 
-    assert exc_info.value.model_id == "anthropic/claude-opus-4.7"
+    assert exc_info.value.model_id == "anthropic/claude-opus-4.8"
     assert exc_info.value.required_tier == "max"
     assert exc_info.value.account_tier == "pro"
 
@@ -147,7 +147,7 @@ def test_conversation_checks_session_before_prompt_request() -> None:
     fake_http = _FakeHTTP(_session_payload("pro"))
     conversation = Conversation(
         cast("HTTPClient", fake_http),
-        ConversationConfig(model="anthropic/claude-opus-4.7"),
+        ConversationConfig(model="anthropic/claude-opus-4.8"),
     )
 
     with raises(ModelAccessError):

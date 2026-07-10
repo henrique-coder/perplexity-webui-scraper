@@ -36,6 +36,16 @@ def test_bundled_model_registry_is_valid() -> None:
     assert MODELS.resolve("perplexity/best").mode == "copilot"
     assert MODELS.resolve("perplexity/best").mode_by_tier["free"] == "copilot"
     assert MODELS.resolve("perplexity/best").mode_by_tier["pro"] == "copilot"
+    assert MODELS.resolve("openai/gpt-5.6-terra").identifier == "gpt56_terra"
+    assert MODELS.resolve("openai/gpt-5.6-terra").min_tier == "pro"
+    assert MODELS.resolve("openai/gpt-5.6-sol").identifier == "gpt56_sol"
+    assert MODELS.resolve("openai/gpt-5.6-sol").min_tier == "max"
+    assert MODELS.resolve("anthropic/claude-sonnet-5").identifier == "claude50sonnet"
+    assert MODELS.resolve("anthropic/claude-sonnet-5").min_tier == "pro"
+    assert MODELS.resolve("anthropic/claude-opus-4.8").identifier == "claude48opus"
+    assert MODELS.resolve("anthropic/claude-opus-4.8").min_tier == "max"
+    assert MODELS.resolve("nvidia/nemotron-3-ultra-thinking").identifier == "nv_nemotron_3_ultra"
+    assert MODELS.resolve("nvidia/nemotron-3-ultra-thinking").min_tier == "pro"
 
 
 def test_model_rejects_unknown_fields() -> None:
