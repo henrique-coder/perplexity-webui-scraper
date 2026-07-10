@@ -2,6 +2,6 @@
   "private": true,
   "devDependencies": {
     "@taplo/cli": "^0.7.0",
-    "prettier": "^3.9.4"
+    "prettier": "^3.9.5"
   }
 }
