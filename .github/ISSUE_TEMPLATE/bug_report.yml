@@ -41,7 +41,7 @@ body:
     id: python
     attributes:
       label: Python version
-      placeholder: "3.12.11, 3.13.x, or 3.14.x"
+      placeholder: "3.11.x, 3.12.x, 3.13.x, or 3.14.x"
     validations:
       required: true
   - type: input
