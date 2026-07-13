@@ -2,6 +2,11 @@
 
 <!-- Describe what changed and why. -->
 
+## Target Branch
+
+- Normal development targets `dev`.
+- Only a release promotion PR from `dev` may target `prod`.
+
 ## Type of Change
 
 - [ ] Bug fix
@@ -19,6 +24,9 @@
 - [ ] I removed secrets, tokens, cookies, private prompts, and local files from the diff.
 - [ ] I ran `just lint`.
 - [ ] I ran `just test`.
+- [ ] I ran `uv run --group docs mkdocs build --strict`.
+- [ ] I ran `uv build`.
+- [ ] This PR targets `dev`, or it is the release promotion from `dev` to `prod`.
 
 ## Notes
 

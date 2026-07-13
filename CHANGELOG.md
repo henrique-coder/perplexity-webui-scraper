@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Model safety controls:** Model selection now requires explicit opt-in before unstable, disabled, or custom internal identifiers can be used.
 - **Unified model interfaces:** Python, CLI, OpenAI-compatible API, and MCP now expose the same risk acknowledgements and catalog warnings.
 - **Historical model states:** The seven backend identifiers confirmed in issue #48 remain enabled but unstable; the other 45 unverified historical entries are retained as disabled pending compatibility testing.
+- **Development workflow:** Added a `dev` integration branch, PR-only production promotions, cross-platform CI, release-policy validation, and automated CodeQL/dependency review.
 
 ### Fixed
 

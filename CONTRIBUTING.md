@@ -41,6 +41,13 @@ Useful commands:
 
 ## Pull Request Checklist
 
+### Branch workflow
+
+- `dev` is the default integration branch. Create feature and fix branches from `dev`, and open normal pull requests back into `dev`.
+- `prod` contains only release-ready code. Do not push to it directly or target it from feature branches.
+- Promote a release with a same-repository pull request from `dev` to `prod` after version, changelog, tests, documentation, and package build are ready.
+- After a release promotion, continue new work from the updated `dev` branch.
+
 - Keep changes focused on one concern.
 - Add or update tests for behavior changes.
 - Update README, MkDocs pages, and `CHANGELOG.md` when user-facing behavior changes.

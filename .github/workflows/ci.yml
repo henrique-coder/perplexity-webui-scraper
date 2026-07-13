@@ -1,63 +1,192 @@
 name: CI
 
 on:
-  pull_request:
-    branches:
-      - prod
   push:
     branches:
+      - dev
       - prod
+  pull_request:
+    branches:
+      - dev
+      - prod
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  lint_and_test:
-    name: Code Quality & Tests
+  quality:
+    name: Quality & Documentation
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           version: "latest"
+          python-version: "3.14"
           enable-cache: true
           cache-dependency-glob: "uv.lock"
 
       - name: Install just
-        uses: extractions/setup-just@v4
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
         with:
           version: 11
           run_install: false
 
-      - name: Get pnpm store path
-        id: pnpm-store
-        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pnpm store
-        uses: actions/cache@v6
-        with:
-          path: ${{ steps.pnpm-store.outputs.path }}
-          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-${{ runner.os }}-
-
       - name: Install Dependencies
         run: |
-          uv sync --frozen --all-extras --group test --group lint
+          uv sync --frozen --all-extras --group lint --group docs
           pnpm install --frozen-lockfile --prefer-offline
 
-      - name: Run Linter & Formatter
-        run: |
-          just format
-          just lint
+      - name: Check Code Quality
+        run: just lint
 
-      - name: Run Tests (Pytest)
-        run: just test
+      - name: Build Documentation
+        run: uv run mkdocs build --strict
+
+  tests:
+    name: Tests (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python: "3.12"
+          - os: ubuntu-latest
+            python: "3.13"
+          - os: ubuntu-latest
+            python: "3.14"
+          - os: macos-latest
+            python: "3.14"
+          - os: windows-latest
+            python: "3.14"
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: "latest"
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install Dependencies
+        run: uv sync --frozen --all-extras --group test
+
+      - name: Run Test Suite
+        run: uv run pytest
+
+  build:
+    name: Build Distribution
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          version: "latest"
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Build Package
+        run: uv build
+
+      - name: Validate Package Metadata
+        run: uvx twine check dist/*
+
+  release_policy:
+    name: Release Policy
+    if: github.event_name == 'pull_request' && github.base_ref == 'prod'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Require dev to prod promotion
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REPOSITORY: ${{ github.repository }}
+        run: |
+          if [ "$HEAD_REF" != "dev" ] || [ "$HEAD_REPOSITORY" != "$BASE_REPOSITORY" ]; then
+            echo "::error::Production releases must be promoted through a same-repository dev -> prod pull request."
+            exit 1
+          fi
+
+      - name: Checkout Code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate Release Version
+        run: |
+          CHANGELOG_VERSION=$(grep -oP '(?<=^## \[)\d+\.\d+\.\d+(?=\])' CHANGELOG.md | head -n 1)
+          PROJECT_VERSION=$(grep -oP '(?<=^version = ")[^"]+' pyproject.toml | head -n 1)
+          LOCK_VERSION=$(awk '/name = "perplexity-webui-scraper"/{found=1; next} found && /^version = /{gsub(/[" ]/, "", $3); print $3; exit}' uv.lock)
+
+          if [ -z "$CHANGELOG_VERSION" ] || [ "$CHANGELOG_VERSION" != "$PROJECT_VERSION" ] || [ "$PROJECT_VERSION" != "$LOCK_VERSION" ]; then
+            echo "::error::CHANGELOG.md, pyproject.toml, and uv.lock must contain the same release version."
+            exit 1
+          fi
+
+          if git ls-remote --exit-code --tags origin "refs/tags/v$PROJECT_VERSION" >/dev/null; then
+            echo "::error::Release tag v$PROJECT_VERSION already exists. Bump the version before promoting to prod."
+            exit 1
+          fi
+
+  required:
+    name: Code Quality & Tests
+    if: always()
+    needs:
+      - quality
+      - tests
+      - build
+      - release_policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify required jobs
+        env:
+          QUALITY_RESULT: ${{ needs.quality.result }}
+          TESTS_RESULT: ${{ needs.tests.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          RELEASE_POLICY_RESULT: ${{ needs.release_policy.result }}
+        run: |
+          if [ "$QUALITY_RESULT" != "success" ] || [ "$TESTS_RESULT" != "success" ] || [ "$BUILD_RESULT" != "success" ]; then
+            echo "::error::One or more required CI jobs failed."
+            exit 1
+          fi
+
+          if [ "$RELEASE_POLICY_RESULT" != "success" ] && [ "$RELEASE_POLICY_RESULT" != "skipped" ]; then
+            echo "::error::The production release policy failed."
+            exit 1
+          fi
+
+          echo "All required checks passed."

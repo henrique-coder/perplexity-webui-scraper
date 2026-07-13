@@ -1,0 +1,51 @@
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pip
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:15"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 7
+    groups:
+      python-runtime:
+        dependency-type: production
+      python-development:
+        dependency-type: development
+
+  - package-ecosystem: npm
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:30"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 7
+    groups:
+      javascript-tooling:
+        patterns:
+          - "*"
