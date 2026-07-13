@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, TypeAlias, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
@@ -13,8 +13,10 @@ if TYPE_CHECKING:
     from perplexity_webui_scraper.models.types import Model, ModelTier
 
 
-type AccountTier = Literal["free", "pro", "max", "unknown"]
+AccountTier: TypeAlias = Literal["free", "pro", "max", "unknown"]
 """Normalized Perplexity account tier."""
+
+T = TypeVar("T")
 
 TIER_RANK: dict[str, int] = {
     "unknown": -1,
@@ -179,7 +181,7 @@ def model_for_account(model: Model, account_tier: AccountTier) -> Model:
     return model.model_copy(update={"identifier": identifier, "mode": mode})
 
 
-def _select_tier_value[T](values_by_tier: dict[ModelTier, T], account_tier: AccountTier) -> T | None:
+def _select_tier_value(values_by_tier: dict[ModelTier, T], account_tier: AccountTier) -> T | None:
     """Select the highest eligible tier-specific value."""
     account_rank = TIER_RANK.get(account_tier, -1)
     candidates = ((TIER_RANK[tier], value) for tier, value in values_by_tier.items() if TIER_RANK[tier] <= account_rank)

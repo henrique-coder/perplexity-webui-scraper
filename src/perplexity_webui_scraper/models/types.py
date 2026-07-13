@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
-type ModelTier = Literal["free", "pro", "max"]
+ModelTier: TypeAlias = Literal["free", "pro", "max"]
 """Minimum Perplexity subscription tier required by a model."""
 
-type ModelMode = Literal["copilot", "search", "research"]
+ModelMode: TypeAlias = Literal["copilot", "search", "research"]
 """Internal Perplexity request mode used for a model."""
 
 
