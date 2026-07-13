@@ -86,20 +86,31 @@ File attachments require a paid Perplexity account. Free accounts can still use 
 
 Useful options:
 
-| Option                       | Values                                        | Description                                        |
-| ---------------------------- | --------------------------------------------- | -------------------------------------------------- |
-| positional `model`           | any model ID                                  | Override the saved/default model                   |
-| `--search-focus`, `-sf`      | `web`, `writing`                              | Use web search or pure generation                  |
-| `--source-focus`, `-SF`      | `web`, `academic`, `social`, `finance`, `all` | Restrict source category                           |
-| `--time-range`, `-tr`        | `all`, `day`, `week`, `month`, `year`         | Restrict result recency                            |
-| `--citation-mode`, `-cm`     | `default`, `markdown`, `clean`                | Control citation formatting                        |
-| `--language`, `-l`           | BCP-47 tag                                    | Response language, for example `pt-BR`             |
-| `--timezone`, `-tz`          | IANA timezone                                 | Localization timezone                              |
-| `--latitude` / `--longitude` | floats                                        | Location-aware results; both are required together |
-| `--space`, `-s`              | UUID                                          | Save the conversation into a Perplexity Space      |
-| `--save` / `--no-save`       | boolean                                       | Save or avoid saving in the Perplexity library     |
-| `--copy`, `-cp`              | flag                                          | Copy the final answer to clipboard                 |
-| `--raw`, `-r`                | flag                                          | Disable Rich UI and print only the answer          |
+| Option                       | Values                                        | Description                                         |
+| ---------------------------- | --------------------------------------------- | --------------------------------------------------- |
+| positional `model`           | any model ID                                  | Override the saved/default model                    |
+| `--search-focus`, `-sf`      | `web`, `writing`                              | Use web search or pure generation                   |
+| `--source-focus`, `-SF`      | `web`, `academic`, `social`, `finance`, `all` | Restrict source category                            |
+| `--time-range`, `-tr`        | `all`, `day`, `week`, `month`, `year`         | Restrict result recency                             |
+| `--citation-mode`, `-cm`     | `default`, `markdown`, `clean`                | Control citation formatting                         |
+| `--language`, `-l`           | BCP-47 tag                                    | Response language, for example `pt-BR`              |
+| `--timezone`, `-tz`          | IANA timezone                                 | Localization timezone                               |
+| `--latitude` / `--longitude` | floats                                        | Location-aware results; both are required together  |
+| `--space`, `-s`              | UUID                                          | Save the conversation into a Perplexity Space       |
+| `--save` / `--no-save`       | boolean                                       | Save or avoid saving in the Perplexity library      |
+| `--copy`, `-cp`              | flag                                          | Copy the final answer to clipboard                  |
+| `--raw`, `-r`                | flag                                          | Disable Rich UI and print only the answer           |
+| `--allow-unstable-model`     | flag                                          | Acknowledge that an unstable model may stop working |
+| `--allow-disabled-model`     | flag                                          | Attempt a model recorded as disabled                |
+| `--custom-model-mode`        | `copilot`, `search`, `research`               | Backend mode for a `custom:<identifier>` model      |
+
+Custom identifiers are explicit and blocked by default:
+
+```bash
+perplexity-webui-scraper chat "Hello" custom:gpt57 \
+  --allow-unstable-model \
+  --custom-model-mode copilot
+```
 
 When `perplexity/best` fails in web-search mode with Perplexity's generic processing error, the CLI retries once using `writing` mode. You can choose that mode directly:
 

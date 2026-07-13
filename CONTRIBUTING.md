@@ -60,10 +60,12 @@ https://www.perplexity.ai/rest/models/config
 
 The WebUI network panel can also be used as a fallback to confirm `model_preference`, mode, provider, and tier behavior. Always redact cookies, session tokens, request headers, account IDs, and private prompt data before sharing evidence in an issue or pull request.
 
+The picker is only a subset of the backend registry: absence from the picker does not prove that a model identifier has stopped working. Never delete an existing `models.json` entry. Retain unverified entries as unstable, and mark an entry disabled only after its failure has been confirmed; disabled entries remain documented for compatibility and historical reference.
+
 Model changes should update:
 
 - `src/perplexity_webui_scraper/_static/models.json`
-- affected README or MkDocs model tables
+- generated README or MkDocs model tables (`just model-docs`)
 - tests that validate the model registry, when applicable
 - `CHANGELOG.md` if the change is user-facing
 
