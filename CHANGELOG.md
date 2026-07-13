@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-07-12
+
+### Added
+
+- **Historical model registry:** Added risk and availability metadata for stable, unstable, disabled, and custom Perplexity models while preserving model records instead of deleting them.
+- **Generated model catalog:** API and MCP documentation tables are now rendered from `models.json`, keeping runtime tools and documentation aligned with one source of truth.
+
+### Changed
+
+- **Model safety controls:** Model selection now requires explicit opt-in before unstable, disabled, or custom internal identifiers can be used.
+- **Unified model interfaces:** Python, CLI, OpenAI-compatible API, and MCP now expose the same risk acknowledgements and catalog warnings.
+- **Historical model states:** The seven backend identifiers confirmed in issue #48 remain enabled but unstable; the other 45 unverified historical entries are retained as disabled pending compatibility testing.
+
+### Fixed
+
+- **Model compatibility:** Restored public model IDs and MCP tool names removed in v1.1.2 even though their backend identifiers remain available.
+
 ## [1.1.2] - 2026-07-10
 
 ### Added
