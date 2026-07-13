@@ -23,6 +23,7 @@ example*.py
 # Build artifacts
 build/
 dist/
+site/
 *.build/
 *.dist/
 *.onefile-build/

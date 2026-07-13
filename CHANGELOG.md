@@ -5,9 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0).
 
-## [Unreleased]
+## [1.1.3] - Unreleased
 
-## [1.1.3] - 2026-07-12
+### Changed
+
+- **Python compatibility:** Restored support for Python 3.11; the supported runtime range is now 3.11 through 3.14. Python 3.15 remains unsupported until the MCP dependency chain supports it.
+- **Release workflow:** Release candidates are now validated explicitly from `prod`; public publication requires a second, deliberate `publish` dispatch and runs PyPI, container, documentation, tag, and GitHub Release in a recoverable order.
 
 ### Added
 

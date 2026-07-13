@@ -15,7 +15,7 @@ This project wraps private Perplexity WebUI endpoints. Changes should be conserv
 
 Requirements:
 
-- Python 3.12, 3.13, or 3.14
+- Python 3.11, 3.12, 3.13, or 3.14
 - `uv`
 - `pnpm`
 - `just`
@@ -47,6 +47,13 @@ Useful commands:
 - `prod` contains only release-ready code. Do not push to it directly or target it from feature branches.
 - Promote a release with a same-repository pull request from `dev` to `prod` after version, changelog, tests, documentation, and package build are ready.
 - After a release promotion, continue new work from the updated `dev` branch.
+
+### Release workflow
+
+1. Keep the target section in `CHANGELOG.md` as `## [X.Y.Z] - Unreleased` while developing.
+2. In the final `dev` to `prod` promotion PR, replace `Unreleased` with the UTC release date (`YYYY-MM-DD`).
+3. On `prod`, run **Publish Release** once in `validate` mode, review its build output, then rerun it with `publish` selected.
+4. The workflow publishes the Python package, API and MCP images, and documentation before creating the immutable tag and GitHub Release. It can safely resume after an interrupted PyPI publication.
 
 - Keep changes focused on one concern.
 - Add or update tests for behavior changes.

@@ -19,8 +19,56 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  quality:
-    name: Quality & Documentation
+  changes:
+    name: Classify Changed Files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      python: ${{ steps.classify.outputs.python }}
+      documentation: ${{ steps.classify.outputs.documentation }}
+      frontend: ${{ steps.classify.outputs.frontend }}
+      workflows: ${{ steps.classify.outputs.workflows }}
+      metadata: ${{ steps.classify.outputs.metadata }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Classify Changed Files
+        id: classify
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_BEFORE: ${{ github.event.before }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_REF: ${{ github.base_ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] || [ "$BASE_REF" = "prod" ]; then
+            python scripts/ci_changed_paths.py --all
+            exit 0
+          fi
+
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            python scripts/ci_changed_paths.py "$PR_BASE_SHA" "$PR_HEAD_SHA"
+            exit 0
+          fi
+
+          if [ "$EVENT_BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA=$(git merge-base "origin/$DEFAULT_BRANCH" "$HEAD_SHA" || git rev-parse "$HEAD_SHA^")
+          else
+            BASE_SHA="$EVENT_BEFORE"
+          fi
+          python scripts/ci_changed_paths.py "$BASE_SHA" "$HEAD_SHA"
+
+  python_quality:
+    name: Python Quality
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -41,6 +89,60 @@ jobs:
       - name: Install just
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
+      - name: Install Dependencies
+        run: uv sync --frozen --all-extras --group lint --group test
+
+      - name: Check Code Quality
+        run: |
+          uv run ruff check
+          uv run ty check
+          just model-docs-check
+
+  documentation:
+    name: Documentation
+    needs: changes
+    if: needs.changes.outputs.documentation == 'true' || needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8.3.0
+        with:
+          version: "latest"
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install Dependencies
+        run: uv sync --frozen --all-extras --group docs
+
+      - name: Build Documentation
+        run: uv run mkdocs build --strict
+
+  formatting:
+    name: Formatting & Configuration
+    needs: changes
+    if: >-
+      needs.changes.outputs.python == 'true' ||
+      needs.changes.outputs.documentation == 'true' ||
+      needs.changes.outputs.frontend == 'true' ||
+      needs.changes.outputs.workflows == 'true' ||
+      needs.changes.outputs.metadata == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+
       - name: Install pnpm
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
         with:
@@ -48,24 +150,49 @@ jobs:
           run_install: false
 
       - name: Install Dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Check Formatting
         run: |
-          uv sync --frozen --all-extras --group lint --group docs --group test
-          pnpm install --frozen-lockfile --prefer-offline
+          pnpm prettier --check .
+          pnpm taplo lint *.toml
 
-      - name: Check Code Quality
-        run: just lint
+  workflow_lint:
+    name: Workflow Security
+    needs: changes
+    if: needs.changes.outputs.workflows == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
 
-      - name: Build Documentation
-        run: uv run mkdocs build --strict
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8.3.0
+        with:
+          version: "latest"
+
+      - name: Install Workflow Linter
+        run: uv sync --frozen --group lint --no-install-project
+
+      - name: Scan Workflows
+        run: uv run zizmor .github/workflows
 
   tests:
     name: Tests (${{ matrix.os }}, Python ${{ matrix.python }})
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         include:
+          - os: ubuntu-latest
+            python: "3.11"
           - os: ubuntu-latest
             python: "3.12"
           - os: ubuntu-latest
@@ -99,6 +226,8 @@ jobs:
 
   build:
     name: Build Distribution
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -166,7 +295,11 @@ jobs:
     name: Code Quality & Tests
     if: always()
     needs:
-      - quality
+      - changes
+      - python_quality
+      - documentation
+      - formatting
+      - workflow_lint
       - tests
       - build
       - release_policy
@@ -174,12 +307,30 @@ jobs:
     steps:
       - name: Verify required jobs
         env:
-          QUALITY_RESULT: ${{ needs.quality.result }}
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          PYTHON_QUALITY_RESULT: ${{ needs.python_quality.result }}
+          DOCUMENTATION_RESULT: ${{ needs.documentation.result }}
+          FORMATTING_RESULT: ${{ needs.formatting.result }}
+          WORKFLOW_LINT_RESULT: ${{ needs.workflow_lint.result }}
           TESTS_RESULT: ${{ needs.tests.result }}
           BUILD_RESULT: ${{ needs.build.result }}
           RELEASE_POLICY_RESULT: ${{ needs.release_policy.result }}
         run: |
-          if [ "$QUALITY_RESULT" != "success" ] || [ "$TESTS_RESULT" != "success" ] || [ "$BUILD_RESULT" != "success" ]; then
+          for result in \
+            "$CHANGES_RESULT" \
+            "$PYTHON_QUALITY_RESULT" \
+            "$DOCUMENTATION_RESULT" \
+            "$FORMATTING_RESULT" \
+            "$WORKFLOW_LINT_RESULT" \
+            "$TESTS_RESULT" \
+            "$BUILD_RESULT"; do
+            if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
+              echo "::error::One or more required CI jobs failed."
+              exit 1
+            fi
+          done
+
+          if [ "$CHANGES_RESULT" != "success" ]; then
             echo "::error::One or more required CI jobs failed."
             exit 1
           fi

@@ -1,112 +1,116 @@
 name: Publish Release
 
 on:
-  push:
-    branches:
-      - prod
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to release. Empty = auto-detect from source."
-        required: false
+        description: "Exact semantic version to validate or publish (MAJOR.MINOR.PATCH)"
+        required: true
         type: string
-      skip_pypi:
-        description: "Skip PyPI publish"
-        required: false
-        default: true
-        type: boolean
-      skip_docker:
-        description: "Skip Docker publish"
-        required: false
-        default: true
-        type: boolean
-      skip_gh_releases:
-        description: "Skip GitHub Release creation"
-        required: false
-        default: true
-        type: boolean
+      mode:
+        description: "Validate only by default; choose publish only after reviewing the candidate."
+        required: true
+        default: validate
+        type: choice
+        options:
+          - validate
+          - publish
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ github.repository }}
   cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
-  check_version:
-    name: Check Version
+  validate:
+    name: Validate Release Candidate
     runs-on: ubuntu-latest
-
+    timeout-minutes: 10
     outputs:
-      version_changed: ${{ steps.check.outputs.version_changed }}
-      new_version: ${{ steps.check.outputs.new_version }}
-      release_tag: ${{ steps.check.outputs.release_tag }}
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      package_name: ${{ steps.version.outputs.package_name }}
+      publish: ${{ steps.version.outputs.publish }}
+      tag_exists: ${{ steps.version.outputs.tag_exists }}
 
     steps:
-      - name: Checkout Code
+      - name: Checkout Production Source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Check if Version Changed
-        id: check
+      - name: Validate Immutable Release Inputs
+        id: version
         env:
-          EVENT_NAME: ${{ github.event_name }}
           REQUESTED_VERSION: ${{ inputs.version }}
-          WORKFLOW_REF: ${{ github.ref }}
+          RELEASE_MODE: ${{ inputs.mode }}
         run: |
-          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$WORKFLOW_REF" != "refs/heads/prod" ]; then
-            echo "::error::Releases can only be dispatched from the prod branch."
+          if [ "$GITHUB_REF" != "refs/heads/prod" ]; then
+            echo "::error::Publish Release must be dispatched from the prod branch."
             exit 1
           fi
 
-          CURRENT_VERSION=$(grep -oP '(?<=^## \[)\d+\.\d+\.\d+(?=\])' CHANGELOG.md | head -n 1)
-          PROJECT_VERSION=$(grep -oP '(?<=^version = ")[^"]+' pyproject.toml | head -n 1)
+          if ! [[ "$REQUESTED_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version must use MAJOR.MINOR.PATCH format."
+            exit 1
+          fi
+
+          PROJECT_VERSION=$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
           LOCK_VERSION=$(awk '/name = "perplexity-webui-scraper"/{found=1; next} found && /^version = /{gsub(/[" ]/, "", $3); print $3; exit}' uv.lock)
+          CHANGELOG_HEADING=$(grep -F "## [$REQUESTED_VERSION] - " CHANGELOG.md | head -n 1)
 
-          if [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" != "$PROJECT_VERSION" ] || [ "$PROJECT_VERSION" != "$LOCK_VERSION" ]; then
-            echo "::error::Version mismatch between CHANGELOG.md, pyproject.toml, and uv.lock."
+          if [ "$REQUESTED_VERSION" != "$PROJECT_VERSION" ] || [ "$PROJECT_VERSION" != "$LOCK_VERSION" ]; then
+            echo "::error::Requested version, pyproject.toml, and uv.lock must match."
             exit 1
           fi
 
-          if [ -n "$REQUESTED_VERSION" ] && [ "$REQUESTED_VERSION" != "$PROJECT_VERSION" ]; then
-            echo "::error::The requested version must match the source version ($PROJECT_VERSION)."
+          if [ -z "$CHANGELOG_HEADING" ] || [[ "$CHANGELOG_HEADING" = *"Unreleased" ]]; then
+            echo "::error::CHANGELOG.md must contain a dated section for $REQUESTED_VERSION before publication."
             exit 1
           fi
 
-          echo "release_tag=v$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
-
-          # Manual dispatch auto-detected from source.
-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            echo "version_changed=true" >> "$GITHUB_OUTPUT"
-            echo "new_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
-            echo "📦 Manual dispatch — auto-detected version $CURRENT_VERSION"
-            exit 0
+          TAG="v$REQUESTED_VERSION"
+          TAG_EXISTS=false
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            git fetch origin "refs/tags/$TAG:refs/tags/$TAG"
+            if [ "$(git rev-list -n 1 "$TAG")" != "$GITHUB_SHA" ]; then
+              echo "::error::$TAG exists but does not point to the selected prod commit."
+              exit 1
+            fi
+            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "::error::Release $TAG already exists; releases are immutable."
+              exit 1
+            fi
+            TAG_EXISTS=true
+            echo "Resuming the interrupted release for $TAG."
           fi
 
-          if git ls-remote --exit-code --tags origin "refs/tags/v$CURRENT_VERSION" >/dev/null; then
-            echo "version_changed=false" >> "$GITHUB_OUTPUT"
-            echo "new_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
-            echo "⏭️ Version $CURRENT_VERSION already has a release tag. Skipping publish pipeline."
-            exit 0
-          fi
+          PACKAGE_NAME=$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["name"])')
+          echo "version=$PROJECT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$PROJECT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
+          echo "publish=$([ "$RELEASE_MODE" = "publish" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "tag_exists=$TAG_EXISTS" >> "$GITHUB_OUTPUT"
 
-          echo "version_changed=true" >> "$GITHUB_OUTPUT"
-          echo "new_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
-          echo "✅ Versions match ($CURRENT_VERSION) and release tag is missing. Triggering publish pipeline."
+      - name: Explain Validation Mode
+        if: inputs.mode == 'validate'
+        run: echo "Validation succeeded. Re-run this workflow with mode=publish to create public artifacts."
 
   build_package:
     name: Build Python Package
+    needs: validate
     runs-on: ubuntu-latest
-    needs: check_version
-    if: needs.check_version.outputs.version_changed == 'true'
+    timeout-minutes: 15
 
     steps:
-      - name: Checkout Code
+      - name: Checkout Production Source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Set up uv
@@ -116,8 +120,11 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
 
-      - name: Build Package
-        run: uv build
+      - name: Build and Validate Package
+        run: |
+          uv build
+          uvx twine check dist/*
+          sha256sum dist/* > dist/SHA256SUMS
 
       - name: Upload Package Artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -126,14 +133,51 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
-  publish_container:
-    name: Publish Docker Images
-    runs-on: ubuntu-latest
+  publish_pypi:
+    name: Publish PyPI
     needs:
-      - check_version
-      - publish_pypi
-    if: needs.check_version.outputs.version_changed == 'true' && needs.publish_pypi.result == 'success' && (github.event_name != 'workflow_dispatch' || (inputs.skip_docker != true && inputs.skip_docker != 'true'))
+      - validate
+      - build_package
+    if: needs.validate.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      id-token: write
 
+    environment: release
+
+    steps:
+      - name: Set up uv
+        uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8.3.0
+        with:
+          version: "latest"
+
+      - name: Download Package Artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: python-dist
+          path: dist
+
+      - name: Publish Idempotently to PyPI
+        env:
+          PACKAGE_NAME: ${{ needs.validate.outputs.package_name }}
+          VERSION: ${{ needs.validate.outputs.version }}
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          if curl --fail --silent --show-error "https://pypi.org/pypi/$PACKAGE_NAME/$VERSION/json" >/dev/null; then
+            echo "PyPI already contains $PACKAGE_NAME $VERSION; continuing a previously interrupted release."
+            exit 0
+          fi
+          uv publish dist/*.whl dist/*.tar.gz
+
+  publish_container:
+    name: Publish Container Images
+    needs:
+      - validate
+      - publish_pypi
+    if: needs.validate.outputs.publish == 'true' && needs.publish_pypi.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: read
       packages: write
@@ -141,9 +185,10 @@ jobs:
     environment: release
 
     steps:
-      - name: Checkout Code
+      - name: Checkout Production Source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Set up QEMU
@@ -159,133 +204,80 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Normalize image repository
-        id: repo
-        run: echo "image_repo=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+      - name: Normalize Image Repository
+        id: repository
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: echo "image=ghcr.io/${REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
-      - name: Docker Metadata (API)
-        id: meta_api
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
-        with:
-          images: ${{ steps.repo.outputs.image_repo }}
-          tags: |
-            type=raw,value=v${{ needs.check_version.outputs.new_version }}
-            type=raw,value=${{ needs.check_version.outputs.new_version }}
-            type=semver,pattern={{major}}.{{minor}},value=v${{ needs.check_version.outputs.new_version }}
-            type=semver,pattern={{major}},value=v${{ needs.check_version.outputs.new_version }}
-            type=raw,value=latest
-
-      - name: Build and Push Docker Image (API)
+      - name: Build and Push API Image
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: Containerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta_api.outputs.tags }}
-          labels: ${{ steps.meta_api.outputs.labels }}
+          tags: |
+            ${{ steps.repository.outputs.image }}:${{ needs.validate.outputs.version }}
+            ${{ steps.repository.outputs.image }}:v${{ needs.validate.outputs.version }}
+            ${{ steps.repository.outputs.image }}:latest
           cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
 
-      - name: Docker Metadata (MCP)
-        id: meta_mcp
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
-        with:
-          images: ${{ steps.repo.outputs.image_repo }}
-          tags: |
-            type=raw,value=mcp
-            type=raw,value=${{ needs.check_version.outputs.new_version }}-mcp
-            type=raw,value=v${{ needs.check_version.outputs.new_version }}-mcp
-
-      - name: Build and Push Docker Image (MCP)
+      - name: Build and Push MCP Image
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: Containerfile.mcp
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta_mcp.outputs.tags }}
-          labels: ${{ steps.meta_mcp.outputs.labels }}
+          tags: |
+            ${{ steps.repository.outputs.image }}:${{ needs.validate.outputs.version }}-mcp
+            ${{ steps.repository.outputs.image }}:v${{ needs.validate.outputs.version }}-mcp
+            ${{ steps.repository.outputs.image }}:mcp
           cache-from: type=gha,scope=mcp
           cache-to: type=gha,mode=max,scope=mcp
 
-  publish_pypi:
-    name: Publish PyPI
-    runs-on: ubuntu-latest
+  deploy_documentation:
+    name: Deploy Documentation
     needs:
-      - check_version
-      - build_package
-      - create_github_release
-    if: needs.check_version.outputs.version_changed == 'true' && needs.create_github_release.result == 'success' && (github.event_name != 'workflow_dispatch' || (inputs.skip_pypi != true && inputs.skip_pypi != 'true'))
-
+      - validate
+      - publish_pypi
+      - publish_container
+    if: needs.validate.outputs.publish == 'true' && needs.publish_pypi.result == 'success' && needs.publish_container.result == 'success'
+    uses: ./.github/workflows/docs.yml
     permissions:
+      contents: read
+      pages: write
       id-token: write
-
-    environment: release
-
-    steps:
-      - name: Set up uv
-        uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3 # v8.3.0
-        with:
-          version: "latest"
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-
-      - name: Download Package Artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: python-dist
-          path: dist
-
-      - name: Publish to PyPI
-        env:
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-        run: uv publish dist/*
 
   create_github_release:
     name: Create GitHub Release
-    runs-on: ubuntu-latest
     needs:
-      - check_version
+      - validate
       - build_package
-    if: needs.check_version.outputs.version_changed == 'true' && (github.event_name != 'workflow_dispatch' || (inputs.skip_gh_releases != true && inputs.skip_gh_releases != 'true'))
-
+      - publish_pypi
+      - publish_container
+      - deploy_documentation
+    if: >-
+      needs.validate.outputs.publish == 'true' &&
+      needs.publish_pypi.result == 'success' &&
+      needs.publish_container.result == 'success' &&
+      needs.deploy_documentation.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
 
     environment: release
 
     steps:
-      - name: Checkout Code
+      - name: Checkout Production Source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
-
-      - name: Ensure Release Tag
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ needs.check_version.outputs.release_tag }}
-        run: |
-          TAG="$RELEASE_TAG"
-
-          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::Invalid release tag: $TAG"
-            exit 1
-          fi
-
-          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
-            git fetch origin "refs/tags/$TAG:refs/tags/$TAG" --force
-            echo "Release tag $TAG already exists at $(git rev-list -n 1 "$TAG")"
-            exit 0
-          fi
-
-          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
-            -f ref="refs/tags/$TAG" \
-            -f sha="$GITHUB_SHA"
-          git fetch origin "refs/tags/$TAG:refs/tags/$TAG"
-          echo "Created release tag $TAG at $GITHUB_SHA"
 
       - name: Download Package Artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -293,19 +285,12 @@ jobs:
           name: python-dist
           path: dist
 
-      - name: Generate Release Notes
+      - name: Generate Release Notes from Changelog
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NEW_VERSION: ${{ needs.check_version.outputs.new_version }}
-          RELEASE_TAG: ${{ needs.check_version.outputs.release_tag }}
+          VERSION: ${{ needs.validate.outputs.version }}
           REPOSITORY: ${{ github.repository }}
-          SHOULD_INCLUDE_DOCKER: ${{ github.event_name != 'workflow_dispatch' || (inputs.skip_docker != true && inputs.skip_docker != 'true') }}
         run: |
-          VERSION="$RELEASE_TAG"
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 "${VERSION}^" 2>/dev/null || git rev-list --max-parents=0 HEAD)
-          IMAGE_REPO="ghcr.io/$(echo "$REPOSITORY" | tr '[:upper:]' '[:lower:]')"
-
-          awk -v heading="## [${VERSION#v}]" '
+          awk -v heading="## [$VERSION] - " '
             index($0, heading) == 1 { found=1; next }
             found && /^## \[/ { exit }
             found { print }
@@ -313,65 +298,38 @@ jobs:
           sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' release_notes.md
 
           if [ ! -s release_notes.md ]; then
-            echo "::error::No changelog section found for ${VERSION}"
+            echo "::error::No release notes found for $VERSION."
             exit 1
           fi
 
-          if [ "$SHOULD_INCLUDE_DOCKER" = "true" ]; then
-            echo "" >> release_notes.md
-            echo "### 🐳 Docker Images" >> release_notes.md
-            echo "" >> release_notes.md
-            echo "#### API" >> release_notes.md
-            echo "" >> release_notes.md
-            echo "\`\`\`bash" >> release_notes.md
-            echo "docker run --rm -p 8000:8000 $IMAGE_REPO:$NEW_VERSION" >> release_notes.md
-            echo "\`\`\`" >> release_notes.md
-            echo "" >> release_notes.md
-            echo "#### MCP" >> release_notes.md
-            echo "" >> release_notes.md
-            echo "\`\`\`bash" >> release_notes.md
-            echo "docker run --rm -e PERPLEXITY_SESSION_TOKEN=your_token $IMAGE_REPO:$NEW_VERSION-mcp" >> release_notes.md
-            echo "\`\`\`" >> release_notes.md
-          fi
+          IMAGE_REPOSITORY="ghcr.io/${REPOSITORY,,}"
+          {
+            echo
+            echo "### Docker images"
+            echo
+            echo '```bash'
+            echo "docker run --rm -p 8000:8000 $IMAGE_REPOSITORY:$VERSION"
+            echo '```'
+            echo
+            echo '```bash'
+            echo "docker run --rm -e PERPLEXITY_SESSION_TOKEN=your_token $IMAGE_REPOSITORY:$VERSION-mcp"
+            echo '```'
+          } >> release_notes.md
 
-          echo "" >> release_notes.md
-          echo "### 👥 Contributors" >> release_notes.md
-          echo "" >> release_notes.md
-
-          LOGINS=$(git log "$PREVIOUS_TAG".."$VERSION" --format='%H' | while read -r sha; do
-            gh api "repos/$REPOSITORY/commits/$sha" --jq '.author.login // .committer.login // empty'
-          done | sort -u | awk 'NF && $0 !~ /\[bot\]/')
-
-          if [ -n "$LOGINS" ]; then
-            AVATARS=""
-            for login in $LOGINS; do
-              AVATARS="$AVATARS<a href=\"https://github.com/$login\"><img src=\"https://wsrv.nl/?url=github.com/$login.png&w=40&h=40&mask=circle\" width=\"40\" height=\"40\" alt=\"@$login\" /></a>&nbsp;"
-            done
-            echo "$AVATARS" >> release_notes.md
-          else
-            echo "_No contributors found._" >> release_notes.md
-          fi
-
-          echo "" >> release_notes.md
-          echo "<br>" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "<details open>" >> release_notes.md
-          echo "<summary><b>📦 Commits History (${PREVIOUS_TAG} &rarr; ${VERSION})</b></summary>" >> release_notes.md
-          echo "" >> release_notes.md
-          git log --reverse --date=iso-strict --max-count=50 --format="- [\`%h\`](https://github.com/$REPOSITORY/commit/%H) - %ad - %s" "$PREVIOUS_TAG".."$VERSION" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "</details>" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "**Full Changelog**: https://github.com/$REPOSITORY/compare/$PREVIOUS_TAG...$VERSION" >> release_notes.md
-
-      - name: Create GitHub Release
+      - name: Create Immutable Tag and Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ needs.check_version.outputs.release_tag }}
+          RELEASE_TAG: ${{ needs.validate.outputs.tag }}
         run: |
+          if ! git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_TAG" >/dev/null; then
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f ref="refs/tags/$RELEASE_TAG" \
+              -f sha="$GITHUB_SHA"
+          fi
           gh release create "$RELEASE_TAG" \
             dist/*.whl \
             dist/*.tar.gz \
+            dist/SHA256SUMS \
             --repo "$GITHUB_REPOSITORY" \
             --title "$RELEASE_TAG" \
             --notes-file release_notes.md \
