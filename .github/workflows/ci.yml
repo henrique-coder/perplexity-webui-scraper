@@ -49,7 +49,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          uv sync --frozen --all-extras --group lint --group docs
+          uv sync --frozen --all-extras --group lint --group docs --group test
           pnpm install --frozen-lockfile --prefer-offline
 
       - name: Check Code Quality
