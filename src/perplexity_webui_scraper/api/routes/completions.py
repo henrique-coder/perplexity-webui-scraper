@@ -57,8 +57,16 @@ async def chat_completions(
     except Exception as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
+    token = extract_token(authorization)
+
     try:
-        MODELS.resolve(request.model)
+        ext = request.perplexity
+        MODELS.resolve_for_use(
+            request.model,
+            allow_unstable_model=ext.allow_unstable_model if ext else False,
+            allow_disabled_model=ext.allow_disabled_model if ext else False,
+            custom_model_mode=ext.custom_model_mode if ext else "copilot",
+        )
     except ValueError:
         available = ", ".join(f'"{m.id}"' for m in MODELS.list_all())
         raise HTTPException(
@@ -66,7 +74,6 @@ async def chat_completions(
             detail=f"Unknown model {request.model!r}. Available: {available}",
         ) from None
 
-    token = extract_token(authorization)
     client = _client_pool.get_or_create(token)
     thread_uuid = request.perplexity.thread_uuid if request.perplexity else None
 

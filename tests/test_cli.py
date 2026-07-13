@@ -107,6 +107,9 @@ def test_chat_subcommand_delegates_with_defaults() -> None:
         save=False,
         copy=False,
         raw=False,
+        allow_unstable_model=False,
+        allow_disabled_model=False,
+        custom_model_mode="copilot",
         token=None,
     )
 
@@ -133,6 +136,10 @@ def test_chat_subcommand_delegates_with_all_options() -> None:
                 "pt-BR",
                 "--copy",
                 "--raw",
+                "--allow-unstable-model",
+                "--allow-disabled-model",
+                "--custom-model-mode",
+                "search",
                 "-t",
                 "my-token",
             ],
@@ -155,6 +162,9 @@ def test_chat_subcommand_delegates_with_all_options() -> None:
         save=False,
         copy=True,
         raw=True,
+        allow_unstable_model=True,
+        allow_disabled_model=True,
+        custom_model_mode="search",
         token="my-token",
     )
 

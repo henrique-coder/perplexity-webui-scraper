@@ -86,6 +86,18 @@ def chat(
         bool,
         Option("--raw", "-r", help="Plain text output without Rich formatting."),
     ] = False,
+    allow_unstable_model: Annotated[
+        bool,
+        Option("--allow-unstable-model", help="Acknowledge that an unstable model may stop working."),
+    ] = False,
+    allow_disabled_model: Annotated[
+        bool,
+        Option("--allow-disabled-model", help="Attempt a model known to be disabled."),
+    ] = False,
+    custom_model_mode: Annotated[
+        str,
+        Option("--custom-model-mode", help="Backend mode for custom:<identifier> models."),
+    ] = "copilot",
     token: Annotated[
         str | None,
         Option("--token", "-t", help="Session token override (skips saved token)."),
@@ -121,6 +133,9 @@ def chat(
         save=save,
         copy=copy,
         raw=raw,
+        allow_unstable_model=allow_unstable_model,
+        allow_disabled_model=allow_disabled_model,
+        custom_model_mode=custom_model_mode,
         token=token,
     )
 

@@ -23,6 +23,16 @@ class ModelObject(BaseModel):
     object: Literal["model"] = "model"
     created: int = 0
     owned_by: str = "perplexity"
+    perplexity: ModelCatalogMetadata
+
+
+class ModelCatalogMetadata(BaseModel):
+    """Perplexity-specific availability metadata for a catalog model."""
+
+    min_tier: Literal["free", "pro", "max"] | None
+    unstable: bool
+    disabled: bool
+    warning: str | None
 
 
 class ModelList(BaseModel):
