@@ -10,16 +10,19 @@ from __future__ import annotations
 
 __all__: list[str] = [
     "AuthenticationError",
+    "DisabledModelError",
     "FileAccessError",
     "FileUploadError",
     "FileValidationError",
     "HTTPError",
     "ModelAccessError",
+    "ModelRiskWarning",
     "PerplexityError",
     "RateLimitError",
     "ResearchClarifyingQuestionsError",
     "ResponseParsingError",
     "StreamingError",
+    "UnstableModelError",
 ]
 
 
@@ -88,6 +91,32 @@ class ModelAccessError(PerplexityError):
         self.required_tier = required_tier
         self.account_tier = account_tier
         super().__init__(f"Model {model_id!r} requires a {required_tier} account, but this session is {account_tier}.")
+
+
+class UnstableModelError(PerplexityError):
+    """Raised when an unstable model is used without explicit acknowledgement."""
+
+    def __init__(self, model_id: str, warning: str) -> None:
+        self.model_id = model_id
+        self.warning = warning
+        super().__init__(
+            f"Model {model_id!r} is unstable. {warning} Set allow_unstable_model=True to acknowledge this risk."
+        )
+
+
+class DisabledModelError(PerplexityError):
+    """Raised when a disabled model is used without explicit acknowledgement."""
+
+    def __init__(self, model_id: str, warning: str) -> None:
+        self.model_id = model_id
+        self.warning = warning
+        super().__init__(
+            f"Model {model_id!r} is disabled. {warning} Set allow_disabled_model=True to attempt it anyway."
+        )
+
+
+class ModelRiskWarning(UserWarning):
+    """Warn that an explicitly allowed risky model may fail without notice."""
 
 
 class FileAccessError(PerplexityError):

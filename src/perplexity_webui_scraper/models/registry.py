@@ -3,10 +3,18 @@
 from __future__ import annotations
 
 from importlib.resources import files
+from re import fullmatch
+from warnings import warn
 
 from orjson import loads
 
-from perplexity_webui_scraper.models.types import Model
+from perplexity_webui_scraper._internal.exceptions import DisabledModelError, ModelRiskWarning, UnstableModelError
+from perplexity_webui_scraper.models.types import Model, ModelMode
+
+
+_CUSTOM_PREFIX = "custom:"
+_CUSTOM_IDENTIFIER_PATTERN = r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}"
+_CUSTOM_WARNING = "Custom internal identifiers are unverified and may change or stop working without notice."
 
 
 class ModelRegistry:
@@ -92,6 +100,49 @@ class ModelRegistry:
             List of all models loaded from ``models.json``.
         """
         return list(self._models.values())
+
+    def resolve_for_use(
+        self,
+        model_id: str,
+        *,
+        allow_unstable_model: bool = False,
+        allow_disabled_model: bool = False,
+        custom_model_mode: ModelMode = "copilot",
+    ) -> Model:
+        """Resolve a model and enforce explicit acknowledgement of risky states."""
+        if model_id.startswith(_CUSTOM_PREFIX):
+            identifier = model_id.removeprefix(_CUSTOM_PREFIX)
+            if not fullmatch(_CUSTOM_IDENTIFIER_PATTERN, identifier):
+                raise ValueError(
+                    "Custom model identifiers must contain 1-128 letters, digits, dots, colons, underscores, or hyphens"
+                )
+
+            model = Model(
+                id=model_id,
+                name=f"Custom model ({identifier})",
+                description="User-supplied Perplexity internal model identifier.",
+                identifier=identifier,
+                tool_name="pplx_custom",
+                provider="custom",
+                min_tier=None,
+                mode=custom_model_mode,
+                unstable=True,
+                disabled=False,
+                warning=_CUSTOM_WARNING,
+            )
+        else:
+            model = self.resolve(model_id)
+
+        if model.disabled and not allow_disabled_model:
+            raise DisabledModelError(model.id, model.warning or "This model is known to be unavailable.")
+
+        if model.unstable and not (allow_unstable_model or allow_disabled_model):
+            raise UnstableModelError(model.id, model.warning or "This model may be unavailable.")
+
+        if model.unstable or model.disabled:
+            warn(model.warning or "This model may be unavailable.", ModelRiskWarning, stacklevel=2)
+
+        return model
 
 
 #: Singleton registry.  Import and use this directly.

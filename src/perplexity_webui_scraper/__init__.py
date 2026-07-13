@@ -38,16 +38,19 @@ from importlib.metadata import version
 
 from perplexity_webui_scraper._internal.exceptions import (
     AuthenticationError,
+    DisabledModelError,
     FileAccessError,
     FileUploadError,
     FileValidationError,
     HTTPError,
     ModelAccessError,
+    ModelRiskWarning,
     PerplexityError,
     RateLimitError,
     ResearchClarifyingQuestionsError,
     ResponseParsingError,
     StreamingError,
+    UnstableModelError,
 )
 from perplexity_webui_scraper._internal.types import (
     CitationMode,
@@ -88,6 +91,7 @@ __all__: list[str] = [
     "Conversation",
     "ConversationConfig",
     "Coordinates",
+    "DisabledModelError",
     "FileAccessError",
     "FileInput",
     "FileUploadError",
@@ -96,6 +100,7 @@ __all__: list[str] = [
     "LogLevel",
     "Model",
     "ModelAccessError",
+    "ModelRiskWarning",
     "Perplexity",
     "PerplexityError",
     "RateLimitError",
@@ -107,4 +112,5 @@ __all__: list[str] = [
     "SourceFocus",
     "StreamingError",
     "TimeRange",
+    "UnstableModelError",
 ]

@@ -159,7 +159,10 @@ def normalize_account_tier(
 def ensure_model_access(session: AccountSession, model: Model) -> None:
     """Raise if *session* cannot access *model* based on its minimum tier."""
     account_tier = session.account_tier
-    required_tier: ModelTier = model.min_tier
+    required_tier: ModelTier | None = model.min_tier
+
+    if required_tier is None:
+        return
 
     if TIER_RANK.get(account_tier, -1) < TIER_RANK[required_tier]:
         raise ModelAccessError(model.id, required_tier, account_tier)

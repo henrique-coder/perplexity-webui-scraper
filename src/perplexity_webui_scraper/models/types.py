@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 type ModelTier = Literal["free", "pro", "max"]
@@ -25,10 +25,14 @@ class Model(BaseModel):
         identifier: Internal Perplexity model identifier sent in the API payload.
         identifier_by_tier: Optional identifier overrides selected by account tier.
         tool_name: MCP tool name used when registering this model as an MCP tool.
-        min_tier: Minimum Perplexity subscription required: ``"pro"`` or ``"max"``.
+        provider: Provider slug used for catalog grouping.
+        min_tier: Minimum Perplexity subscription, or ``None`` when unknown.
         mode: API request mode sent in the payload (e.g. ``"copilot"``,
             ``"search"``, ``"research"``).
         mode_by_tier: Optional mode overrides selected by account tier.
+        unstable: Whether use requires explicit risk acknowledgement.
+        disabled: Whether the model is known not to work and is retained for history.
+        warning: Human-readable availability warning.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -39,6 +43,21 @@ class Model(BaseModel):
     identifier: str
     identifier_by_tier: dict[ModelTier, str] = Field(default_factory=dict)
     tool_name: str
-    min_tier: ModelTier
+    provider: str
+    min_tier: ModelTier | None
     mode: ModelMode = "copilot"
     mode_by_tier: dict[ModelTier, ModelMode] = Field(default_factory=dict)
+    unstable: bool = False
+    disabled: bool = False
+    warning: str | None = None
+
+    @model_validator(mode="after")
+    def _validate_availability(self) -> Model:
+        """Ensure disabled and unstable metadata is internally consistent."""
+        if self.disabled and not self.unstable:
+            raise ValueError("disabled models must also be unstable")
+
+        if (self.unstable or self.disabled) and not self.warning:
+            raise ValueError("unstable and disabled models must include a warning")
+
+        return self

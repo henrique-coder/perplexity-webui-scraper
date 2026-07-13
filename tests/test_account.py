@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
-from pytest import raises
+from pytest import raises, warns
 
 from perplexity_webui_scraper._internal.constants import ENDPOINT_AUTH_SESSION, ENDPOINT_USER_SETTINGS
-from perplexity_webui_scraper._internal.exceptions import FileAccessError, ModelAccessError
+from perplexity_webui_scraper._internal.exceptions import FileAccessError, ModelAccessError, ModelRiskWarning
 from perplexity_webui_scraper.config.conversation import ConversationConfig
 from perplexity_webui_scraper.core.account import (
     AccountSession,
@@ -185,6 +185,25 @@ def test_best_model_uses_pro_upgraded_copilot_for_pro_account() -> None:
     assert fake_http.ask_payload is not None
     assert fake_http.ask_payload["params"]["model_preference"] == "pplx_pro_upgraded"
     assert fake_http.ask_payload["params"]["mode"] == "copilot"
+
+
+def test_custom_model_builds_payload_after_risk_acknowledgement() -> None:
+    fake_http = _FakeHTTP(_session_payload("pro"))
+    conversation = Conversation(
+        cast("HTTPClient", fake_http),
+        ConversationConfig(
+            model="custom:gpt57",
+            allow_unstable_model=True,
+            custom_model_mode="search",
+        ),
+    )
+
+    with warns(ModelRiskWarning):
+        conversation.ask("hello")
+
+    assert fake_http.ask_payload is not None
+    assert fake_http.ask_payload["params"]["model_preference"] == "gpt57"
+    assert fake_http.ask_payload["params"]["mode"] == "search"
 
 
 def test_unknown_session_tier_falls_back_to_user_settings() -> None:

@@ -11,6 +11,7 @@ from perplexity_webui_scraper._internal.types import (  # noqa: TC001
     SourceFocus,
     TimeRange,
 )
+from perplexity_webui_scraper.models.types import ModelMode  # noqa: TC001
 
 
 class ConversationConfig(BaseModel):
@@ -35,6 +36,9 @@ class ConversationConfig(BaseModel):
         coordinates: Geographic location constraints (latitude/longitude).
         save_to_library: If ``True``, saves the thread to your account history.
         space_uuid: UUID of a Perplexity Space (collection) to post into.
+        allow_unstable_model: Explicitly acknowledge an unstable model.
+        allow_disabled_model: Explicitly attempt a known-disabled model.
+        custom_model_mode: Backend mode for ``custom:<identifier>`` models.
     """
 
     model: str | None = None
@@ -47,3 +51,6 @@ class ConversationConfig(BaseModel):
     coordinates: Coordinates | None = None
     save_to_library: bool = False
     space_uuid: str | None = None
+    allow_unstable_model: bool = False
+    allow_disabled_model: bool = False
+    custom_model_mode: ModelMode = "copilot"

@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from perplexity_webui_scraper._internal.types import CitationMode, FileInput
     from perplexity_webui_scraper.config.conversation import ConversationConfig
     from perplexity_webui_scraper.http.client import HTTPClient
+    from perplexity_webui_scraper.models.types import ModelMode
 
 
 _DEFAULT_MODEL: str = "perplexity/best"
@@ -105,6 +106,9 @@ class Conversation:
         files: list[FileInput] | None = None,
         citation_mode: CitationMode | None = None,
         stream: bool = False,
+        allow_unstable_model: bool | None = None,
+        allow_disabled_model: bool | None = None,
+        custom_model_mode: ModelMode | None = None,
     ) -> Conversation:
         """Send a query and return ``self`` for chaining or streaming iteration.
 
@@ -117,12 +121,24 @@ class Conversation:
             files: Optional list of attachments.
             citation_mode: Per-query citation override.
             stream: If ``True``, sets up an internal generator for streaming.
+            allow_unstable_model: Per-query acknowledgement for unstable models.
+            allow_disabled_model: Per-query acknowledgement for disabled models.
+            custom_model_mode: Backend mode for a ``custom:<identifier>`` model.
 
         Returns:
             ``self`` to support method chaining or iteration.
         """
         model_id = model or self._config.model or _DEFAULT_MODEL
-        resolved_model = MODELS.resolve(model_id)
+        resolved_model = MODELS.resolve_for_use(
+            model_id,
+            allow_unstable_model=(
+                self._config.allow_unstable_model if allow_unstable_model is None else allow_unstable_model
+            ),
+            allow_disabled_model=(
+                self._config.allow_disabled_model if allow_disabled_model is None else allow_disabled_model
+            ),
+            custom_model_mode=custom_model_mode or self._config.custom_model_mode,
+        )
         resolved_model = self._validate_request_access(resolved_model, has_files=bool(files))
         self._citation_mode = citation_mode if citation_mode is not None else self._config.citation_mode
 
