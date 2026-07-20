@@ -98,11 +98,10 @@ def test_model_catalog_exposes_risk_metadata(client: TestClient) -> None:
     assert len(data) == 70
     unstable = next(item for item in data if item["id"] == "openai/gpt-5.4")
     assert unstable["owned_by"] == "openai"
-    assert unstable["perplexity"]["unstable"] is True
-    assert unstable["perplexity"]["disabled"] is False
+    assert unstable["perplexity"] == {"min_tier": "pro", "status": "unstable"}
 
 
-def test_unstable_model_api_requires_and_accepts_acknowledgement(client: TestClient) -> None:
+def test_risky_model_api_requires_and_accepts_acknowledgement(client: TestClient) -> None:
     with patch("perplexity_webui_scraper.api.routes.completions.MODELS", MODELS):
         denied = client.post(
             "/v1/chat/completions",
@@ -110,7 +109,7 @@ def test_unstable_model_api_requires_and_accepts_acknowledgement(client: TestCli
             headers={"Authorization": AUTH_HEADER},
         )
     assert denied.status_code == 400
-    assert denied.json()["error"]["code"] == "unstable_model_confirmation_required"
+    assert denied.json()["error"]["code"] == "model_status_confirmation_required"
 
     mock_client_instance = MagicMock()
     mock_client_instance.create_conversation.return_value = _make_mock_conversation()
@@ -127,7 +126,7 @@ def test_unstable_model_api_requires_and_accepts_acknowledgement(client: TestCli
             json={
                 "model": "openai/gpt-5.4",
                 "messages": [{"role": "user", "content": "Hello"}],
-                "perplexity": {"allow_unstable_model": True},
+                "perplexity": {"allow_risky_model": True},
             },
             headers={"Authorization": AUTH_HEADER},
         )

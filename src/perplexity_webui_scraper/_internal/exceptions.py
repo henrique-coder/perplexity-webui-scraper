@@ -10,19 +10,18 @@ from __future__ import annotations
 
 __all__: list[str] = [
     "AuthenticationError",
-    "DisabledModelError",
     "FileAccessError",
     "FileUploadError",
     "FileValidationError",
     "HTTPError",
     "ModelAccessError",
     "ModelRiskWarning",
+    "ModelStatusError",
     "PerplexityError",
     "RateLimitError",
     "ResearchClarifyingQuestionsError",
     "ResponseParsingError",
     "StreamingError",
-    "UnstableModelError",
 ]
 
 
@@ -93,25 +92,15 @@ class ModelAccessError(PerplexityError):
         super().__init__(f"Model {model_id!r} requires a {required_tier} account, but this session is {account_tier}.")
 
 
-class UnstableModelError(PerplexityError):
-    """Raised when an unstable model is used without explicit acknowledgement."""
+class ModelStatusError(PerplexityError):
+    """Raised when a non-available model is used without acknowledgement."""
 
-    def __init__(self, model_id: str, warning: str) -> None:
+    def __init__(self, model_id: str, status: str, explanation: str) -> None:
         self.model_id = model_id
-        self.warning = warning
+        self.status = status
         super().__init__(
-            f"Model {model_id!r} is unstable. {warning} Set allow_unstable_model=True to acknowledge this risk."
-        )
-
-
-class DisabledModelError(PerplexityError):
-    """Raised when a disabled model is used without explicit acknowledgement."""
-
-    def __init__(self, model_id: str, warning: str) -> None:
-        self.model_id = model_id
-        self.warning = warning
-        super().__init__(
-            f"Model {model_id!r} is disabled. {warning} Set allow_disabled_model=True to attempt it anyway."
+            f"Model {model_id!r} has status {status!r}. {explanation} "
+            "Set allow_risky_model=True to acknowledge this risk."
         )
 
 

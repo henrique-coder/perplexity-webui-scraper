@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Literal, TypeAlias
+from typing import Final, Literal, TypeAlias
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 
 ModelTier: TypeAlias = Literal["free", "pro", "max"]
@@ -12,6 +12,17 @@ ModelTier: TypeAlias = Literal["free", "pro", "max"]
 
 ModelMode: TypeAlias = Literal["copilot", "search", "research"]
 """Internal Perplexity request mode used for a model."""
+
+ModelStatus: TypeAlias = Literal["available", "unstable", "unknown", "unavailable"]
+"""Observed availability state of a model identifier."""
+
+MODEL_STATUS_DESCRIPTIONS: Final[dict[ModelStatus, str]] = {
+    "available": "Confirmed to work normally.",
+    "unstable": "Confirmed to work, but not guaranteed to remain available.",
+    "unknown": "Current availability has not been confirmed.",
+    "unavailable": "Confirmed not to work with the current backend.",
+}
+"""Canonical human-readable meaning of each model status."""
 
 
 class Model(BaseModel):
@@ -30,9 +41,8 @@ class Model(BaseModel):
         mode: API request mode sent in the payload (e.g. ``"copilot"``,
             ``"search"``, ``"research"``).
         mode_by_tier: Optional mode overrides selected by account tier.
-        unstable: Whether use requires explicit risk acknowledgement.
-        disabled: Whether the model is known not to work and is retained for history.
-        warning: Human-readable availability warning.
+        status: Observed availability state. Unknown models require explicit
+            risk acknowledgement and are the default for new entries.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -47,17 +57,4 @@ class Model(BaseModel):
     min_tier: ModelTier | None
     mode: ModelMode = "copilot"
     mode_by_tier: dict[ModelTier, ModelMode] = Field(default_factory=dict)
-    unstable: bool = False
-    disabled: bool = False
-    warning: str | None = None
-
-    @model_validator(mode="after")
-    def _validate_availability(self) -> Model:
-        """Ensure disabled and unstable metadata is internally consistent."""
-        if self.disabled and not self.unstable:
-            raise ValueError("disabled models must also be unstable")
-
-        if (self.unstable or self.disabled) and not self.warning:
-            raise ValueError("unstable and disabled models must include a warning")
-
-        return self
+    status: ModelStatus = "unknown"

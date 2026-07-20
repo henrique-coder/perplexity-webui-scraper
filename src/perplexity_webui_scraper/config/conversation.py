@@ -36,8 +36,7 @@ class ConversationConfig(BaseModel):
         coordinates: Geographic location constraints (latitude/longitude).
         save_to_library: If ``True``, saves the thread to your account history.
         space_uuid: UUID of a Perplexity Space (collection) to post into.
-        allow_unstable_model: Explicitly acknowledge an unstable model.
-        allow_disabled_model: Explicitly attempt a known-disabled model.
+        allow_risky_model: Explicitly acknowledge any non-available model status.
         custom_model_mode: Backend mode for ``custom:<identifier>`` models.
     """
 
@@ -51,6 +50,5 @@ class ConversationConfig(BaseModel):
     coordinates: Coordinates | None = None
     save_to_library: bool = False
     space_uuid: str | None = None
-    allow_unstable_model: bool = False
-    allow_disabled_model: bool = False
+    allow_risky_model: bool = False
     custom_model_mode: ModelMode = "copilot"

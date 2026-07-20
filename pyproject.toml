@@ -64,7 +64,6 @@ all = [
 [dependency-groups]
 dev = [
     "prek~=0.4.0",
-    "python-dotenv~=1.2.0",
 ]
 docs = [
     "mkdocs~=1.6.0",

@@ -73,13 +73,12 @@ conversation = client.create_conversation(ConversationConfig(model="perplexity/b
 | `files`         | `list[FileInput] \| None` | `None`                       | File attachments             |
 | `citation_mode` | `str \| None`             | `None`                       | Override conversation config |
 | `stream`        | `bool`                    | `False`                      | Yield chunks as they arrive  |
-| `allow_unstable_model` | `bool \| None` | `None` | Acknowledge unstable model risk |
-| `allow_disabled_model` | `bool \| None` | `None` | Attempt a disabled model |
+| `allow_risky_model` | `bool \| None` | `None` | Acknowledge any non-available model status |
 | `custom_model_mode` | `str \| None` | `None` | Mode for `custom:<identifier>` |
 
 Returns `self` (the `Conversation`) for method chaining or streaming iteration.
 
-Before every prompt request, the library performs a fast `/api/auth/session` check and blocks models that require a higher tier than the authenticated account. If the session response is incomplete, it falls back to `/rest/user/settings`. For example, a Pro account receives `ModelAccessError` before a Max-only model is sent to Perplexity. Free accounts receive `FileAccessError` before file uploads are attempted.
+Before every prompt request, the library performs a fast `/api/auth/session` check and blocks `available` models that require a higher tier than the authenticated account. If the session response is incomplete, it falls back to `/rest/user/settings`. For example, a Pro account receives `ModelAccessError` before an `available` Max-only model is sent to Perplexity. Acknowledged non-available models defer the final entitlement decision to Perplexity, avoiding false local denials caused by stale tier metadata. Free accounts receive `FileAccessError` before file uploads are attempted.
 
 `perplexity/best` adapts to the authenticated account: free accounts use Perplexity's internal `turbo` preference, while Pro/Max accounts use `pplx_pro_upgraded`; both use `copilot` mode.
 
@@ -102,109 +101,108 @@ ConversationConfig(model="perplexity/best")
 conversation.ask("...", model="google/gemini-3.1-pro-thinking-low")
 ```
 
-Unstable models are blocked unless the caller explicitly acknowledges the risk. Disabled models remain in the catalog for historical compatibility and require the stronger disabled-model opt-in:
+Every model has one status: `available`, `unstable`, `unknown`, or `unavailable`. Only `available` models can be selected without acknowledgement. Set `allow_risky_model=True` to explicitly try any other status; the backend then makes the final access decision. Custom identifiers default to `unknown`.
 
 ```python
 config = ConversationConfig(
     model="openai/gpt-5.4",
-    allow_unstable_model=True,
+    allow_risky_model=True,
 )
 conversation = client.create_conversation(config)
 
 custom = ConversationConfig(
     model="custom:gpt57",
-    allow_unstable_model=True,
+    allow_risky_model=True,
     custom_model_mode="copilot",
 )
 ```
 
-The OpenAI-compatible API exposes the same controls inside the `perplexity` request object: `allow_unstable_model`, `allow_disabled_model`, and `custom_model_mode`.
+The OpenAI-compatible API exposes the same controls inside the `perplexity` request object: `allow_risky_model` and `custom_model_mode`.
 
 <!-- BEGIN GENERATED MODEL CATALOG -->
-### Stable
+### Status reference
 
-| Model ID | Internal identifier | Provider | Min. tier | Warning |
+| Status | Meaning | Runtime behavior |
+| --- | --- | --- |
+| `available` | Confirmed to work normally. | Normal use; the local minimum-tier check applies. |
+| `unstable` | Confirmed to work, but not guaranteed to remain available. | Requires `allow_risky_model`; Perplexity makes the final access decision. |
+| `unknown` | Current availability has not been confirmed. | Requires `allow_risky_model`; this is the default for unverified entries. |
+| `unavailable` | Confirmed not to work with the current backend. | Requires `allow_risky_model`; retained for history and expected to fail. |
+
+### Model catalog
+
+| Model ID | Internal identifier | Provider | Min. tier | Status |
 | --- | --- | --- | --- | --- |
-| `perplexity/best` | `turbo` | perplexity | free | — |
-| `perplexity/deep-research` | `pplx_alpha` | perplexity | pro | — |
-| `perplexity/sonar-2` | `experimental` | perplexity | pro | — |
-| `openai/gpt-5.6-terra` | `gpt56_terra` | openai | pro | — |
-| `openai/gpt-5.6-terra-thinking` | `gpt56_terra_thinking` | openai | pro | — |
-| `openai/gpt-5.6-sol` | `gpt56_sol` | openai | max | — |
-| `openai/gpt-5.6-sol-thinking` | `gpt56_sol_thinking` | openai | max | — |
-| `anthropic/claude-sonnet-5` | `claude50sonnet` | anthropic | pro | — |
-| `anthropic/claude-sonnet-5-thinking` | `claude50sonnetthinking` | anthropic | pro | — |
-| `anthropic/claude-opus-4.8` | `claude48opus` | anthropic | max | — |
-| `anthropic/claude-opus-4.8-thinking` | `claude48opusthinking` | anthropic | max | — |
-| `z-ai/glm-5.2` | `glm_5_2` | z-ai | pro | — |
-| `google/gemini-3.1-pro-thinking-low` | `gemini31pro_low` | google | pro | — |
-| `google/gemini-3.1-pro-thinking-high` | `gemini31pro_high` | google | pro | — |
-| `moonshot/kimi-k2.6-instant` | `kimik26instant` | moonshot | pro | — |
-| `moonshot/kimi-k2.6-thinking` | `kimik26thinking` | moonshot | pro | — |
-| `nvidia/nemotron-3-super-thinking` | `nv_nemotron_3_super` | nvidia | pro | — |
-| `nvidia/nemotron-3-ultra-thinking` | `nv_nemotron_3_ultra` | nvidia | pro | — |
-
-### Unstable
-
-| Model ID | Internal identifier | Provider | Min. tier | Warning |
-| --- | --- | --- | --- | --- |
-| `openai/gpt-5.4` | `gpt54` | openai | pro | Unverified model from Perplexity's config endpoint; availability and behavior may change or stop without notice. |
-| `openai/gpt-5.4-thinking` | `gpt54_thinking` | openai | pro | Unverified model from Perplexity's config endpoint; availability and behavior may change or stop without notice. |
-| `openai/gpt-5.5-thinking` | `gpt55_thinking` | openai | max | Unverified model from Perplexity's config endpoint; availability and behavior may change or stop without notice. |
-| `anthropic/claude-opus-4.7` | `claude47opus` | anthropic | max | Unverified model from Perplexity's config endpoint; availability and behavior may change or stop without notice. |
-| `anthropic/claude-opus-4.7-thinking` | `claude47opusthinking` | anthropic | max | Unverified model from Perplexity's config endpoint; availability and behavior may change or stop without notice. |
-| `anthropic/claude-sonnet-4.6` | `claude46sonnet` | anthropic | pro | Unverified model from Perplexity's config endpoint; availability and behavior may change or stop without notice. |
-| `anthropic/claude-sonnet-4.6-thinking` | `claude46sonnetthinking` | anthropic | pro | Unverified model from Perplexity's config endpoint; availability and behavior may change or stop without notice. |
-
-### Disabled
-
-| Model ID | Internal identifier | Provider | Min. tier | Warning |
-| --- | --- | --- | --- | --- |
-| `openai/gpt4o` | `gpt4o` | openai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `openai/gpt41` | `gpt41` | openai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `openai/gpt5` | `gpt5` | openai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `openai/gpt5-thinking` | `gpt5_thinking` | openai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `openai/gpt51` | `gpt51` | openai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `openai/gpt51-thinking` | `gpt51_thinking` | openai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `openai/gpt51-low-thinking` | `gpt51_low_thinking` | openai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `openai/gpt5-mini` | `gpt5_mini` | openai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `openai/gpt5-nano` | `gpt5_nano` | openai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `openai/gpt5-pro` | `gpt5_pro` | openai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `openai/gpt52` | `gpt52` | openai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `openai/gpt52-thinking` | `gpt52_thinking` | openai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `openai/gpt52-pro` | `gpt52_pro` | openai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `openai/gpt55` | `gpt55` | openai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `anthropic/claude2` | `claude2` | anthropic | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `anthropic/claude37sonnetthinking` | `claude37sonnetthinking` | anthropic | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `anthropic/claude40sonnetthinking` | `claude40sonnetthinking` | anthropic | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `google/gemini25pro` | `gemini25pro` | google | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `google/gemini30pro` | `gemini30pro` | google | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `google/gemini30flash` | `gemini30flash` | google | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `google/gemini30flash-high` | `gemini30flash_high` | google | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `google/gemini35flash` | `gemini35flash` | google | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `google/gemini35flash-medium` | `gemini35flash_medium` | google | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `google/gemini35flash-high` | `gemini35flash_high` | google | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `x-ai/grok` | `grok` | x-ai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `anthropic/claude40opus` | `claude40opus` | anthropic | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `anthropic/claude40opusthinking` | `claude40opusthinking` | anthropic | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `anthropic/claude41opus` | `claude41opus` | anthropic | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `anthropic/claude41opusthinking` | `claude41opusthinking` | anthropic | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `anthropic/claude45opus` | `claude45opus` | anthropic | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `anthropic/claude45opusthinking` | `claude45opusthinking` | anthropic | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `anthropic/claude46opus` | `claude46opus` | anthropic | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `anthropic/claude46opusthinking` | `claude46opusthinking` | anthropic | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `anthropic/claude45sonnet` | `claude45sonnet` | anthropic | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `anthropic/claude45sonnetthinking` | `claude45sonnetthinking` | anthropic | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `anthropic/claude45haiku` | `claude45haiku` | anthropic | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `anthropic/claude45haikuthinking` | `claude45haikuthinking` | anthropic | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `moonshot/kimik2thinking` | `kimik2thinking` | moonshot | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `moonshot/kimik25thinking` | `kimik25thinking` | moonshot | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `x-ai/grok4` | `grok4` | x-ai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `x-ai/grok4nonthinking` | `grok4nonthinking` | x-ai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `x-ai/grok41reasoning` | `grok41reasoning` | x-ai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `x-ai/grok41nonreasoning` | `grok41nonreasoning` | x-ai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `openai/o4mini` | `o4mini` | openai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
-| `openai/o3pro` | `o3pro` | openai | unknown | Disabled pending compatibility testing; the backend identifier is retained for historical reference and may fail even with explicit override. |
+| `perplexity/best` | `turbo` | perplexity | free | `available` |
+| `perplexity/deep-research` | `pplx_alpha` | perplexity | pro | `available` |
+| `perplexity/sonar-2` | `experimental` | perplexity | pro | `available` |
+| `openai/gpt-5.6-terra` | `gpt56_terra` | openai | pro | `available` |
+| `openai/gpt-5.6-terra-thinking` | `gpt56_terra_thinking` | openai | pro | `available` |
+| `openai/gpt-5.6-sol` | `gpt56_sol` | openai | max | `available` |
+| `openai/gpt-5.6-sol-thinking` | `gpt56_sol_thinking` | openai | max | `available` |
+| `anthropic/claude-sonnet-5` | `claude50sonnet` | anthropic | pro | `available` |
+| `anthropic/claude-sonnet-5-thinking` | `claude50sonnetthinking` | anthropic | pro | `available` |
+| `anthropic/claude-opus-4.8` | `claude48opus` | anthropic | max | `available` |
+| `anthropic/claude-opus-4.8-thinking` | `claude48opusthinking` | anthropic | max | `available` |
+| `z-ai/glm-5.2` | `glm_5_2` | z-ai | pro | `available` |
+| `google/gemini-3.1-pro-thinking-low` | `gemini31pro_low` | google | pro | `available` |
+| `google/gemini-3.1-pro-thinking-high` | `gemini31pro_high` | google | pro | `available` |
+| `moonshot/kimi-k2.6-instant` | `kimik26instant` | moonshot | pro | `available` |
+| `moonshot/kimi-k2.6-thinking` | `kimik26thinking` | moonshot | pro | `available` |
+| `nvidia/nemotron-3-super-thinking` | `nv_nemotron_3_super` | nvidia | pro | `available` |
+| `nvidia/nemotron-3-ultra-thinking` | `nv_nemotron_3_ultra` | nvidia | pro | `available` |
+| `openai/gpt-5.4` | `gpt54` | openai | pro | `unstable` |
+| `openai/gpt-5.4-thinking` | `gpt54_thinking` | openai | pro | `unstable` |
+| `openai/gpt-5.5-thinking` | `gpt55_thinking` | openai | max | `unstable` |
+| `anthropic/claude-opus-4.7` | `claude47opus` | anthropic | max | `unstable` |
+| `anthropic/claude-opus-4.7-thinking` | `claude47opusthinking` | anthropic | max | `unstable` |
+| `anthropic/claude-sonnet-4.6` | `claude46sonnet` | anthropic | pro | `unstable` |
+| `anthropic/claude-sonnet-4.6-thinking` | `claude46sonnetthinking` | anthropic | pro | `unstable` |
+| `openai/gpt4o` | `gpt4o` | openai | unknown | `unknown` |
+| `openai/gpt41` | `gpt41` | openai | unknown | `unknown` |
+| `openai/gpt5` | `gpt5` | openai | unknown | `unknown` |
+| `openai/gpt5-thinking` | `gpt5_thinking` | openai | unknown | `unknown` |
+| `openai/gpt51` | `gpt51` | openai | unknown | `unknown` |
+| `openai/gpt51-thinking` | `gpt51_thinking` | openai | unknown | `unknown` |
+| `openai/gpt51-low-thinking` | `gpt51_low_thinking` | openai | unknown | `unknown` |
+| `openai/gpt5-mini` | `gpt5_mini` | openai | unknown | `unknown` |
+| `openai/gpt5-nano` | `gpt5_nano` | openai | unknown | `unknown` |
+| `openai/gpt5-pro` | `gpt5_pro` | openai | unknown | `unknown` |
+| `openai/gpt52` | `gpt52` | openai | unknown | `unknown` |
+| `openai/gpt52-thinking` | `gpt52_thinking` | openai | unknown | `unknown` |
+| `openai/gpt52-pro` | `gpt52_pro` | openai | unknown | `unknown` |
+| `openai/gpt55` | `gpt55` | openai | unknown | `unknown` |
+| `anthropic/claude2` | `claude2` | anthropic | unknown | `unknown` |
+| `anthropic/claude37sonnetthinking` | `claude37sonnetthinking` | anthropic | unknown | `unknown` |
+| `anthropic/claude40sonnetthinking` | `claude40sonnetthinking` | anthropic | unknown | `unknown` |
+| `google/gemini25pro` | `gemini25pro` | google | unknown | `unknown` |
+| `google/gemini30pro` | `gemini30pro` | google | unknown | `unknown` |
+| `google/gemini30flash` | `gemini30flash` | google | unknown | `unknown` |
+| `google/gemini30flash-high` | `gemini30flash_high` | google | unknown | `unknown` |
+| `google/gemini35flash` | `gemini35flash` | google | unknown | `unknown` |
+| `google/gemini35flash-medium` | `gemini35flash_medium` | google | unknown | `unknown` |
+| `google/gemini35flash-high` | `gemini35flash_high` | google | unknown | `unknown` |
+| `x-ai/grok` | `grok` | x-ai | unknown | `unknown` |
+| `anthropic/claude40opus` | `claude40opus` | anthropic | unknown | `unknown` |
+| `anthropic/claude40opusthinking` | `claude40opusthinking` | anthropic | unknown | `unknown` |
+| `anthropic/claude41opus` | `claude41opus` | anthropic | unknown | `unknown` |
+| `anthropic/claude41opusthinking` | `claude41opusthinking` | anthropic | unknown | `unknown` |
+| `anthropic/claude45opus` | `claude45opus` | anthropic | unknown | `unknown` |
+| `anthropic/claude45opusthinking` | `claude45opusthinking` | anthropic | unknown | `unknown` |
+| `anthropic/claude46opus` | `claude46opus` | anthropic | unknown | `unknown` |
+| `anthropic/claude46opusthinking` | `claude46opusthinking` | anthropic | unknown | `unknown` |
+| `anthropic/claude45sonnet` | `claude45sonnet` | anthropic | unknown | `unknown` |
+| `anthropic/claude45sonnetthinking` | `claude45sonnetthinking` | anthropic | unknown | `unknown` |
+| `anthropic/claude45haiku` | `claude45haiku` | anthropic | unknown | `unknown` |
+| `anthropic/claude45haikuthinking` | `claude45haikuthinking` | anthropic | unknown | `unknown` |
+| `moonshot/kimik2thinking` | `kimik2thinking` | moonshot | unknown | `unknown` |
+| `moonshot/kimik25thinking` | `kimik25thinking` | moonshot | unknown | `unknown` |
+| `x-ai/grok4` | `grok4` | x-ai | unknown | `unknown` |
+| `x-ai/grok4nonthinking` | `grok4nonthinking` | x-ai | unknown | `unknown` |
+| `x-ai/grok41reasoning` | `grok41reasoning` | x-ai | unknown | `unknown` |
+| `x-ai/grok41nonreasoning` | `grok41nonreasoning` | x-ai | unknown | `unknown` |
+| `openai/o4mini` | `o4mini` | openai | unknown | `unknown` |
+| `openai/o3pro` | `o3pro` | openai | unknown | `unknown` |
 
 <!-- END GENERATED MODEL CATALOG -->
 
@@ -253,8 +251,7 @@ config = ConversationConfig(citation_mode="markdown")
 | `timezone`        | `str \| None`                                    | `None`                       | IANA timezone (e.g. `"America/Sao_Paulo"`)         |
 | `coordinates`     | `Coordinates \| None`                            | `None`                       | Geographic location (lat/lng)                      |
 | `space_uuid`      | `str \| None`                                    | `None`                       | UUID of the Perplexity Space to post the thread to |
-| `allow_unstable_model` | `bool` | `False` | Acknowledge unstable model risk |
-| `allow_disabled_model` | `bool` | `False` | Attempt a disabled model |
+| `allow_risky_model` | `bool` | `False` | Acknowledge any non-available model status |
 | `custom_model_mode` | `Literal["copilot", "search", "research"]` | `"copilot"` | Mode for `custom:<identifier>` |
 
 > **How to obtain `space_uuid`:** The URL slug (e.g. `questions-abcdef123456`) is **not** the UUID. Use one of these methods:

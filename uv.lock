@@ -1275,7 +1275,6 @@ mcp = [
 [package.dev-dependencies]
 dev = [
     { name = "prek" },
-    { name = "python-dotenv" },
 ]
 docs = [
     { name = "mkdocs" },
@@ -1311,10 +1310,7 @@ requires-dist = [
 provides-extras = ["cli", "api", "mcp", "all"]
 
 [package.metadata.requires-dev]
-dev = [
-    { name = "prek", specifier = "~=0.4.0" },
-    { name = "python-dotenv", specifier = "~=1.2.0" },
-]
+dev = [{ name = "prek", specifier = "~=0.4.0" }]
 docs = [
     { name = "mkdocs", specifier = "~=1.6.0" },
     { name = "mkdocs-material", specifier = "~=9.7.0" },

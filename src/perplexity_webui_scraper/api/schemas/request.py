@@ -144,8 +144,7 @@ class PerplexityExtensions(BaseModel):
             returns plain text; ``"json_object"`` adds a JSON-output instruction
             to the system prompt.  Note: Perplexity has no native structured
             output support — this is a best-effort prompt injection.
-        allow_unstable_model: Explicitly acknowledge unstable model risk.
-        allow_disabled_model: Explicitly attempt a known-disabled model.
+        allow_risky_model: Explicitly acknowledge any non-available model status.
         custom_model_mode: Backend mode used with ``model="custom:<identifier>"``.
     """
 
@@ -166,8 +165,7 @@ class PerplexityExtensions(BaseModel):
     space_uuid: str | None = None
     thread_uuid: str | None = None
     response_format: Literal["text", "json_object"] = "text"
-    allow_unstable_model: bool = False
-    allow_disabled_model: bool = False
+    allow_risky_model: bool = False
     custom_model_mode: Literal["copilot", "search", "research"] = "copilot"
 
     @model_validator(mode="before")

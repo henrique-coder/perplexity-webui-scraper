@@ -86,13 +86,9 @@ def chat(
         bool,
         Option("--raw", "-r", help="Plain text output without Rich formatting."),
     ] = False,
-    allow_unstable_model: Annotated[
+    allow_risky_model: Annotated[
         bool,
-        Option("--allow-unstable-model", help="Acknowledge that an unstable model may stop working."),
-    ] = False,
-    allow_disabled_model: Annotated[
-        bool,
-        Option("--allow-disabled-model", help="Attempt a model known to be disabled."),
+        Option("--allow-risky-model", help="Acknowledge a model whose status is not available."),
     ] = False,
     custom_model_mode: Annotated[
         str,
@@ -133,8 +129,7 @@ def chat(
         save=save,
         copy=copy,
         raw=raw,
-        allow_unstable_model=allow_unstable_model,
-        allow_disabled_model=allow_disabled_model,
+        allow_risky_model=allow_risky_model,
         custom_model_mode=custom_model_mode,
         token=token,
     )

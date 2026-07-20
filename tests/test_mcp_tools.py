@@ -27,14 +27,13 @@ class _FakeMCP:
         return decorator
 
 
-def test_mcp_registers_catalog_and_custom_tools_with_warnings() -> None:
+def test_mcp_registers_catalog_and_custom_tools_with_statuses() -> None:
     mcp = _FakeMCP()
     register_all_tools(mcp, _unused_client)
 
     assert len(mcp.tools) == 71
     by_name = {name: description for name, description, _function in mcp.tools}
-    assert by_name["pplx_best"].startswith("[STABLE]")
+    assert by_name["pplx_best"].startswith("[AVAILABLE]")
     assert by_name["pplx_gpt54"].startswith("[UNSTABLE]")
-    assert "may change or stop" in by_name["pplx_gpt54"]
-    assert by_name["pplx_gpt4o"].startswith("[DISABLED]")
-    assert by_name["pplx_custom"].startswith("[UNSTABLE]")
+    assert by_name["pplx_gpt4o"].startswith("[UNKNOWN]")
+    assert by_name["pplx_custom"].startswith("[UNKNOWN]")

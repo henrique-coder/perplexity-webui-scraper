@@ -106,8 +106,7 @@ class Conversation:
         files: list[FileInput] | None = None,
         citation_mode: CitationMode | None = None,
         stream: bool = False,
-        allow_unstable_model: bool | None = None,
-        allow_disabled_model: bool | None = None,
+        allow_risky_model: bool | None = None,
         custom_model_mode: ModelMode | None = None,
     ) -> Conversation:
         """Send a query and return ``self`` for chaining or streaming iteration.
@@ -121,8 +120,8 @@ class Conversation:
             files: Optional list of attachments.
             citation_mode: Per-query citation override.
             stream: If ``True``, sets up an internal generator for streaming.
-            allow_unstable_model: Per-query acknowledgement for unstable models.
-            allow_disabled_model: Per-query acknowledgement for disabled models.
+            allow_risky_model: Per-query acknowledgement for a model whose
+                status is not ``"available"``.
             custom_model_mode: Backend mode for a ``custom:<identifier>`` model.
 
         Returns:
@@ -131,12 +130,7 @@ class Conversation:
         model_id = model or self._config.model or _DEFAULT_MODEL
         resolved_model = MODELS.resolve_for_use(
             model_id,
-            allow_unstable_model=(
-                self._config.allow_unstable_model if allow_unstable_model is None else allow_unstable_model
-            ),
-            allow_disabled_model=(
-                self._config.allow_disabled_model if allow_disabled_model is None else allow_disabled_model
-            ),
+            allow_risky_model=(self._config.allow_risky_model if allow_risky_model is None else allow_risky_model),
             custom_model_mode=custom_model_mode or self._config.custom_model_mode,
         )
         resolved_model = self._validate_request_access(resolved_model, has_files=bool(files))
@@ -210,7 +204,8 @@ class Conversation:
         profile = AccountProfile(session=session, settings=settings)
         account_tier = profile.account_tier
         effective_session = AccountSession.model_validate({"user": {"subscription_tier": account_tier}})
-        ensure_model_access(effective_session, model)
+        if model.status == "available":
+            ensure_model_access(effective_session, model)
         ensure_file_access(account_tier, has_files)
         return model_for_account(model, account_tier)
 

@@ -22,9 +22,7 @@ async def list_models() -> JSONResponse:
                 owned_by=m.provider,
                 perplexity=ModelCatalogMetadata(
                     min_tier=m.min_tier,
-                    unstable=m.unstable,
-                    disabled=m.disabled,
-                    warning=m.warning,
+                    status=m.status,
                 ),
             )
             for m in MODELS.list_all()

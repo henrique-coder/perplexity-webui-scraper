@@ -23,7 +23,7 @@ Python scraper to extract AI responses from [Perplexity's](https://www.perplexit
 This library lets you interact with Perplexity AI programmatically using the same web endpoints as the browser — no official API key required. It supports conversations, file uploads, streaming, an MCP server for AI agents, and a drop-in OpenAI-compatible REST API.
 
 - **Requirements:** A Perplexity account and your browser session token. Free accounts support text prompts; paid tiers are required for Pro/Max models and file uploads.
-- **Key Features:** JSON-backed stable and historical model catalog, file attachments (images, PDFs, …), streaming, MCP Server for AI agents, OpenAI-compatible REST API, multi-turn conversation thread continuation.
+- **Key Features:** JSON-backed model catalog with explicit availability status, file attachments (images, PDFs, …), streaming, MCP Server for AI agents, OpenAI-compatible REST API, multi-turn conversation thread continuation.
 
 ## Community
 
@@ -105,7 +105,7 @@ conversation.ask("Explain it simpler")
 print(conversation.answer)
 ```
 
-Before each prompt, the library checks `/api/auth/session` and raises `ModelAccessError` if the selected model requires a higher tier than the authenticated account. When the session payload does not expose enough subscription data, it falls back to `/rest/user/settings`. Free accounts can use text prompts, but file attachments raise `FileAccessError`.
+Before each prompt, the library checks `/api/auth/session` and raises `ModelAccessError` if an `available` model requires a higher tier than the authenticated account. When the session payload does not expose enough subscription data, it falls back to `/rest/user/settings`. Models use one of four statuses: `available` (confirmed working normally), `unstable` (confirmed working but fragile), `unknown` (not yet verified, including custom identifiers), or `unavailable` (confirmed not working). Any non-available status requires `allow_risky_model=True`; after acknowledgement, the backend makes the final entitlement decision. Free accounts can use text prompts, but file attachments raise `FileAccessError`.
 
 `perplexity/best` adapts to the account tier: free accounts use Perplexity's internal `turbo` preference, while Pro/Max accounts use `pplx_pro_upgraded`; both use `copilot` mode.
 

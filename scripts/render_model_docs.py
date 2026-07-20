@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from argparse import ArgumentParser
+from collections import Counter
 from importlib.resources import files
 from pathlib import Path
 from re import DOTALL, MULTILINE, sub
@@ -10,12 +11,19 @@ from sys import stderr, stdout
 
 from orjson import loads
 
-from perplexity_webui_scraper.models.types import Model
+from perplexity_webui_scraper.models.types import MODEL_STATUS_DESCRIPTIONS, Model, ModelStatus
 
 
 ROOT = Path(__file__).resolve().parents[1]
 BEGIN = "<!-- BEGIN GENERATED MODEL CATALOG -->"
 END = "<!-- END GENERATED MODEL CATALOG -->"
+STATUS_ORDER: tuple[ModelStatus, ...] = ("available", "unstable", "unknown", "unavailable")
+STATUS_BEHAVIOR: dict[ModelStatus, str] = {
+    "available": "Normal use; the local minimum-tier check applies.",
+    "unstable": "Requires `allow_risky_model`; Perplexity makes the final access decision.",
+    "unknown": "Requires `allow_risky_model`; this is the default for unverified entries.",
+    "unavailable": "Requires `allow_risky_model`; retained for history and expected to fail.",
+}
 
 
 def _models() -> list[Model]:
@@ -23,12 +31,17 @@ def _models() -> list[Model]:
     return [Model.model_validate(item) for item in loads(raw)]
 
 
-def _groups(models: list[Model]) -> list[tuple[str, list[Model]]]:
-    return [
-        ("Stable", [model for model in models if not model.unstable]),
-        ("Unstable", [model for model in models if model.unstable and not model.disabled]),
-        ("Disabled", [model for model in models if model.disabled]),
+def _status_reference() -> list[str]:
+    lines = [
+        "### Status reference",
+        "",
+        "| Status | Meaning | Runtime behavior |",
+        "| --- | --- | --- |",
     ]
+    lines.extend(
+        f"| `{status}` | {MODEL_STATUS_DESCRIPTIONS[status]} | {STATUS_BEHAVIOR[status]} |" for status in STATUS_ORDER
+    )
+    return [*lines, ""]
 
 
 def _tier(model: Model) -> str:
@@ -36,50 +49,41 @@ def _tier(model: Model) -> str:
 
 
 def _api_catalog(models: list[Model]) -> str:
-    lines: list[str] = [BEGIN]
-    for heading, entries in _groups(models):
-        lines.extend((f"### {heading}", ""))
-        if not entries:
-            lines.extend(("_No models in this category._", ""))
-            continue
-        lines.extend(
-            (
-                "| Model ID | Internal identifier | Provider | Min. tier | Warning |",
-                "| --- | --- | --- | --- | --- |",
-            )
+    lines: list[str] = [BEGIN, *_status_reference(), "### Model catalog", ""]
+    lines.extend(
+        (
+            "| Model ID | Internal identifier | Provider | Min. tier | Status |",
+            "| --- | --- | --- | --- | --- |",
         )
-        for model in entries:
-            warning = model.warning or "—"
-            lines.append(f"| `{model.id}` | `{model.identifier}` | {model.provider} | {_tier(model)} | {warning} |")
-        lines.append("")
+    )
+    lines.extend(
+        f"| `{model.id}` | `{model.identifier}` | {model.provider} | {_tier(model)} | `{model.status}` |"
+        for model in models
+    )
+    lines.append("")
     lines.append(END)
     return "\n".join(lines)
 
 
 def _mcp_catalog(models: list[Model]) -> str:
-    lines: list[str] = [BEGIN]
-    for heading, entries in _groups(models):
-        lines.extend((f"### {heading} tools", ""))
-        if not entries:
-            lines.extend(("_No tools in this category._", ""))
-            continue
-        lines.extend(
-            (
-                "| Tool | Model ID | Name | Min. tier | Warning |",
-                "| --- | --- | --- | --- | --- |",
-            )
+    lines: list[str] = [BEGIN, *_status_reference(), "### Model tools", ""]
+    lines.extend(
+        (
+            "| Tool | Model ID | Name | Min. tier | Status |",
+            "| --- | --- | --- | --- | --- |",
         )
-        for model in entries:
-            warning = model.warning or "—"
-            lines.append(f"| `{model.tool_name}` | `{model.id}` | {model.name} | {_tier(model)} | {warning} |")
-        lines.append("")
+    )
+    lines.extend(
+        f"| `{model.tool_name}` | `{model.id}` | {model.name} | {_tier(model)} | `{model.status}` |" for model in models
+    )
+    lines.append("")
     lines.extend(
         (
             "### Custom tool",
             "",
             (
                 "`pplx_custom` accepts an arbitrary `custom:<identifier>` model and requires "
-                "explicit unstable-model acknowledgement."
+                "explicit risky-model acknowledgement."
             ),
             "",
             END,
@@ -132,12 +136,11 @@ def main() -> int:
         for path in stale:
             stderr.write(f"  {path.relative_to(ROOT)}\n")
         return 1
-    stable = sum(not model.unstable for model in models)
-    unstable = sum(model.unstable and not model.disabled for model in models)
-    disabled = sum(model.disabled for model in models)
+    counts = Counter(model.status for model in models)
     action = "Verified" if args.check else "Generated" if updated_paths else "Already up to date"
     stdout.write(
-        f"{action} model docs: {len(models)} models ({stable} stable, {unstable} unstable, {disabled} disabled).\n"
+        f"{action} model docs: {len(models)} models "
+        f"({', '.join(f'{counts[status]} {status}' for status in STATUS_ORDER)}).\n"
     )
     if updated_paths:
         for path in updated_paths:

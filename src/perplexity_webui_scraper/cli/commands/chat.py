@@ -27,12 +27,11 @@ from typer import Exit
 from perplexity_webui_scraper import (
     ConversationConfig,
     Coordinates,
-    DisabledModelError,
     FileAccessError,
     ModelAccessError,
+    ModelStatusError,
     Perplexity,
     ResponseParsingError,
-    UnstableModelError,
 )
 from perplexity_webui_scraper.cli.commands._token_store import (
     get_config_dir,
@@ -43,6 +42,7 @@ from perplexity_webui_scraper.cli.commands._token_store import (
     set_default_model,
 )
 from perplexity_webui_scraper.models.registry import MODELS
+from perplexity_webui_scraper.models.types import MODEL_STATUS_DESCRIPTIONS
 
 
 if TYPE_CHECKING:
@@ -74,8 +74,7 @@ def run(
     save: bool,
     copy: bool,
     raw: bool,
-    allow_unstable_model: bool = False,
-    allow_disabled_model: bool = False,
+    allow_risky_model: bool = False,
     custom_model_mode: str = "copilot",
     token: str | None = None,
 ) -> None:
@@ -93,20 +92,19 @@ def run(
     try:
         model_metadata = MODELS.resolve_for_use(
             resolved_model,
-            allow_unstable_model=allow_unstable_model,
-            allow_disabled_model=allow_disabled_model,
+            allow_risky_model=allow_risky_model,
             custom_model_mode=cast("ModelMode", custom_model_mode),
         )
     except ValueError:
         console.print(f"[red]⛔ Unknown model: {resolved_model!r}[/red]")
         console.print("Run [bold cyan]perplexity-webui-scraper chat setup[/bold cyan] to change your default model.")
         raise Exit(code=1)  # noqa: B904
-    except (UnstableModelError, DisabledModelError) as exc:
+    except ModelStatusError as exc:
         console.print(f"[red]⛔ {exc}[/red]")
         raise Exit(code=1) from exc
 
-    if model_metadata.warning:
-        console.print(f"[yellow]⚠ {model_metadata.warning}[/yellow]")
+    if model_metadata.status != "available":
+        console.print(f"[yellow]⚠ {MODEL_STATUS_DESCRIPTIONS[model_metadata.status]}[/yellow]")
 
     if (latitude is None) != (longitude is None):
         console.print("[red]⛔ Latitude and longitude must be provided together.[/red]")
@@ -127,8 +125,7 @@ def run(
         coordinates=coords,
         save_to_library=save,
         space_uuid=space_uuid,
-        allow_unstable_model=allow_unstable_model,
-        allow_disabled_model=allow_disabled_model,
+        allow_risky_model=allow_risky_model,
         custom_model_mode=cast("ModelMode", custom_model_mode),
     )
 
@@ -268,7 +265,7 @@ def run(
                     break
 
     except Exception as exc:
-        if isinstance(exc, ModelAccessError | UnstableModelError | DisabledModelError):
+        if isinstance(exc, ModelAccessError | ModelStatusError):
             console.print(f"[red]⛔ {exc}[/red]")
             raise Exit(code=1) from exc
 
@@ -370,8 +367,7 @@ def _prompt_and_save_model(console: object) -> None:
 
     models = MODELS.list_all()
     for idx, m in enumerate(models, 1):
-        status = "disabled" if m.disabled else "unstable" if m.unstable else "stable"
-        table.add_row(str(idx), m.id, m.name, m.min_tier or "unknown", status)
+        table.add_row(str(idx), m.id, m.name, m.min_tier or "unknown", m.status)
 
     rich_console.print()
     rich_console.print(table)
@@ -398,9 +394,9 @@ def _prompt_and_save_model(console: object) -> None:
         rich_console.print(f"[red]  Unknown model: {chosen!r}[/red]")
         return
 
-    if chosen_model.warning:
-        rich_console.print(f"[yellow]  ⚠ {chosen_model.warning}[/yellow]")
-        rich_console.print("[yellow]  This default will require the matching risk flag when used.[/yellow]")
+    if chosen_model.status != "available":
+        rich_console.print(f"[yellow]  ⚠ {MODEL_STATUS_DESCRIPTIONS[chosen_model.status]}[/yellow]")
+        rich_console.print("[yellow]  This default requires --allow-risky-model when used.[/yellow]")
 
     set_default_model(chosen)
     rich_console.print(f"[green]  ✔ Default model set to: {chosen}[/green]")

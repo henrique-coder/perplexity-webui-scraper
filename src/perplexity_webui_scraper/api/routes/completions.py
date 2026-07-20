@@ -63,8 +63,7 @@ async def chat_completions(
         ext = request.perplexity
         MODELS.resolve_for_use(
             request.model,
-            allow_unstable_model=ext.allow_unstable_model if ext else False,
-            allow_disabled_model=ext.allow_disabled_model if ext else False,
+            allow_risky_model=ext.allow_risky_model if ext else False,
             custom_model_mode=ext.custom_model_mode if ext else "copilot",
         )
     except ValueError:

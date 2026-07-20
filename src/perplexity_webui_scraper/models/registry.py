@@ -8,13 +8,12 @@ from warnings import warn
 
 from orjson import loads
 
-from perplexity_webui_scraper._internal.exceptions import DisabledModelError, ModelRiskWarning, UnstableModelError
-from perplexity_webui_scraper.models.types import Model, ModelMode
+from perplexity_webui_scraper._internal.exceptions import ModelRiskWarning, ModelStatusError
+from perplexity_webui_scraper.models.types import MODEL_STATUS_DESCRIPTIONS, Model, ModelMode
 
 
 _CUSTOM_PREFIX = "custom:"
 _CUSTOM_IDENTIFIER_PATTERN = r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}"
-_CUSTOM_WARNING = "Custom internal identifiers are unverified and may change or stop working without notice."
 
 
 class ModelRegistry:
@@ -105,8 +104,7 @@ class ModelRegistry:
         self,
         model_id: str,
         *,
-        allow_unstable_model: bool = False,
-        allow_disabled_model: bool = False,
+        allow_risky_model: bool = False,
         custom_model_mode: ModelMode = "copilot",
     ) -> Model:
         """Resolve a model and enforce explicit acknowledgement of risky states."""
@@ -126,21 +124,16 @@ class ModelRegistry:
                 provider="custom",
                 min_tier=None,
                 mode=custom_model_mode,
-                unstable=True,
-                disabled=False,
-                warning=_CUSTOM_WARNING,
+                status="unknown",
             )
         else:
             model = self.resolve(model_id)
 
-        if model.disabled and not allow_disabled_model:
-            raise DisabledModelError(model.id, model.warning or "This model is known to be unavailable.")
+        if model.status != "available" and not allow_risky_model:
+            raise ModelStatusError(model.id, model.status, MODEL_STATUS_DESCRIPTIONS[model.status])
 
-        if model.unstable and not (allow_unstable_model or allow_disabled_model):
-            raise UnstableModelError(model.id, model.warning or "This model may be unavailable.")
-
-        if model.unstable or model.disabled:
-            warn(model.warning or "This model may be unavailable.", ModelRiskWarning, stacklevel=2)
+        if model.status != "available":
+            warn(MODEL_STATUS_DESCRIPTIONS[model.status], ModelRiskWarning, stacklevel=2)
 
         return model
 

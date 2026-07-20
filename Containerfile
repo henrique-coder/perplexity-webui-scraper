@@ -12,4 +12,4 @@ RUN uv sync --frozen --no-dev --no-editable --extra api
 
 EXPOSE 8000
 
-ENTRYPOINT ["uv", "run", "perplexity-webui-scraper", "api", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["/app/.venv/bin/perplexity-webui-scraper", "api", "--host", "0.0.0.0", "--port", "8000"]
