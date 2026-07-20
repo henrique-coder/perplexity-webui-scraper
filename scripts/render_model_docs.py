@@ -48,16 +48,22 @@ def _tier(model: Model) -> str:
     return model.min_tier or "unknown"
 
 
+def _last_tested(model: Model) -> str:
+    return model.last_tested_at.isoformat().replace("+00:00", "Z") if model.last_tested_at else "—"
+
+
 def _api_catalog(models: list[Model]) -> str:
     lines: list[str] = [BEGIN, *_status_reference(), "### Model catalog", ""]
     lines.extend(
         (
-            "| Model ID | Internal identifier | Provider | Min. tier | Status |",
-            "| --- | --- | --- | --- | --- |",
+            "| Model ID | Internal identifier | Provider | Min. tier | Status | Last tested (UTC) |",
+            "| --- | --- | --- | --- | --- | --- |",
         )
     )
     lines.extend(
-        f"| `{model.id}` | `{model.identifier}` | {model.provider} | {_tier(model)} | `{model.status}` |"
+        "| "
+        f"`{model.id}` | `{model.identifier}` | {model.provider} | {_tier(model)} | "
+        f"`{model.status}` | {_last_tested(model)} |"
         for model in models
     )
     lines.append("")
@@ -69,12 +75,15 @@ def _mcp_catalog(models: list[Model]) -> str:
     lines: list[str] = [BEGIN, *_status_reference(), "### Model tools", ""]
     lines.extend(
         (
-            "| Tool | Model ID | Name | Min. tier | Status |",
-            "| --- | --- | --- | --- | --- |",
+            "| Tool | Model ID | Name | Min. tier | Status | Last tested (UTC) |",
+            "| --- | --- | --- | --- | --- | --- |",
         )
     )
     lines.extend(
-        f"| `{model.tool_name}` | `{model.id}` | {model.name} | {_tier(model)} | `{model.status}` |" for model in models
+        "| "
+        f"`{model.tool_name}` | `{model.id}` | {model.name} | {_tier(model)} | "
+        f"`{model.status}` | {_last_tested(model)} |"
+        for model in models
     )
     lines.append("")
     lines.extend(

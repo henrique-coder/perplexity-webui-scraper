@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime  # noqa: TC003
 from time import time
 from typing import Literal
 from uuid import uuid4
@@ -31,6 +32,7 @@ class ModelCatalogMetadata(BaseModel):
 
     min_tier: Literal["free", "pro", "max"] | None
     status: Literal["available", "unstable", "unknown", "unavailable"]
+    last_tested_at: datetime | None
 
 
 class ModelList(BaseModel):

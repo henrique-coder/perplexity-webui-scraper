@@ -95,10 +95,16 @@ def test_model_catalog_exposes_risk_metadata(client: TestClient) -> None:
     response = client.get("/v1/models")
     assert response.status_code == 200
     data = response.json()["data"]
-    assert len(data) == 70
+    assert len(data) == 72
     unstable = next(item for item in data if item["id"] == "openai/gpt-5.4")
     assert unstable["owned_by"] == "openai"
-    assert unstable["perplexity"] == {"min_tier": "pro", "status": "unstable"}
+    assert unstable["perplexity"] == {"min_tier": "pro", "status": "unstable", "last_tested_at": None}
+    grok = next(item for item in data if item["id"] == "x-ai/grok-4.5")
+    assert grok["perplexity"] == {
+        "min_tier": "pro",
+        "status": "available",
+        "last_tested_at": "2026-07-20T23:34:21.320430Z",
+    }
 
 
 def test_risky_model_api_requires_and_accepts_acknowledgement(client: TestClient) -> None:

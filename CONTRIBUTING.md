@@ -76,6 +76,8 @@ The WebUI network panel can also be used as a fallback to confirm `model_prefere
 
 The picker is only a subset of the backend registry: absence from the picker does not prove that a model identifier has stopped working. Never delete an existing `models.json` entry. Use exactly one `status`: `available` for models confirmed to work normally, `unstable` for models confirmed to work but likely to disappear, `unknown` for unverified models (the default for new or custom identifiers), and `unavailable` only after backend failure is confirmed. Account-tier denial alone does not make a model unavailable. Historical entries remain documented for compatibility.
 
+Set `last_tested_at` to the UTC timestamp of the live test that supports the current `status`. Leave it as `null` when no conclusive live test has been performed; presence in `/rest/models/config` alone is not a successful model test.
+
 Model changes should update:
 
 - `src/perplexity_webui_scraper/_static/models.json`

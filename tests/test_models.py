@@ -27,11 +27,12 @@ def test_bundled_model_registry_is_valid() -> None:
     ids = [model.id for model in models]
     tool_names = [model.tool_name for model in models]
 
-    assert len(models) == 70
-    assert sum(model.status == "available" for model in models) == 18
+    assert len(models) == 72
+    assert sum(model.status == "available" for model in models) == 20
     assert sum(model.status == "unstable" for model in models) == 7
     assert sum(model.status == "unknown" for model in models) == 45
     assert not any(model.status == "unavailable" for model in models)
+    assert all("last_tested_at" in model.model_fields_set for model in models)
     assert len(ids) == len(set(ids))
     assert len(tool_names) == len(set(tool_names))
     assert MODELS.resolve("perplexity/best").id == "perplexity/best"
@@ -52,6 +53,13 @@ def test_bundled_model_registry_is_valid() -> None:
     assert MODELS.resolve("anthropic/claude-opus-4.8").min_tier == "max"
     assert MODELS.resolve("nvidia/nemotron-3-ultra-thinking").identifier == "nv_nemotron_3_ultra"
     assert MODELS.resolve("nvidia/nemotron-3-ultra-thinking").min_tier == "pro"
+    assert MODELS.resolve("x-ai/grok-4.5").identifier == "grok45low"
+    assert MODELS.resolve("x-ai/grok-4.5").status == "available"
+    assert MODELS.resolve("x-ai/grok-4.5").last_tested_at is not None
+    assert MODELS.resolve("x-ai/grok-4.5-thinking").identifier == "grok45medium"
+    assert MODELS.resolve("x-ai/grok-4.5-thinking").status == "available"
+    assert MODELS.resolve("x-ai/grok-4.5-thinking").last_tested_at is not None
+    assert MODELS.resolve("openai/gpt4o").last_tested_at is None
     assert MODELS.resolve("openai/gpt-5.4").tool_name == "pplx_gpt54"
     assert MODELS.resolve("anthropic/claude-sonnet-4.6-thinking").tool_name == "pplx_claude_s46_think"
     assert MODELS.resolve("openai/gpt-5.4").status == "unstable"
@@ -64,6 +72,12 @@ def test_model_rejects_unknown_fields() -> None:
 
     with raises(ValidationError):
         Model.model_validate(model_data)
+
+
+@mark.parametrize("timestamp", ["2026-07-20T23:34:21", "2026-07-21T02:34:21+03:00"])
+def test_model_rejects_non_utc_test_timestamps(timestamp: str) -> None:
+    with raises(ValidationError, match="last_tested_at must use UTC"):
+        Model.model_validate({**_MODEL, "last_tested_at": timestamp})
 
 
 def test_model_registry_rejects_duplicate_ids() -> None:

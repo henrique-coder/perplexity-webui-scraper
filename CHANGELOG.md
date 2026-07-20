@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Unified model status:** Added the four-state `available`, `unstable`, `unknown`, and `unavailable` model status, preserving historical records instead of deleting them.
+- **Grok 4.5:** Added the Pro-tier Grok 4.5 and Grok 4.5 Thinking models after successful live probes against both picker identifiers.
+- **Model test timestamps:** Added nullable `last_tested_at` metadata with the UTC instant of the test supporting each model status.
 - **Generated model catalog:** API and MCP documentation tables are now rendered from `models.json`, keeping runtime tools and documentation aligned with one source of truth.
 
 ### Changed

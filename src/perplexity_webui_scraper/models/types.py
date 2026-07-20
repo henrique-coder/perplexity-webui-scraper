@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from typing import Final, Literal, TypeAlias
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 ModelTier: TypeAlias = Literal["free", "pro", "max"]
@@ -43,6 +44,8 @@ class Model(BaseModel):
         mode_by_tier: Optional mode overrides selected by account tier.
         status: Observed availability state. Unknown models require explicit
             risk acknowledgement and are the default for new entries.
+        last_tested_at: UTC timestamp of the test that supports the current
+            status, or ``None`` when the model has not been tested.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -58,3 +61,12 @@ class Model(BaseModel):
     mode: ModelMode = "copilot"
     mode_by_tier: dict[ModelTier, ModelMode] = Field(default_factory=dict)
     status: ModelStatus = "unknown"
+    last_tested_at: datetime | None = None
+
+    @field_validator("last_tested_at")
+    @classmethod
+    def _require_utc_test_timestamp(cls, value: datetime | None) -> datetime | None:
+        """Reject test timestamps that are missing a UTC offset."""
+        if value is not None and value.utcoffset() != timedelta(0):
+            raise ValueError("last_tested_at must use UTC")
+        return value

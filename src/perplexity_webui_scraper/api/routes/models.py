@@ -23,9 +23,10 @@ async def list_models() -> JSONResponse:
                 perplexity=ModelCatalogMetadata(
                     min_tier=m.min_tier,
                     status=m.status,
+                    last_tested_at=m.last_tested_at,
                 ),
             )
             for m in MODELS.list_all()
         ]
     )
-    return JSONResponse(content=data.model_dump())
+    return JSONResponse(content=data.model_dump(mode="json"))
