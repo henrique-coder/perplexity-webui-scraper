@@ -3,10 +3,17 @@
 from __future__ import annotations
 
 from importlib.resources import files
+from re import fullmatch
+from warnings import warn
 
 from orjson import loads
 
-from perplexity_webui_scraper.models.types import Model
+from perplexity_webui_scraper._internal.exceptions import ModelRiskWarning, ModelStatusError
+from perplexity_webui_scraper.models.types import MODEL_STATUS_DESCRIPTIONS, Model, ModelMode
+
+
+_CUSTOM_PREFIX = "custom:"
+_CUSTOM_IDENTIFIER_PATTERN = r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}"
 
 
 class ModelRegistry:
@@ -92,6 +99,43 @@ class ModelRegistry:
             List of all models loaded from ``models.json``.
         """
         return list(self._models.values())
+
+    def resolve_for_use(
+        self,
+        model_id: str,
+        *,
+        allow_risky_model: bool = False,
+        custom_model_mode: ModelMode = "copilot",
+    ) -> Model:
+        """Resolve a model and enforce explicit acknowledgement of risky states."""
+        if model_id.startswith(_CUSTOM_PREFIX):
+            identifier = model_id.removeprefix(_CUSTOM_PREFIX)
+            if not fullmatch(_CUSTOM_IDENTIFIER_PATTERN, identifier):
+                raise ValueError(
+                    "Custom model identifiers must contain 1-128 letters, digits, dots, colons, underscores, or hyphens"
+                )
+
+            model = Model(
+                id=model_id,
+                name=f"Custom model ({identifier})",
+                description="User-supplied Perplexity internal model identifier.",
+                identifier=identifier,
+                tool_name="pplx_custom",
+                provider="custom",
+                min_tier=None,
+                mode=custom_model_mode,
+                status="unknown",
+            )
+        else:
+            model = self.resolve(model_id)
+
+        if model.status != "available" and not allow_risky_model:
+            raise ModelStatusError(model.id, model.status, MODEL_STATUS_DESCRIPTIONS[model.status])
+
+        if model.status != "available":
+            warn(MODEL_STATUS_DESCRIPTIONS[model.status], ModelRiskWarning, stacklevel=2)
+
+        return model
 
 
 #: Singleton registry.  Import and use this directly.

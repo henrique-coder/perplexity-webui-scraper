@@ -15,7 +15,7 @@ This project wraps private Perplexity WebUI endpoints. Changes should be conserv
 
 Requirements:
 
-- Python 3.12, 3.13, or 3.14
+- Python 3.11, 3.12, 3.13, or 3.14
 - `uv`
 - `pnpm`
 - `just`
@@ -41,6 +41,20 @@ Useful commands:
 
 ## Pull Request Checklist
 
+### Branch workflow
+
+- `dev` is the default integration branch. Create feature and fix branches from `dev`, and open normal pull requests back into `dev`.
+- `prod` contains only release-ready code. Do not push to it directly or target it from feature branches.
+- Promote a release with a same-repository pull request from `dev` to `prod` after version, changelog, tests, documentation, and package build are ready.
+- After a release promotion, continue new work from the updated `dev` branch.
+
+### Release workflow
+
+1. Keep the target section in `CHANGELOG.md` as `## [X.Y.Z] - Unreleased` while developing.
+2. In the final `dev` to `prod` promotion PR, replace `Unreleased` with the UTC release date (`YYYY-MM-DD`).
+3. On `prod`, run **Publish Release** once in `validate` mode, review its build output, then rerun it with `publish` selected.
+4. The workflow publishes the Python package, API and MCP images, and documentation before creating the immutable tag and GitHub Release. It can safely resume after an interrupted PyPI publication.
+
 - Keep changes focused on one concern.
 - Add or update tests for behavior changes.
 - Update README, MkDocs pages, and `CHANGELOG.md` when user-facing behavior changes.
@@ -60,10 +74,14 @@ https://www.perplexity.ai/rest/models/config
 
 The WebUI network panel can also be used as a fallback to confirm `model_preference`, mode, provider, and tier behavior. Always redact cookies, session tokens, request headers, account IDs, and private prompt data before sharing evidence in an issue or pull request.
 
+The picker is only a subset of the backend registry: absence from the picker does not prove that a model identifier has stopped working. Never delete an existing `models.json` entry. Use exactly one `status`: `available` for models confirmed to work normally, `unstable` for models confirmed to work but likely to disappear, `unknown` for unverified models (the default for new or custom identifiers), and `unavailable` only after backend failure is confirmed. Account-tier denial alone does not make a model unavailable. Historical entries remain documented for compatibility.
+
+Set `last_tested_at` to the UTC timestamp of the live test that supports the current `status`. Leave it as `null` when no conclusive live test has been performed; presence in `/rest/models/config` alone is not a successful model test.
+
 Model changes should update:
 
 - `src/perplexity_webui_scraper/_static/models.json`
-- affected README or MkDocs model tables
+- generated README or MkDocs model tables (`just model-docs`)
 - tests that validate the model registry, when applicable
 - `CHANGELOG.md` if the change is user-facing
 

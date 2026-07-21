@@ -3,11 +3,12 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
-from pytest import fixture
+from pytest import fixture, warns
 
-from perplexity_webui_scraper._internal.exceptions import FileAccessError, ModelAccessError
+from perplexity_webui_scraper._internal.exceptions import FileAccessError, ModelAccessError, ModelRiskWarning
 from perplexity_webui_scraper.api.app import app
 from perplexity_webui_scraper.core import Conversation
+from perplexity_webui_scraper.models.registry import MODELS
 
 
 # Constants
@@ -25,6 +26,9 @@ class _MockModelRegistry:
 
     def list_all(self) -> list[MagicMock]:
         return [MagicMock(id=MODEL_ID)]
+
+    def resolve_for_use(self, item: str, **_kwargs: object) -> MagicMock:
+        return self.resolve(item)
 
 
 _mock_models = _MockModelRegistry()
@@ -85,6 +89,73 @@ def test_invalid_model(client: TestClient) -> None:
     )
     assert response.status_code == 400
     assert "Unknown model" in response.json()["error"]["message"]
+
+
+def test_invalid_custom_model_exposes_validation_error(client: TestClient) -> None:
+    """Invalid custom identifiers should not be reported as unknown catalog models."""
+    with patch("perplexity_webui_scraper.api.routes.completions.MODELS", MODELS):
+        response = client.post(
+            "/v1/chat/completions",
+            json={
+                "model": "custom:",
+                "messages": [{"role": "user", "content": "Hello"}],
+                "perplexity": {"allow_risky_model": True},
+            },
+            headers={"Authorization": AUTH_HEADER},
+        )
+
+    message = response.json()["error"]["message"]
+    assert response.status_code == 400
+    assert "Custom model identifiers must contain" in message
+    assert "Available:" not in message
+
+
+def test_model_catalog_exposes_risk_metadata(client: TestClient) -> None:
+    response = client.get("/v1/models")
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert len(data) == 72
+    unstable = next(item for item in data if item["id"] == "openai/gpt-5.4")
+    assert unstable["owned_by"] == "openai"
+    assert unstable["perplexity"] == {"min_tier": "pro", "status": "unstable", "last_tested_at": None}
+    grok = next(item for item in data if item["id"] == "x-ai/grok-4.5")
+    assert grok["perplexity"] == {
+        "min_tier": "pro",
+        "status": "available",
+        "last_tested_at": "2026-07-20T23:34:21.320430Z",
+    }
+
+
+def test_risky_model_api_requires_and_accepts_acknowledgement(client: TestClient) -> None:
+    with patch("perplexity_webui_scraper.api.routes.completions.MODELS", MODELS):
+        denied = client.post(
+            "/v1/chat/completions",
+            json={"model": "openai/gpt-5.4", "messages": [{"role": "user", "content": "Hello"}]},
+            headers={"Authorization": AUTH_HEADER},
+        )
+    assert denied.status_code == 400
+    assert denied.json()["error"]["code"] == "model_status_confirmation_required"
+
+    mock_client_instance = MagicMock()
+    mock_client_instance.create_conversation.return_value = _make_mock_conversation()
+    with (
+        patch("perplexity_webui_scraper.api.routes.completions.MODELS", MODELS),
+        patch(
+            "perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create",
+            return_value=mock_client_instance,
+        ),
+        warns(ModelRiskWarning),
+    ):
+        allowed = client.post(
+            "/v1/chat/completions",
+            json={
+                "model": "openai/gpt-5.4",
+                "messages": [{"role": "user", "content": "Hello"}],
+                "perplexity": {"allow_risky_model": True},
+            },
+            headers={"Authorization": AUTH_HEADER},
+        )
+    assert allowed.status_code == 200
 
 
 @patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create")

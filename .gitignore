@@ -11,9 +11,6 @@ node_modules/
 .claude/
 .debug/
 
-# Files
-example*.py
-
 # Extensions
 *.env
 *.log
@@ -23,6 +20,7 @@ example*.py
 # Build artifacts
 build/
 dist/
+site/
 *.build/
 *.dist/
 *.onefile-build/

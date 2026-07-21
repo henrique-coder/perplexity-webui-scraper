@@ -1,63 +1,343 @@
 name: CI
 
 on:
-  pull_request:
-    branches:
-      - prod
   push:
     branches:
+      - dev
       - prod
+  pull_request:
+    branches:
+      - dev
+      - prod
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  lint_and_test:
-    name: Code Quality & Tests
+  changes:
+    name: Classify Changed Files
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      python: ${{ steps.classify.outputs.python }}
+      documentation: ${{ steps.classify.outputs.documentation }}
+      frontend: ${{ steps.classify.outputs.frontend }}
+      workflows: ${{ steps.classify.outputs.workflows }}
+      metadata: ${{ steps.classify.outputs.metadata }}
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Classify Changed Files
+        id: classify
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_BEFORE: ${{ github.event.before }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_REF: ${{ github.base_ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] || [ "$BASE_REF" = "prod" ]; then
+            python scripts/ci_changed_paths.py --all
+            exit 0
+          fi
+
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            python scripts/ci_changed_paths.py "$PR_BASE_SHA" "$PR_HEAD_SHA"
+            exit 0
+          fi
+
+          if [ "$EVENT_BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA=$(git merge-base "origin/$DEFAULT_BRANCH" "$HEAD_SHA" || git rev-parse "$HEAD_SHA^")
+          else
+            BASE_SHA="$EVENT_BEFORE"
+          fi
+          python scripts/ci_changed_paths.py "$BASE_SHA" "$HEAD_SHA"
+
+  python_quality:
+    name: Python Quality
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           version: "latest"
+          python-version: "3.14"
           enable-cache: true
           cache-dependency-glob: "uv.lock"
 
       - name: Install just
-        uses: extractions/setup-just@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 11
-          run_install: false
-
-      - name: Get pnpm store path
-        id: pnpm-store
-        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache pnpm store
-        uses: actions/cache@v6
-        with:
-          path: ${{ steps.pnpm-store.outputs.path }}
-          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-${{ runner.os }}-
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
 
       - name: Install Dependencies
-        run: |
-          uv sync --frozen --all-extras --group test --group lint
-          pnpm install --frozen-lockfile --prefer-offline
+        run: uv sync --frozen --all-extras --group lint --group test
 
-      - name: Run Linter & Formatter
+      - name: Check Code Quality
         run: |
-          just format
-          just lint
+          uv run ruff check
+          uv run ty check
+          just model-docs-check
 
-      - name: Run Tests (Pytest)
-        run: just test
+  documentation:
+    name: Documentation
+    needs: changes
+    if: needs.changes.outputs.documentation == 'true' || needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "latest"
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install Dependencies
+        run: uv sync --frozen --all-extras --group docs
+
+      - name: Build Documentation
+        run: uv run mkdocs build --strict
+
+  formatting:
+    name: Formatting & Configuration
+    needs: changes
+    if: >-
+      needs.changes.outputs.python == 'true' ||
+      needs.changes.outputs.documentation == 'true' ||
+      needs.changes.outputs.frontend == 'true' ||
+      needs.changes.outputs.workflows == 'true' ||
+      needs.changes.outputs.metadata == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+        with:
+          version: 11.11.0
+          run_install: false
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Check Formatting
+        run: |
+          pnpm prettier --check .
+          pnpm taplo lint *.toml
+
+  workflow_lint:
+    name: Workflow Security
+    needs: changes
+    if: needs.changes.outputs.workflows == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "latest"
+
+      - name: Install Workflow Linter
+        run: uv sync --frozen --group lint --no-install-project
+
+      - name: Scan Workflows
+        run: uv run zizmor .github/workflows
+
+  tests:
+    name: Tests (${{ matrix.os }}, Python ${{ matrix.python }})
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python: "3.11"
+          - os: ubuntu-latest
+            python: "3.12"
+          - os: ubuntu-latest
+            python: "3.13"
+          - os: ubuntu-latest
+            python: "3.14"
+          - os: macos-latest
+            python: "3.14"
+          - os: windows-latest
+            python: "3.14"
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "latest"
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install Dependencies
+        run: uv sync --frozen --all-extras --group test
+
+      - name: Run Test Suite
+        run: uv run pytest
+
+  build:
+    name: Build Distribution
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "latest"
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Build Package
+        run: uv build
+
+      - name: Validate Package Metadata
+        run: uvx twine check dist/*
+
+  release_policy:
+    name: Release Policy
+    if: github.event_name == 'pull_request' && github.base_ref == 'prod'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Require dev to prod promotion
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REPOSITORY: ${{ github.repository }}
+        run: |
+          if [ "$HEAD_REF" != "dev" ] || [ "$HEAD_REPOSITORY" != "$BASE_REPOSITORY" ]; then
+            echo "::error::Production releases must be promoted through a same-repository dev -> prod pull request."
+            exit 1
+          fi
+
+      - name: Checkout Code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate Release Version
+        run: |
+          CHANGELOG_VERSION=$(grep -oP '(?<=^## \[)\d+\.\d+\.\d+(?=\])' CHANGELOG.md | head -n 1)
+          PROJECT_VERSION=$(grep -oP '(?<=^version = ")[^"]+' pyproject.toml | head -n 1)
+          LOCK_VERSION=$(awk '/name = "perplexity-webui-scraper"/{found=1; next} found && /^version = /{gsub(/[" ]/, "", $3); print $3; exit}' uv.lock)
+
+          if [ -z "$CHANGELOG_VERSION" ] || [ "$CHANGELOG_VERSION" != "$PROJECT_VERSION" ] || [ "$PROJECT_VERSION" != "$LOCK_VERSION" ]; then
+            echo "::error::CHANGELOG.md, pyproject.toml, and uv.lock must contain the same release version."
+            exit 1
+          fi
+
+          if git ls-remote --exit-code --tags origin "refs/tags/v$PROJECT_VERSION" >/dev/null; then
+            echo "::error::Release tag v$PROJECT_VERSION already exists. Bump the version before promoting to prod."
+            exit 1
+          fi
+
+  required:
+    name: Code Quality & Tests
+    if: always()
+    needs:
+      - changes
+      - python_quality
+      - documentation
+      - formatting
+      - workflow_lint
+      - tests
+      - build
+      - release_policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify required jobs
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          PYTHON_QUALITY_RESULT: ${{ needs.python_quality.result }}
+          DOCUMENTATION_RESULT: ${{ needs.documentation.result }}
+          FORMATTING_RESULT: ${{ needs.formatting.result }}
+          WORKFLOW_LINT_RESULT: ${{ needs.workflow_lint.result }}
+          TESTS_RESULT: ${{ needs.tests.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          RELEASE_POLICY_RESULT: ${{ needs.release_policy.result }}
+        run: |
+          for result in \
+            "$CHANGES_RESULT" \
+            "$PYTHON_QUALITY_RESULT" \
+            "$DOCUMENTATION_RESULT" \
+            "$FORMATTING_RESULT" \
+            "$WORKFLOW_LINT_RESULT" \
+            "$TESTS_RESULT" \
+            "$BUILD_RESULT"; do
+            if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
+              echo "::error::One or more required CI jobs failed."
+              exit 1
+            fi
+          done
+
+          if [ "$CHANGES_RESULT" != "success" ]; then
+            echo "::error::One or more required CI jobs failed."
+            exit 1
+          fi
+
+          if [ "$RELEASE_POLICY_RESULT" != "success" ] && [ "$RELEASE_POLICY_RESULT" != "skipped" ]; then
+            echo "::error::The production release policy failed."
+            exit 1
+          fi
+
+          echo "All required checks passed."

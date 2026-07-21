@@ -16,6 +16,13 @@ lint:
     uv run ty check
     pnpm prettier --check .
     pnpm taplo lint *.toml
+    uv run scripts/render_model_docs.py --check
+
+model-docs:
+    uv run scripts/render_model_docs.py
+
+model-docs-check:
+    uv run scripts/render_model_docs.py --check
 
 test:
     uv run pytest

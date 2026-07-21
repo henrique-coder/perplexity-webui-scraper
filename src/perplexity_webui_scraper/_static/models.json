@@ -16,7 +16,10 @@
       "free": "copilot",
       "pro": "copilot",
       "max": "copilot"
-    }
+    },
+    "provider": "perplexity",
+    "status": "available",
+    "last_tested_at": null
   },
   {
     "id": "perplexity/deep-research",
@@ -25,7 +28,10 @@
     "identifier": "pplx_alpha",
     "tool_name": "pplx_deep_research",
     "min_tier": "pro",
-    "mode": "research"
+    "mode": "research",
+    "provider": "perplexity",
+    "status": "available",
+    "last_tested_at": null
   },
   {
     "id": "perplexity/sonar-2",
@@ -34,7 +40,10 @@
     "identifier": "experimental",
     "tool_name": "pplx_sonar",
     "min_tier": "pro",
-    "mode": "copilot"
+    "mode": "copilot",
+    "provider": "perplexity",
+    "status": "available",
+    "last_tested_at": null
   },
   {
     "id": "openai/gpt-5.6-terra",
@@ -43,7 +52,10 @@
     "identifier": "gpt56_terra",
     "tool_name": "pplx_gpt56_terra",
     "min_tier": "pro",
-    "mode": "copilot"
+    "mode": "copilot",
+    "provider": "openai",
+    "status": "available",
+    "last_tested_at": null
   },
   {
     "id": "openai/gpt-5.6-terra-thinking",
@@ -52,7 +64,10 @@
     "identifier": "gpt56_terra_thinking",
     "tool_name": "pplx_gpt56_terra_thinking",
     "min_tier": "pro",
-    "mode": "copilot"
+    "mode": "copilot",
+    "provider": "openai",
+    "status": "available",
+    "last_tested_at": null
   },
   {
     "id": "openai/gpt-5.6-sol",
@@ -61,7 +76,10 @@
     "identifier": "gpt56_sol",
     "tool_name": "pplx_gpt56_sol",
     "min_tier": "max",
-    "mode": "copilot"
+    "mode": "copilot",
+    "provider": "openai",
+    "status": "available",
+    "last_tested_at": null
   },
   {
     "id": "openai/gpt-5.6-sol-thinking",
@@ -70,7 +88,10 @@
     "identifier": "gpt56_sol_thinking",
     "tool_name": "pplx_gpt56_sol_thinking",
     "min_tier": "max",
-    "mode": "copilot"
+    "mode": "copilot",
+    "provider": "openai",
+    "status": "available",
+    "last_tested_at": null
   },
   {
     "id": "anthropic/claude-sonnet-5",
@@ -79,7 +100,10 @@
     "identifier": "claude50sonnet",
     "tool_name": "pplx_claude_s50",
     "min_tier": "pro",
-    "mode": "copilot"
+    "mode": "copilot",
+    "provider": "anthropic",
+    "status": "available",
+    "last_tested_at": null
   },
   {
     "id": "anthropic/claude-sonnet-5-thinking",
@@ -88,7 +112,10 @@
     "identifier": "claude50sonnetthinking",
     "tool_name": "pplx_claude_s50_think",
     "min_tier": "pro",
-    "mode": "copilot"
+    "mode": "copilot",
+    "provider": "anthropic",
+    "status": "available",
+    "last_tested_at": null
   },
   {
     "id": "anthropic/claude-opus-4.8",
@@ -97,7 +124,10 @@
     "identifier": "claude48opus",
     "tool_name": "pplx_claude_o48",
     "min_tier": "max",
-    "mode": "copilot"
+    "mode": "copilot",
+    "provider": "anthropic",
+    "status": "available",
+    "last_tested_at": null
   },
   {
     "id": "anthropic/claude-opus-4.8-thinking",
@@ -106,7 +136,10 @@
     "identifier": "claude48opusthinking",
     "tool_name": "pplx_claude_o48_think",
     "min_tier": "max",
-    "mode": "copilot"
+    "mode": "copilot",
+    "provider": "anthropic",
+    "status": "available",
+    "last_tested_at": null
   },
   {
     "id": "z-ai/glm-5.2",
@@ -115,7 +148,10 @@
     "identifier": "glm_5_2",
     "tool_name": "pplx_glm52",
     "min_tier": "pro",
-    "mode": "copilot"
+    "mode": "copilot",
+    "provider": "z-ai",
+    "status": "available",
+    "last_tested_at": null
   },
   {
     "id": "google/gemini-3.1-pro-thinking-low",
@@ -124,7 +160,10 @@
     "identifier": "gemini31pro_low",
     "tool_name": "pplx_gemini31_pro_think_low",
     "min_tier": "pro",
-    "mode": "copilot"
+    "mode": "copilot",
+    "provider": "google",
+    "status": "available",
+    "last_tested_at": null
   },
   {
     "id": "google/gemini-3.1-pro-thinking-high",
@@ -133,7 +172,10 @@
     "identifier": "gemini31pro_high",
     "tool_name": "pplx_gemini31_pro_think_high",
     "min_tier": "pro",
-    "mode": "copilot"
+    "mode": "copilot",
+    "provider": "google",
+    "status": "available",
+    "last_tested_at": null
   },
   {
     "id": "moonshot/kimi-k2.6-instant",
@@ -142,7 +184,10 @@
     "identifier": "kimik26instant",
     "tool_name": "pplx_kimi_k26_instant",
     "min_tier": "pro",
-    "mode": "copilot"
+    "mode": "copilot",
+    "provider": "moonshot",
+    "status": "available",
+    "last_tested_at": null
   },
   {
     "id": "moonshot/kimi-k2.6-thinking",
@@ -151,7 +196,34 @@
     "identifier": "kimik26thinking",
     "tool_name": "pplx_kimi_k26_thinking",
     "min_tier": "pro",
-    "mode": "copilot"
+    "mode": "copilot",
+    "provider": "moonshot",
+    "status": "available",
+    "last_tested_at": null
+  },
+  {
+    "id": "x-ai/grok-4.5",
+    "name": "Grok 4.5",
+    "description": "xAI's most advanced model.",
+    "identifier": "grok45low",
+    "tool_name": "pplx_grok45",
+    "provider": "x-ai",
+    "min_tier": "pro",
+    "mode": "copilot",
+    "status": "available",
+    "last_tested_at": "2026-07-20T23:34:21.320430Z"
+  },
+  {
+    "id": "x-ai/grok-4.5-thinking",
+    "name": "Grok 4.5 Thinking",
+    "description": "xAI's most advanced model with thinking.",
+    "identifier": "grok45medium",
+    "tool_name": "pplx_grok45_think",
+    "provider": "x-ai",
+    "min_tier": "pro",
+    "mode": "copilot",
+    "status": "available",
+    "last_tested_at": "2026-07-20T23:34:25.402265Z"
   },
   {
     "id": "nvidia/nemotron-3-super-thinking",
@@ -160,7 +232,10 @@
     "identifier": "nv_nemotron_3_super",
     "tool_name": "pplx_nemotron3_super_think",
     "min_tier": "pro",
-    "mode": "copilot"
+    "mode": "copilot",
+    "provider": "nvidia",
+    "status": "available",
+    "last_tested_at": null
   },
   {
     "id": "nvidia/nemotron-3-ultra-thinking",
@@ -169,6 +244,633 @@
     "identifier": "nv_nemotron_3_ultra",
     "tool_name": "pplx_nemotron3_ultra_think",
     "min_tier": "pro",
-    "mode": "copilot"
+    "mode": "copilot",
+    "provider": "nvidia",
+    "status": "available",
+    "last_tested_at": null
+  },
+  {
+    "id": "openai/gpt-5.4",
+    "name": "GPT-5.4",
+    "description": "OpenAI GPT-5.4.",
+    "identifier": "gpt54",
+    "tool_name": "pplx_gpt54",
+    "min_tier": "pro",
+    "mode": "copilot",
+    "provider": "openai",
+    "status": "unstable",
+    "last_tested_at": null
+  },
+  {
+    "id": "openai/gpt-5.4-thinking",
+    "name": "GPT-5.4 Thinking",
+    "description": "OpenAI GPT-5.4 (Thinking).",
+    "identifier": "gpt54_thinking",
+    "tool_name": "pplx_gpt54_thinking",
+    "min_tier": "pro",
+    "mode": "copilot",
+    "provider": "openai",
+    "status": "unstable",
+    "last_tested_at": null
+  },
+  {
+    "id": "openai/gpt-5.5-thinking",
+    "name": "GPT-5.5 Thinking",
+    "description": "OpenAI GPT-5.5 (Thinking).",
+    "identifier": "gpt55_thinking",
+    "tool_name": "pplx_gpt55_thinking",
+    "min_tier": "max",
+    "mode": "copilot",
+    "provider": "openai",
+    "status": "unstable",
+    "last_tested_at": null
+  },
+  {
+    "id": "anthropic/claude-opus-4.7",
+    "name": "Claude Opus 4.7",
+    "description": "Anthropic Claude Opus 4.7.",
+    "identifier": "claude47opus",
+    "tool_name": "pplx_claude_o47",
+    "min_tier": "max",
+    "mode": "copilot",
+    "provider": "anthropic",
+    "status": "unstable",
+    "last_tested_at": null
+  },
+  {
+    "id": "anthropic/claude-opus-4.7-thinking",
+    "name": "Claude Opus 4.7 Thinking",
+    "description": "Anthropic Claude Opus 4.7 (Thinking).",
+    "identifier": "claude47opusthinking",
+    "tool_name": "pplx_claude_o47_think",
+    "min_tier": "max",
+    "mode": "copilot",
+    "provider": "anthropic",
+    "status": "unstable",
+    "last_tested_at": null
+  },
+  {
+    "id": "anthropic/claude-sonnet-4.6",
+    "name": "Claude Sonnet 4.6",
+    "description": "Anthropic Claude Sonnet 4.6.",
+    "identifier": "claude46sonnet",
+    "tool_name": "pplx_claude_s46",
+    "min_tier": "pro",
+    "mode": "copilot",
+    "provider": "anthropic",
+    "status": "unstable",
+    "last_tested_at": null
+  },
+  {
+    "id": "anthropic/claude-sonnet-4.6-thinking",
+    "name": "Claude Sonnet 4.6 Thinking",
+    "description": "Anthropic Claude Sonnet 4.6 (Thinking).",
+    "identifier": "claude46sonnetthinking",
+    "tool_name": "pplx_claude_s46_think",
+    "min_tier": "pro",
+    "mode": "copilot",
+    "provider": "anthropic",
+    "status": "unstable",
+    "last_tested_at": null
+  },
+  {
+    "id": "openai/gpt4o",
+    "name": "GPT-4o",
+    "description": "OpenAI's versatile model.",
+    "identifier": "gpt4o",
+    "tool_name": "pplx_gpt4o",
+    "provider": "openai",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "openai/gpt41",
+    "name": "GPT-4.1",
+    "description": "OpenAI's advanced model.",
+    "identifier": "gpt41",
+    "tool_name": "pplx_gpt41",
+    "provider": "openai",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "openai/gpt5",
+    "name": "GPT-5",
+    "description": "OpenAI's latest model.",
+    "identifier": "gpt5",
+    "tool_name": "pplx_gpt5",
+    "provider": "openai",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "openai/gpt5-thinking",
+    "name": "GPT-5 Thinking",
+    "description": "OpenAI's latest model with thinking.",
+    "identifier": "gpt5_thinking",
+    "tool_name": "pplx_gpt5_thinking",
+    "provider": "openai",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "openai/gpt51",
+    "name": "GPT-5.1",
+    "description": "OpenAI's latest model.",
+    "identifier": "gpt51",
+    "tool_name": "pplx_gpt51",
+    "provider": "openai",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "openai/gpt51-thinking",
+    "name": "GPT-5.1 Thinking",
+    "description": "OpenAI's latest model with thinking.",
+    "identifier": "gpt51_thinking",
+    "tool_name": "pplx_gpt51_thinking",
+    "provider": "openai",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "openai/gpt51-low-thinking",
+    "name": "GPT-5.1 Low Thinking",
+    "description": "OpenAI's latest model with low reasoning effort.",
+    "identifier": "gpt51_low_thinking",
+    "tool_name": "pplx_gpt51_low_thinking",
+    "provider": "openai",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "openai/gpt5-mini",
+    "name": "GPT-5 Mini",
+    "description": "OpenAI's compact model.",
+    "identifier": "gpt5_mini",
+    "tool_name": "pplx_gpt5_mini",
+    "provider": "openai",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "openai/gpt5-nano",
+    "name": "GPT-5 Nano",
+    "description": "OpenAI's smallest model.",
+    "identifier": "gpt5_nano",
+    "tool_name": "pplx_gpt5_nano",
+    "provider": "openai",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "openai/gpt5-pro",
+    "name": "GPT-5 Pro",
+    "description": "OpenAI's latest, most powerful reasoning model.",
+    "identifier": "gpt5_pro",
+    "tool_name": "pplx_gpt5_pro",
+    "provider": "openai",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "openai/gpt52",
+    "name": "GPT-5.2",
+    "description": "OpenAI's latest model.",
+    "identifier": "gpt52",
+    "tool_name": "pplx_gpt52",
+    "provider": "openai",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "openai/gpt52-thinking",
+    "name": "GPT-5.2 Thinking",
+    "description": "OpenAI's latest model with thinking.",
+    "identifier": "gpt52_thinking",
+    "tool_name": "pplx_gpt52_thinking",
+    "provider": "openai",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "openai/gpt52-pro",
+    "name": "GPT-5.2 Pro",
+    "description": "OpenAI's most powerful reasoning model.",
+    "identifier": "gpt52_pro",
+    "tool_name": "pplx_gpt52_pro",
+    "provider": "openai",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "openai/gpt55",
+    "name": "GPT-5.5",
+    "description": "OpenAI's latest model.",
+    "identifier": "gpt55",
+    "tool_name": "pplx_gpt55",
+    "provider": "openai",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "anthropic/claude2",
+    "name": "Claude Sonnet 4.0",
+    "description": "Anthropic's advanced model.",
+    "identifier": "claude2",
+    "tool_name": "pplx_claude2",
+    "provider": "anthropic",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "anthropic/claude37sonnetthinking",
+    "name": "Claude Sonnet 4.0 Thinking",
+    "description": "Anthropic's reasoning model.",
+    "identifier": "claude37sonnetthinking",
+    "tool_name": "pplx_claude37sonnetthinking",
+    "provider": "anthropic",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "anthropic/claude40sonnetthinking",
+    "name": "Claude Sonnet 4.0 Thinking",
+    "description": "Anthropic's reasoning model.",
+    "identifier": "claude40sonnetthinking",
+    "tool_name": "pplx_claude40sonnetthinking",
+    "provider": "anthropic",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "google/gemini25pro",
+    "name": "Gemini 2.5 Pro",
+    "description": "Google's latest model.",
+    "identifier": "gemini25pro",
+    "tool_name": "pplx_gemini25pro",
+    "provider": "google",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "google/gemini30pro",
+    "name": "Gemini 3 Pro",
+    "description": "Google's most advanced model.",
+    "identifier": "gemini30pro",
+    "tool_name": "pplx_gemini30pro",
+    "provider": "google",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "google/gemini30flash",
+    "name": "Gemini 3 Flash",
+    "description": "Google's fast model.",
+    "identifier": "gemini30flash",
+    "tool_name": "pplx_gemini30flash",
+    "provider": "google",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "google/gemini30flash-high",
+    "name": "Gemini 3 Flash Thinking",
+    "description": "Google's fast model.",
+    "identifier": "gemini30flash_high",
+    "tool_name": "pplx_gemini30flash_high",
+    "provider": "google",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "google/gemini35flash",
+    "name": "Gemini 3.5 Flash",
+    "description": "Google's fast model.",
+    "identifier": "gemini35flash",
+    "tool_name": "pplx_gemini35flash",
+    "provider": "google",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "google/gemini35flash-medium",
+    "name": "Gemini 3.5 Flash Medium Thinking",
+    "description": "Google's fast model with medium thinking.",
+    "identifier": "gemini35flash_medium",
+    "tool_name": "pplx_gemini35flash_medium",
+    "provider": "google",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "google/gemini35flash-high",
+    "name": "Gemini 3.5 Flash Thinking",
+    "description": "Google's fast model with thinking.",
+    "identifier": "gemini35flash_high",
+    "tool_name": "pplx_gemini35flash_high",
+    "provider": "google",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "x-ai/grok",
+    "name": "Grok 3 Beta",
+    "description": "xAI's Grok 3 model.",
+    "identifier": "grok",
+    "tool_name": "pplx_grok",
+    "provider": "x-ai",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "anthropic/claude40opus",
+    "name": "Claude Opus 4.0",
+    "description": "Anthropic's Opus reasoning model.",
+    "identifier": "claude40opus",
+    "tool_name": "pplx_claude40opus",
+    "provider": "anthropic",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "anthropic/claude40opusthinking",
+    "name": "Claude Opus 4.0 Thinking",
+    "description": "Anthropic's Opus reasoning model with thinking.",
+    "identifier": "claude40opusthinking",
+    "tool_name": "pplx_claude40opusthinking",
+    "provider": "anthropic",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "anthropic/claude41opus",
+    "name": "Claude Opus 4.1",
+    "description": "Anthropic's Opus reasoning model.",
+    "identifier": "claude41opus",
+    "tool_name": "pplx_claude41opus",
+    "provider": "anthropic",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "anthropic/claude41opusthinking",
+    "name": "Claude Opus 4.1 Thinking",
+    "description": "Anthropic's Opus reasoning model with thinking.",
+    "identifier": "claude41opusthinking",
+    "tool_name": "pplx_claude41opusthinking",
+    "provider": "anthropic",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "anthropic/claude45opus",
+    "name": "Claude Opus 4.5",
+    "description": "Anthropic's most advanced model.",
+    "identifier": "claude45opus",
+    "tool_name": "pplx_claude45opus",
+    "provider": "anthropic",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "anthropic/claude45opusthinking",
+    "name": "Claude Opus 4.5 Thinking",
+    "description": "Anthropic's Opus reasoning model with thinking.",
+    "identifier": "claude45opusthinking",
+    "tool_name": "pplx_claude45opusthinking",
+    "provider": "anthropic",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "anthropic/claude46opus",
+    "name": "Claude Opus 4.6",
+    "description": "Anthropic's most advanced model.",
+    "identifier": "claude46opus",
+    "tool_name": "pplx_claude46opus",
+    "provider": "anthropic",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "anthropic/claude46opusthinking",
+    "name": "Claude Opus 4.6 Thinking",
+    "description": "Anthropic's Opus reasoning model with thinking.",
+    "identifier": "claude46opusthinking",
+    "tool_name": "pplx_claude46opusthinking",
+    "provider": "anthropic",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "anthropic/claude45sonnet",
+    "name": "Claude Sonnet 4.5",
+    "description": "Anthropic's fast model.",
+    "identifier": "claude45sonnet",
+    "tool_name": "pplx_claude45sonnet",
+    "provider": "anthropic",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "anthropic/claude45sonnetthinking",
+    "name": "Claude Sonnet 4.5 Thinking",
+    "description": "Anthropic's newest reasoning model.",
+    "identifier": "claude45sonnetthinking",
+    "tool_name": "pplx_claude45sonnetthinking",
+    "provider": "anthropic",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "anthropic/claude45haiku",
+    "name": "Claude Haiku 4.5",
+    "description": "Anthropic's compact model.",
+    "identifier": "claude45haiku",
+    "tool_name": "pplx_claude45haiku",
+    "provider": "anthropic",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "anthropic/claude45haikuthinking",
+    "name": "Claude Haiku 4.5 Thinking",
+    "description": "Anthropic's compact reasoning model.",
+    "identifier": "claude45haikuthinking",
+    "tool_name": "pplx_claude45haikuthinking",
+    "provider": "anthropic",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "moonshot/kimik2thinking",
+    "name": "Kimi K2",
+    "description": "Moonshot AI's latest model.",
+    "identifier": "kimik2thinking",
+    "tool_name": "pplx_kimik2thinking",
+    "provider": "moonshot",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "moonshot/kimik25thinking",
+    "name": "Kimi K2.5 Thinking",
+    "description": "Moonshot AI's latest model.",
+    "identifier": "kimik25thinking",
+    "tool_name": "pplx_kimik25thinking",
+    "provider": "moonshot",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "x-ai/grok4",
+    "name": "Grok 4",
+    "description": "xAI's reasoning model.",
+    "identifier": "grok4",
+    "tool_name": "pplx_grok4",
+    "provider": "x-ai",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "x-ai/grok4nonthinking",
+    "name": "Grok 4",
+    "description": "xAI's advanced model.",
+    "identifier": "grok4nonthinking",
+    "tool_name": "pplx_grok4nonthinking",
+    "provider": "x-ai",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "x-ai/grok41reasoning",
+    "name": "Grok 4.1",
+    "description": "xAI's latest model.",
+    "identifier": "grok41reasoning",
+    "tool_name": "pplx_grok41reasoning",
+    "provider": "x-ai",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "x-ai/grok41nonreasoning",
+    "name": "Grok 4.1",
+    "description": "xAI's latest model.",
+    "identifier": "grok41nonreasoning",
+    "tool_name": "pplx_grok41nonreasoning",
+    "provider": "x-ai",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "openai/o4mini",
+    "name": "o4-mini",
+    "description": "OpenAI's latest reasoning model.",
+    "identifier": "o4mini",
+    "tool_name": "pplx_o4mini",
+    "provider": "openai",
+    "min_tier": null,
+    "mode": "research",
+    "status": "unknown",
+    "last_tested_at": null
+  },
+  {
+    "id": "openai/o3pro",
+    "name": "o3-pro",
+    "description": "OpenAI's powerful reasoning model.",
+    "identifier": "o3pro",
+    "tool_name": "pplx_o3pro",
+    "provider": "openai",
+    "min_tier": null,
+    "mode": "copilot",
+    "status": "unknown",
+    "last_tested_at": null
   }
 ]

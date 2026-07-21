@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, TypeAlias, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
@@ -13,8 +13,10 @@ if TYPE_CHECKING:
     from perplexity_webui_scraper.models.types import Model, ModelTier
 
 
-type AccountTier = Literal["free", "pro", "max", "unknown"]
+AccountTier: TypeAlias = Literal["free", "pro", "max", "unknown"]
 """Normalized Perplexity account tier."""
+
+T = TypeVar("T")
 
 TIER_RANK: dict[str, int] = {
     "unknown": -1,
@@ -159,7 +161,10 @@ def normalize_account_tier(
 def ensure_model_access(session: AccountSession, model: Model) -> None:
     """Raise if *session* cannot access *model* based on its minimum tier."""
     account_tier = session.account_tier
-    required_tier: ModelTier = model.min_tier
+    required_tier: ModelTier | None = model.min_tier
+
+    if required_tier is None:
+        return
 
     if TIER_RANK.get(account_tier, -1) < TIER_RANK[required_tier]:
         raise ModelAccessError(model.id, required_tier, account_tier)
@@ -176,7 +181,7 @@ def model_for_account(model: Model, account_tier: AccountTier) -> Model:
     return model.model_copy(update={"identifier": identifier, "mode": mode})
 
 
-def _select_tier_value[T](values_by_tier: dict[ModelTier, T], account_tier: AccountTier) -> T | None:
+def _select_tier_value(values_by_tier: dict[ModelTier, T], account_tier: AccountTier) -> T | None:
     """Select the highest eligible tier-specific value."""
     account_rank = TIER_RANK.get(account_tier, -1)
     candidates = ((TIER_RANK[tier], value) for tier, value in values_by_tier.items() if TIER_RANK[tier] <= account_rank)

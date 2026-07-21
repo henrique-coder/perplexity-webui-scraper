@@ -144,6 +144,8 @@ class PerplexityExtensions(BaseModel):
             returns plain text; ``"json_object"`` adds a JSON-output instruction
             to the system prompt.  Note: Perplexity has no native structured
             output support — this is a best-effort prompt injection.
+        allow_risky_model: Explicitly acknowledge any non-available model status.
+        custom_model_mode: Backend mode used with ``model="custom:<identifier>"``.
     """
 
     model_config = ConfigDict(extra="ignore")
@@ -163,6 +165,8 @@ class PerplexityExtensions(BaseModel):
     space_uuid: str | None = None
     thread_uuid: str | None = None
     response_format: Literal["text", "json_object"] = "text"
+    allow_risky_model: bool = False
+    custom_model_mode: Literal["copilot", "search", "research"] = "copilot"
 
     @model_validator(mode="before")
     @classmethod
@@ -178,7 +182,7 @@ class PerplexityExtensions(BaseModel):
         if not isinstance(values, dict):
             return values
 
-        for key in ("citation_mode", "search_focus", "time_range", "response_format"):
+        for key in ("citation_mode", "search_focus", "time_range", "response_format", "custom_model_mode"):
             if isinstance(values.get(key), str):
                 values[key] = values[key].lower()
 

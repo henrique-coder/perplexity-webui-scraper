@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
-from pytest import raises
+from pytest import raises, warns
 
 from perplexity_webui_scraper._internal.constants import ENDPOINT_AUTH_SESSION, ENDPOINT_USER_SETTINGS
-from perplexity_webui_scraper._internal.exceptions import FileAccessError, ModelAccessError
+from perplexity_webui_scraper._internal.exceptions import FileAccessError, ModelAccessError, ModelRiskWarning
 from perplexity_webui_scraper.config.conversation import ConversationConfig
 from perplexity_webui_scraper.core.account import (
     AccountSession,
@@ -157,6 +157,21 @@ def test_conversation_checks_session_before_prompt_request() -> None:
     assert fake_http.stream_called is False
 
 
+def test_acknowledged_unstable_model_defers_tier_check_to_backend() -> None:
+    fake_http = _FakeHTTP(_session_payload("pro"))
+    conversation = Conversation(
+        cast("HTTPClient", fake_http),
+        ConversationConfig(model="openai/gpt-5.5-thinking", allow_risky_model=True),
+    )
+
+    with warns(ModelRiskWarning):
+        conversation.ask("hello")
+
+    assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, False)]
+    assert fake_http.ask_payload is not None
+    assert fake_http.ask_payload["params"]["model_preference"] == "gpt55_thinking"
+
+
 def test_best_model_uses_turbo_copilot_for_free_account() -> None:
     fake_http = _FakeHTTP(_free_session_payload())
     conversation = Conversation(
@@ -185,6 +200,25 @@ def test_best_model_uses_pro_upgraded_copilot_for_pro_account() -> None:
     assert fake_http.ask_payload is not None
     assert fake_http.ask_payload["params"]["model_preference"] == "pplx_pro_upgraded"
     assert fake_http.ask_payload["params"]["mode"] == "copilot"
+
+
+def test_custom_model_builds_payload_after_risk_acknowledgement() -> None:
+    fake_http = _FakeHTTP(_session_payload("pro"))
+    conversation = Conversation(
+        cast("HTTPClient", fake_http),
+        ConversationConfig(
+            model="custom:gpt57",
+            allow_risky_model=True,
+            custom_model_mode="search",
+        ),
+    )
+
+    with warns(ModelRiskWarning):
+        conversation.ask("hello")
+
+    assert fake_http.ask_payload is not None
+    assert fake_http.ask_payload["params"]["model_preference"] == "gpt57"
+    assert fake_http.ask_payload["params"]["mode"] == "search"
 
 
 def test_unknown_session_tier_falls_back_to_user_settings() -> None:

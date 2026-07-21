@@ -5,7 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0).
 
-## [Unreleased]
+## [1.1.3] - 2026-07-20
+
+### Added
+
+- **Unified model status:** Added the four-state `available`, `unstable`, `unknown`, and `unavailable` model status, preserving historical records instead of deleting them.
+- **Grok 4.5:** Added the Pro-tier Grok 4.5 and Grok 4.5 Thinking models after successful live probes against both picker identifiers.
+- **Model test timestamps:** Added nullable `last_tested_at` metadata with the UTC instant of the test supporting each model status.
+- **Generated model catalog:** API and MCP documentation tables are now rendered from `models.json`, keeping runtime tools and documentation aligned with one source of truth.
+
+### Changed
+
+- **Python compatibility:** Restored support for Python 3.11; the supported runtime range is now 3.11 through 3.14. Python 3.15 remains unsupported until the MCP dependency chain supports it.
+- **Release workflow:** Release candidates are now validated explicitly from `prod`; public publication requires a second, deliberate `publish` dispatch and runs PyPI, container, documentation, tag, and GitHub Release in a recoverable order.
+- **Model safety controls:** Python, CLI, OpenAI-compatible API, and MCP now use the single `allow_risky_model` acknowledgement for every non-available model. Acknowledged models defer the final entitlement decision to Perplexity, preventing stale local tier metadata from causing false denials.
+- **Historical model states:** The seven backend identifiers confirmed working in issue #48 are `unstable`; the other 45 unverified historical entries are `unknown`. `unavailable` is reserved for identifiers confirmed not to work.
+- **Development workflow:** Added a `dev` integration branch, PR-only production promotions, cross-platform CI, release-policy validation, and automated CodeQL/dependency review.
+
+### Fixed
+
+- **Model compatibility:** Restored public model IDs and MCP tool names removed in v1.1.2 even though their backend identifiers remain available.
+- **Container startup:** API and MCP images now execute the installed virtual-environment entry point directly instead of resolving and installing development dependencies through `uv run` at startup.
+
+### Removed
+
+- **Redundant model metadata:** Replaced the legacy `unstable` and `disabled` booleans and repeated per-model `warning` strings with the single `status` field and centrally documented behavior.
 
 ## [1.1.2] - 2026-07-10
 

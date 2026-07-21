@@ -1,5 +1,7 @@
 # Folders
 docs/api/
+docs/api-reference.md
+docs/mcp-server.md
 
 # Files
 uv.lock

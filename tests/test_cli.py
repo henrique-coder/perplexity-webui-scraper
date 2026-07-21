@@ -107,6 +107,8 @@ def test_chat_subcommand_delegates_with_defaults() -> None:
         save=False,
         copy=False,
         raw=False,
+        allow_risky_model=False,
+        custom_model_mode="copilot",
         token=None,
     )
 
@@ -133,6 +135,9 @@ def test_chat_subcommand_delegates_with_all_options() -> None:
                 "pt-BR",
                 "--copy",
                 "--raw",
+                "--allow-risky-model",
+                "--custom-model-mode",
+                "search",
                 "-t",
                 "my-token",
             ],
@@ -155,6 +160,8 @@ def test_chat_subcommand_delegates_with_all_options() -> None:
         save=False,
         copy=True,
         raw=True,
+        allow_risky_model=True,
+        custom_model_mode="search",
         token="my-token",
     )
 
@@ -191,6 +198,38 @@ def test_chat_rejects_partial_coordinates() -> None:
         )
 
     assert exc_info.value.exit_code == 1
+
+
+def test_chat_reports_invalid_custom_identifier() -> None:
+    with (
+        patch("perplexity_webui_scraper.cli.commands.chat.Console") as console_type,
+        raises(Exit) as exc_info,
+    ):
+        run_chat(
+            query="Hello",
+            model="custom:",
+            search_focus="web",
+            source_focus="web",
+            time_range="all",
+            citation_mode="clean",
+            language="en-US",
+            files=None,
+            timezone=None,
+            latitude=None,
+            longitude=None,
+            space_uuid=None,
+            save=False,
+            copy=False,
+            raw=False,
+            allow_risky_model=True,
+            token="test-token",
+        )
+
+    assert exc_info.value.exit_code == 1
+    message = console_type.return_value.print.call_args.args[0]
+    assert "Invalid custom model" in message
+    assert "Custom model identifiers must contain" in message
+    assert "Unknown model" not in message
 
 
 def test_chat_retries_best_as_writing_on_processing_failure() -> None:

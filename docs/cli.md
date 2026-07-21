@@ -100,6 +100,16 @@ Useful options:
 | `--save` / `--no-save`       | boolean                                       | Save or avoid saving in the Perplexity library     |
 | `--copy`, `-cp`              | flag                                          | Copy the final answer to clipboard                 |
 | `--raw`, `-r`                | flag                                          | Disable Rich UI and print only the answer          |
+| `--allow-risky-model`        | flag                                          | Acknowledge any non-available model status         |
+| `--custom-model-mode`        | `copilot`, `search`, `research`               | Backend mode for a `custom:<identifier>` model     |
+
+Custom identifiers are explicit and blocked by default:
+
+```bash
+perplexity-webui-scraper chat "Hello" custom:gpt57 \
+  --allow-risky-model \
+  --custom-model-mode copilot
+```
 
 When `perplexity/best` fails in web-search mode with Perplexity's generic processing error, the CLI retries once using `writing` mode. You can choose that mode directly:
 

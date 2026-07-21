@@ -3,8 +3,9 @@ from __future__ import annotations
 from copy import deepcopy
 
 from pydantic import ValidationError
-from pytest import raises
+from pytest import mark, raises, warns
 
+from perplexity_webui_scraper import ModelRiskWarning, ModelStatusError
 from perplexity_webui_scraper.models.registry import MODELS, ModelRegistry
 from perplexity_webui_scraper.models.types import Model
 
@@ -15,6 +16,7 @@ _MODEL: dict[str, object] = {
     "description": "A test model.",
     "identifier": "provider_model",
     "tool_name": "pplx_provider_model",
+    "provider": "provider",
     "min_tier": "pro",
     "mode": "copilot",
 }
@@ -25,7 +27,12 @@ def test_bundled_model_registry_is_valid() -> None:
     ids = [model.id for model in models]
     tool_names = [model.tool_name for model in models]
 
-    assert models
+    assert len(models) == 72
+    assert sum(model.status == "available" for model in models) == 20
+    assert sum(model.status == "unstable" for model in models) == 7
+    assert sum(model.status == "unknown" for model in models) == 45
+    assert not any(model.status == "unavailable" for model in models)
+    assert all("last_tested_at" in model.model_fields_set for model in models)
     assert len(ids) == len(set(ids))
     assert len(tool_names) == len(set(tool_names))
     assert MODELS.resolve("perplexity/best").id == "perplexity/best"
@@ -46,6 +53,17 @@ def test_bundled_model_registry_is_valid() -> None:
     assert MODELS.resolve("anthropic/claude-opus-4.8").min_tier == "max"
     assert MODELS.resolve("nvidia/nemotron-3-ultra-thinking").identifier == "nv_nemotron_3_ultra"
     assert MODELS.resolve("nvidia/nemotron-3-ultra-thinking").min_tier == "pro"
+    assert MODELS.resolve("x-ai/grok-4.5").identifier == "grok45low"
+    assert MODELS.resolve("x-ai/grok-4.5").status == "available"
+    assert MODELS.resolve("x-ai/grok-4.5").last_tested_at is not None
+    assert MODELS.resolve("x-ai/grok-4.5-thinking").identifier == "grok45medium"
+    assert MODELS.resolve("x-ai/grok-4.5-thinking").status == "available"
+    assert MODELS.resolve("x-ai/grok-4.5-thinking").last_tested_at is not None
+    assert MODELS.resolve("openai/gpt4o").last_tested_at is None
+    assert MODELS.resolve("openai/gpt-5.4").tool_name == "pplx_gpt54"
+    assert MODELS.resolve("anthropic/claude-sonnet-4.6-thinking").tool_name == "pplx_claude_s46_think"
+    assert MODELS.resolve("openai/gpt-5.4").status == "unstable"
+    assert MODELS.resolve("openai/gpt4o").status == "unknown"
 
 
 def test_model_rejects_unknown_fields() -> None:
@@ -54,6 +72,12 @@ def test_model_rejects_unknown_fields() -> None:
 
     with raises(ValidationError):
         Model.model_validate(model_data)
+
+
+@mark.parametrize("timestamp", ["2026-07-20T23:34:21", "2026-07-21T02:34:21+03:00"])
+def test_model_rejects_non_utc_test_timestamps(timestamp: str) -> None:
+    with raises(ValidationError, match="last_tested_at must use UTC"):
+        Model.model_validate({**_MODEL, "last_tested_at": timestamp})
 
 
 def test_model_registry_rejects_duplicate_ids() -> None:
@@ -70,3 +94,48 @@ def test_model_registry_rejects_duplicate_tool_names() -> None:
 
     with raises(ValueError, match="Duplicate MCP tool name"):
         ModelRegistry([_MODEL, duplicate])
+
+
+@mark.parametrize("legacy_field", ["unstable", "disabled", "warning"])
+def test_model_rejects_legacy_availability_fields(legacy_field: str) -> None:
+    with raises(ValidationError):
+        Model.model_validate({**_MODEL, legacy_field: True})
+
+
+def test_unstable_model_requires_acknowledgement() -> None:
+    with raises(ModelStatusError) as exc_info:
+        MODELS.resolve_for_use("openai/gpt-5.4")
+    assert exc_info.value.status == "unstable"
+
+    with warns(ModelRiskWarning):
+        model = MODELS.resolve_for_use("openai/gpt-5.4", allow_risky_model=True)
+    assert model.identifier == "gpt54"
+
+
+@mark.parametrize("status", ["unknown", "unavailable"])
+def test_other_risky_statuses_use_the_same_acknowledgement(status: str) -> None:
+    registry = ModelRegistry([{**_MODEL, "status": status}])
+    with raises(ModelStatusError) as exc_info:
+        registry.resolve_for_use("provider/model")
+    assert exc_info.value.status == status
+    with warns(ModelRiskWarning):
+        assert registry.resolve_for_use("provider/model", allow_risky_model=True).status == status
+
+
+def test_custom_model_is_explicit_and_validated() -> None:
+    with raises(ModelStatusError):
+        MODELS.resolve_for_use("custom:gpt57")
+    with warns(ModelRiskWarning):
+        model = MODELS.resolve_for_use(
+            "custom:gpt57",
+            allow_risky_model=True,
+            custom_model_mode="search",
+        )
+    assert model.identifier == "gpt57"
+    assert model.mode == "search"
+    assert model.min_tier is None
+    assert model.status == "unknown"
+    with raises(ValueError, match="Custom model identifiers"):
+        MODELS.resolve_for_use("custom:", allow_risky_model=True)
+    with raises(ValueError, match="Unknown model"):
+        MODELS.resolve_for_use("gpt57", allow_risky_model=True)

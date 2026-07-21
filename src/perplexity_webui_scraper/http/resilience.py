@@ -76,7 +76,7 @@ class RateLimiter:
             self._last_request = monotonic()
 
 
-def retry_with_backoff[T](
+def retry_with_backoff(
     fn: Callable[[], T],
     config: RetryConfig,
     on_retry: Callable[[int, BaseException, float], None] | None = None,

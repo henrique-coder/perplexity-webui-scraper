@@ -10,4 +10,4 @@ RUN uv sync --frozen --no-install-project --no-dev --extra mcp
 COPY . /app/
 RUN uv sync --frozen --no-dev --no-editable --extra mcp
 
-ENTRYPOINT ["uv", "run", "perplexity-webui-scraper", "mcp"]
+ENTRYPOINT ["/app/.venv/bin/perplexity-webui-scraper", "mcp"]

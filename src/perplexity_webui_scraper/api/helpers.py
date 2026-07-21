@@ -95,4 +95,6 @@ def build_conversation_config(
         timezone=ext.timezone,
         coordinates=coordinates,
         space_uuid=ext.space_uuid,
+        allow_risky_model=ext.allow_risky_model,
+        custom_model_mode=ext.custom_model_mode,
     )

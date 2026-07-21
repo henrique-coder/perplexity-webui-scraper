@@ -15,6 +15,8 @@ __all__: list[str] = [
     "FileValidationError",
     "HTTPError",
     "ModelAccessError",
+    "ModelRiskWarning",
+    "ModelStatusError",
     "PerplexityError",
     "RateLimitError",
     "ResearchClarifyingQuestionsError",
@@ -88,6 +90,22 @@ class ModelAccessError(PerplexityError):
         self.required_tier = required_tier
         self.account_tier = account_tier
         super().__init__(f"Model {model_id!r} requires a {required_tier} account, but this session is {account_tier}.")
+
+
+class ModelStatusError(PerplexityError):
+    """Raised when a non-available model is used without acknowledgement."""
+
+    def __init__(self, model_id: str, status: str, explanation: str) -> None:
+        self.model_id = model_id
+        self.status = status
+        super().__init__(
+            f"Model {model_id!r} has status {status!r}. {explanation} "
+            "Set allow_risky_model=True to acknowledge this risk."
+        )
+
+
+class ModelRiskWarning(UserWarning):
+    """Warn that an explicitly allowed risky model may fail without notice."""
 
 
 class FileAccessError(PerplexityError):

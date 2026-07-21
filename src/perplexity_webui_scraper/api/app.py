@@ -6,7 +6,11 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from perplexity_webui_scraper._internal.exceptions import FileAccessError, ModelAccessError
+from perplexity_webui_scraper._internal.exceptions import (
+    FileAccessError,
+    ModelAccessError,
+    ModelStatusError,
+)
 from perplexity_webui_scraper.api.routes.completions import router as completions_router
 from perplexity_webui_scraper.api.routes.models import router as models_router
 from perplexity_webui_scraper.api.schemas.errors import ErrorDetail, ErrorResponse
@@ -93,6 +97,23 @@ def create_app() -> FastAPI:
                     message=str(exc),
                     type="invalid_request_error",
                     code="file_access_denied",
+                )
+            ).model_dump(),
+        )
+
+    @application.exception_handler(ModelStatusError)
+    async def _model_status_exception_handler(
+        _request: Request,
+        exc: ModelStatusError,
+    ) -> JSONResponse:
+        """Require explicit acknowledgement before risky model use."""
+        return JSONResponse(
+            status_code=400,
+            content=ErrorResponse(
+                error=ErrorDetail(
+                    message=str(exc),
+                    type="invalid_request_error",
+                    code="model_status_confirmation_required",
                 )
             ).model_dump(),
         )

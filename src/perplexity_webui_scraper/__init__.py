@@ -43,6 +43,8 @@ from perplexity_webui_scraper._internal.exceptions import (
     FileValidationError,
     HTTPError,
     ModelAccessError,
+    ModelRiskWarning,
+    ModelStatusError,
     PerplexityError,
     RateLimitError,
     ResearchClarifyingQuestionsError,
@@ -70,7 +72,7 @@ from perplexity_webui_scraper.core.client import Perplexity
 from perplexity_webui_scraper.core.conversation import Conversation
 from perplexity_webui_scraper.core.response import Coordinates, Response, SearchResultItem
 from perplexity_webui_scraper.models.registry import MODELS
-from perplexity_webui_scraper.models.types import Model
+from perplexity_webui_scraper.models.types import Model, ModelStatus
 
 
 __version__: str = version("perplexity-webui-scraper")
@@ -96,6 +98,9 @@ __all__: list[str] = [
     "LogLevel",
     "Model",
     "ModelAccessError",
+    "ModelRiskWarning",
+    "ModelStatus",
+    "ModelStatusError",
     "Perplexity",
     "PerplexityError",
     "RateLimitError",
