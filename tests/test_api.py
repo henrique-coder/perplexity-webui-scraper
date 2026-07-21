@@ -91,6 +91,25 @@ def test_invalid_model(client: TestClient) -> None:
     assert "Unknown model" in response.json()["error"]["message"]
 
 
+def test_invalid_custom_model_exposes_validation_error(client: TestClient) -> None:
+    """Invalid custom identifiers should not be reported as unknown catalog models."""
+    with patch("perplexity_webui_scraper.api.routes.completions.MODELS", MODELS):
+        response = client.post(
+            "/v1/chat/completions",
+            json={
+                "model": "custom:",
+                "messages": [{"role": "user", "content": "Hello"}],
+                "perplexity": {"allow_risky_model": True},
+            },
+            headers={"Authorization": AUTH_HEADER},
+        )
+
+    message = response.json()["error"]["message"]
+    assert response.status_code == 400
+    assert "Custom model identifiers must contain" in message
+    assert "Available:" not in message
+
+
 def test_model_catalog_exposes_risk_metadata(client: TestClient) -> None:
     response = client.get("/v1/models")
     assert response.status_code == 200

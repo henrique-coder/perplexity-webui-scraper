@@ -66,12 +66,14 @@ async def chat_completions(
             allow_risky_model=ext.allow_risky_model if ext else False,
             custom_model_mode=ext.custom_model_mode if ext else "copilot",
         )
-    except ValueError:
+    except ValueError as exc:
+        if request.model.startswith("custom:"):
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         available = ", ".join(f'"{m.id}"' for m in MODELS.list_all())
         raise HTTPException(
             status_code=400,
             detail=f"Unknown model {request.model!r}. Available: {available}",
-        ) from None
+        ) from exc
 
     client = _client_pool.get_or_create(token)
     thread_uuid = request.perplexity.thread_uuid if request.perplexity else None

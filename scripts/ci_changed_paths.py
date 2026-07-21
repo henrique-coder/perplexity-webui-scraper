@@ -40,7 +40,7 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
 
 
 def _changed_paths(base: str, head: str, *, cwd: Path | None = None) -> list[str]:
-    """Read added, copied, modified, and renamed paths from the Git diff."""
+    """Read added, copied, modified, renamed, and deleted paths from the Git diff."""
     output = check_output(
         ["git", "diff", "--name-only", "--diff-filter=ACMRD", base, head],
         cwd=cwd,

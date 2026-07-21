@@ -95,10 +95,13 @@ def run(
             allow_risky_model=allow_risky_model,
             custom_model_mode=cast("ModelMode", custom_model_mode),
         )
-    except ValueError:
+    except ValueError as exc:
+        if resolved_model.startswith("custom:"):
+            console.print(f"[red]⛔ Invalid custom model: {exc}[/red]")
+            raise Exit(code=1) from exc
         console.print(f"[red]⛔ Unknown model: {resolved_model!r}[/red]")
         console.print("Run [bold cyan]perplexity-webui-scraper chat setup[/bold cyan] to change your default model.")
-        raise Exit(code=1)  # noqa: B904
+        raise Exit(code=1) from exc
     except ModelStatusError as exc:
         console.print(f"[red]⛔ {exc}[/red]")
         raise Exit(code=1) from exc
