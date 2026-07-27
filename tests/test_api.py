@@ -114,7 +114,7 @@ def test_model_catalog_exposes_risk_metadata(client: TestClient) -> None:
     response = client.get("/v1/models")
     assert response.status_code == 200
     data = response.json()["data"]
-    assert len(data) == 72
+    assert len(data) == 74
     unstable = next(item for item in data if item["id"] == "openai/gpt-5.4")
     assert unstable["owned_by"] == "openai"
     assert unstable["perplexity"] == {"min_tier": "pro", "status": "unstable", "last_tested_at": None}

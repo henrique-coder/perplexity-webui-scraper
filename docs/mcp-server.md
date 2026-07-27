@@ -115,7 +115,7 @@ Tools marked `[AVAILABLE]` can be called normally. `[UNSTABLE]`, `[UNKNOWN]`, an
 | `pplx_claude_s50_think` | `anthropic/claude-sonnet-5-thinking` | Claude Sonnet 5 Thinking | pro | `available` | — |
 | `pplx_claude_o48` | `anthropic/claude-opus-4.8` | Claude Opus 4.8 | max | `available` | — |
 | `pplx_claude_o48_think` | `anthropic/claude-opus-4.8-thinking` | Claude Opus 4.8 Thinking | max | `available` | — |
-| `pplx_glm52` | `z-ai/glm-5.2` | GLM 5.2 | pro | `available` | — |
+| `pplx_glm52` | `z-ai/glm-5.2` | GLM-5.2 | pro | `available` | — |
 | `pplx_gemini31_pro_think_low` | `google/gemini-3.1-pro-thinking-low` | Gemini 3.1 Pro | pro | `available` | — |
 | `pplx_gemini31_pro_think_high` | `google/gemini-3.1-pro-thinking-high` | Gemini 3.1 Pro Thinking | pro | `available` | — |
 | `pplx_kimi_k26_instant` | `moonshot/kimi-k2.6-instant` | Kimi K2.6 | pro | `available` | — |
@@ -176,6 +176,8 @@ Tools marked `[AVAILABLE]` can be called normally. `[UNSTABLE]`, `[UNKNOWN]`, an
 | `pplx_grok41nonreasoning` | `x-ai/grok41nonreasoning` | Grok 4.1 | unknown | `unknown` | — |
 | `pplx_o4mini` | `openai/o4mini` | o4-mini | unknown | `unknown` | — |
 | `pplx_o3pro` | `openai/o3pro` | o3-pro | unknown | `unknown` | — |
+| `pplx_claude_o50` | `anthropic/claude-opus-5` | Claude Opus 5 | max | `unknown` | — |
+| `pplx_claude_o50_think` | `anthropic/claude-opus-5-thinking` | Claude Opus 5 Thinking | max | `unknown` | — |
 
 ### Custom tool
 

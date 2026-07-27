@@ -27,10 +27,10 @@ def test_bundled_model_registry_is_valid() -> None:
     ids = [model.id for model in models]
     tool_names = [model.tool_name for model in models]
 
-    assert len(models) == 72
+    assert len(models) == 74
     assert sum(model.status == "available" for model in models) == 20
     assert sum(model.status == "unstable" for model in models) == 7
-    assert sum(model.status == "unknown" for model in models) == 45
+    assert sum(model.status == "unknown" for model in models) == 47
     assert not any(model.status == "unavailable" for model in models)
     assert all("last_tested_at" in model.model_fields_set for model in models)
     assert len(ids) == len(set(ids))
@@ -51,6 +51,8 @@ def test_bundled_model_registry_is_valid() -> None:
     assert MODELS.resolve("anthropic/claude-sonnet-5").min_tier == "pro"
     assert MODELS.resolve("anthropic/claude-opus-4.8").identifier == "claude48opus"
     assert MODELS.resolve("anthropic/claude-opus-4.8").min_tier == "max"
+    assert MODELS.resolve("anthropic/claude-opus-5").identifier == "claude50opus"
+    assert MODELS.resolve("anthropic/claude-opus-5").min_tier == "max"
     assert MODELS.resolve("nvidia/nemotron-3-ultra-thinking").identifier == "nv_nemotron_3_ultra"
     assert MODELS.resolve("nvidia/nemotron-3-ultra-thinking").min_tier == "pro"
     assert MODELS.resolve("x-ai/grok-4.5").identifier == "grok45low"

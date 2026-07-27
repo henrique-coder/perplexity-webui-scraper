@@ -205,6 +205,8 @@ The OpenAI-compatible API exposes the same controls inside the `perplexity` requ
 | `x-ai/grok41nonreasoning` | `grok41nonreasoning` | x-ai | unknown | `unknown` | — |
 | `openai/o4mini` | `o4mini` | openai | unknown | `unknown` | — |
 | `openai/o3pro` | `o3pro` | openai | unknown | `unknown` | — |
+| `anthropic/claude-opus-5` | `claude50opus` | anthropic | max | `unknown` | — |
+| `anthropic/claude-opus-5-thinking` | `claude50opusthinking` | anthropic | max | `unknown` | — |
 
 <!-- END GENERATED MODEL CATALOG -->
 

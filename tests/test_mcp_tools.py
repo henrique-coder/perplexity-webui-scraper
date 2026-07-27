@@ -31,7 +31,7 @@ def test_mcp_registers_catalog_and_custom_tools_with_statuses() -> None:
     mcp = _FakeMCP()
     register_all_tools(mcp, _unused_client)
 
-    assert len(mcp.tools) == 73
+    assert len(mcp.tools) == 75
     by_name = {name: description for name, description, _function in mcp.tools}
     assert by_name["pplx_best"].startswith("[AVAILABLE]")
     assert by_name["pplx_gpt54"].startswith("[UNSTABLE]")

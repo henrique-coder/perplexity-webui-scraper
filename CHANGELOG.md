@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0).
 
+## [Unreleased]
+
+### Added
+
+- **Claude Opus 5:** Added the Max-tier Claude Opus 5 and Claude Opus 5 Thinking entries from Perplexity's current model configuration.
+
+### Changed
+
+- **Model metadata:** Synchronized registered model names, descriptions, and providers with Perplexity's `/rest/models/config` response. Sonar 2 remains available under the confirmed `experimental` identifier.
+
 ## [1.1.3] - 2026-07-20
 
 ### Added
