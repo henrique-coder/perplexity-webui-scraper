@@ -46,7 +46,7 @@ dependencies = [
 [project.optional-dependencies]
 cli = [
     "cryptography>=49.0.0, <50.0.0",
-    "platformdirs~=4.10.0",
+    "platformdirs~=4.11.0",
     "pyperclip~=1.11.0",
     "rich~=15.0.0",
 ]
@@ -63,7 +63,10 @@ all = [
 
 [dependency-groups]
 dev = [
-    "prek~=0.4.0",
+    { include-group = "docs" },
+    { include-group = "lint" },
+    { include-group = "test" },
+    "prek~=0.4.10",
 ]
 docs = [
     "mkdocs~=1.6.0",
@@ -73,7 +76,7 @@ docs = [
 lint = [
     "ruff~=0.15.0",
     "ty~=0.0.60",
-    "zizmor~=1.27.0",
+    "zizmor~=1.28.0",
 ]
 test = [
     "httpx~=0.28.0",

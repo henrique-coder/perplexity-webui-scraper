@@ -257,7 +257,7 @@ def test_free_account_cannot_send_files() -> None:
 def test_client_get_account_session_uses_fast_session_request() -> None:
     fake_http = _FakeHTTP(_session_payload("pro"))
     client = Perplexity.__new__(Perplexity)
-    client._http = fake_http  # type: ignore[assignment]
+    client._http = fake_http  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
 
     session = client.get_account_session()
 
@@ -271,7 +271,7 @@ def test_client_get_account_profile_uses_settings_only_when_needed() -> None:
         settings_payload=_free_settings_payload(),
     )
     client = Perplexity.__new__(Perplexity)
-    client._http = fake_http  # type: ignore[assignment]
+    client._http = fake_http  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
 
     profile = client.get_account_profile()
 
