@@ -74,7 +74,7 @@ docs = [
     "mkdocstrings[python]~=1.0.0",
 ]
 lint = [
-    "ruff~=0.15.0",
+    "ruff>=0.15,<0.17",
     "ty~=0.0.60",
     "zizmor~=1.28.0",
 ]
