@@ -51,7 +51,7 @@ cli = [
     "rich~=15.0.0",
 ]
 api = [
-    "fastapi~=0.139.0",
+    "fastapi>=0.139,<0.141",
     "uvicorn[standard]~=0.51.0",
 ]
 mcp = [
