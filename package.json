@@ -1,6 +1,6 @@
 {
   "private": true,
-  "packageManager": "pnpm@11.17.0",
+  "packageManager": "pnpm@11.19.0",
   "devDependencies": {
     "@taplo/cli": "^0.7.0",
     "prettier": "^3.9.6"
