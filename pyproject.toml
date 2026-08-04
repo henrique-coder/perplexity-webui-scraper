@@ -36,7 +36,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "curl-cffi~=0.15.0",
+    "curl-cffi~=0.16.0",
     "loguru~=0.7.0",
     "orjson~=3.11.0",
     "pydantic>=2.13.0, <3.0.0",
@@ -45,7 +45,7 @@ dependencies = [
 
 [project.optional-dependencies]
 cli = [
-    "cryptography>=49.0.0, <50.0.0",
+    "cryptography>=50.0.0, <51.0.0",
     "platformdirs~=4.11.0",
     "pyperclip~=1.11.0",
     "rich~=15.0.0",
@@ -74,7 +74,7 @@ docs = [
     "mkdocstrings[python]~=1.0.0",
 ]
 lint = [
-    "ruff>=0.15,<0.17",
+    "ruff~=0.16.0",
     "ty~=0.0.60",
     "zizmor~=1.28.0",
 ]
