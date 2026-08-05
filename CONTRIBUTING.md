@@ -37,6 +37,14 @@ Useful commands:
 | `uv run --group docs mkdocs build --strict` | Build the documentation site with MkDocs using the `docs` dependency group. `--strict` fails on documentation warnings. |
 | `uv build`                                  | Build the Python source distribution and wheel.                                                                         |
 
+Install the Git hook once per checkout:
+
+```bash
+uv run prek install --hook-type pre-push
+```
+
+The full `just lint` check runs at `git push`, not at `git add` or `git commit`, so local commits remain quick while pushes are checked before they leave the machine. The CI workflow remains the authoritative check for the branch. If an exceptional situation requires bypassing the local hook, use `git push --no-verify` only after running the checks manually.
+
 `mkdocs` is the documentation generator used by this project. The command above does not publish anything; it only verifies that the local documentation can be built successfully.
 
 ## Pull Request Checklist
@@ -74,7 +82,7 @@ https://www.perplexity.ai/rest/models/config
 
 The WebUI network panel can also be used as a fallback to confirm `model_preference`, mode, provider, and tier behavior. Always redact cookies, session tokens, request headers, account IDs, and private prompt data before sharing evidence in an issue or pull request.
 
-The picker is only a subset of the backend registry: absence from the picker does not prove that a model identifier has stopped working. Never delete an existing `models.json` entry. Use exactly one `status`: `available` for models confirmed to work normally, `unstable` for models confirmed to work but likely to disappear, `unknown` for unverified models (the default for new or custom identifiers), and `unavailable` only after backend failure is confirmed. Account-tier denial alone does not make a model unavailable. Historical entries remain documented for compatibility.
+The picker is only a subset of the backend registry: absence from the picker does not prove that a model identifier has stopped working. Never delete an existing `models.json` entry. Set `is_official` to `true` only when the model is listed by the official WebUI. Use exactly one operational `status`: `available` for models confirmed to work normally, `unknown` for unverified models (the default for new or custom identifiers), and `unavailable` only after backend failure is confirmed. Official listing does not imply that a model has been tested, and account-tier denial alone does not make a model unavailable. Historical entries remain documented for compatibility.
 
 Set `last_tested_at` to the UTC timestamp of the live test that supports the current `status`. Leave it as `null` when no conclusive live test has been performed; presence in `/rest/models/config` alone is not a successful model test.
 
