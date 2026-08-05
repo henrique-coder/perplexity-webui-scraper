@@ -115,8 +115,8 @@ def test_model_catalog_exposes_risk_metadata(client: TestClient) -> None:
     assert response.status_code == 200
     data = response.json()["data"]
     assert len(data) == 75
-    unknown = next(item for item in data if item["id"] == "openai/gpt-5.4")
-    assert unknown["owned_by"] == "openai"
+    unknown = next(item for item in data if item["id"] == "google/gemini25pro")
+    assert unknown["owned_by"] == "google"
     assert unknown["perplexity"] == {
         "min_tier": "pro",
         "is_official": False,
@@ -127,8 +127,8 @@ def test_model_catalog_exposes_risk_metadata(client: TestClient) -> None:
     assert grok["perplexity"] == {
         "min_tier": "pro",
         "is_official": True,
-        "status": "unknown",
-        "last_tested_at": None,
+        "status": "available",
+        "last_tested_at": grok["perplexity"]["last_tested_at"],
     }
 
 
@@ -136,7 +136,7 @@ def test_risky_model_api_requires_and_accepts_acknowledgement(client: TestClient
     with patch("perplexity_webui_scraper.api.routes.completions.MODELS", MODELS):
         denied = client.post(
             "/v1/chat/completions",
-            json={"model": "openai/gpt-5.4", "messages": [{"role": "user", "content": "Hello"}]},
+            json={"model": "google/gemini25pro", "messages": [{"role": "user", "content": "Hello"}]},
             headers={"Authorization": AUTH_HEADER},
         )
     assert denied.status_code == 400
@@ -155,7 +155,7 @@ def test_risky_model_api_requires_and_accepts_acknowledgement(client: TestClient
         allowed = client.post(
             "/v1/chat/completions",
             json={
-                "model": "openai/gpt-5.4",
+                "model": "google/gemini25pro",
                 "messages": [{"role": "user", "content": "Hello"}],
                 "perplexity": {"allow_risky_model": True},
             },

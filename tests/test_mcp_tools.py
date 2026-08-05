@@ -33,9 +33,9 @@ def test_mcp_registers_catalog_and_custom_tools_with_statuses() -> None:
 
     assert len(mcp.tools) == 76
     by_name = {name: description for name, description, _function in mcp.tools}
-    assert by_name["pplx_best"].startswith("[UNKNOWN]")
-    assert by_name["pplx_gpt54"].startswith("[UNKNOWN]")
-    assert by_name["pplx_gpt4o"].startswith("[UNKNOWN]")
-    assert by_name["pplx_grok45"].startswith("[UNKNOWN]")
-    assert by_name["pplx_grok45_think"].startswith("[UNKNOWN]")
+    assert by_name["pplx_best"].startswith("[AVAILABLE]")
+    assert by_name["pplx_gpt54"].startswith("[AVAILABLE]")
+    assert by_name["pplx_gpt4o"].startswith("[AVAILABLE]")
+    assert by_name["pplx_grok45"].startswith("[AVAILABLE]")
+    assert by_name["pplx_grok45_think"].startswith("[AVAILABLE]")
     assert by_name["pplx_custom"].startswith("[UNKNOWN]")
