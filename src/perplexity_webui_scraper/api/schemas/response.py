@@ -31,7 +31,8 @@ class ModelCatalogMetadata(BaseModel):
     """Perplexity-specific availability metadata for a catalog model."""
 
     min_tier: Literal["free", "pro", "max"] | None
-    status: Literal["available", "unstable", "unknown", "unavailable"]
+    is_official: bool
+    status: Literal["available", "unknown", "unavailable"]
     last_tested_at: datetime | None
 
 
