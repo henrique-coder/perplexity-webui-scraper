@@ -66,6 +66,7 @@ conversation.ask("Summarize this", files=[Path("document.pdf")])
 
 # 2. Raw bytes — filename defaults to "file", mimetype to "application/octet-stream"
 import requests
+
 image_bytes: bytes = requests.get("https://example.com/image.jpg").content
 conversation.ask("What's in this image?", files=[image_bytes])
 
