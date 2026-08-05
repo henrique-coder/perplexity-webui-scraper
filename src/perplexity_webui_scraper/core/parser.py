@@ -10,6 +10,8 @@ making them independently testable without any HTTP or client machinery.
 
 from __future__ import annotations
 
+from copy import deepcopy
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from orjson import JSONDecodeError, loads
@@ -32,11 +34,203 @@ if TYPE_CHECKING:
     from perplexity_webui_scraper.core.response import SearchResultItem
 
 
+@dataclass
+class SchematizedStreamState:
+    """Mutable state needed to apply schematized WebUI stream updates."""
+
+    workflow_block: dict[str, Any] | None = None
+    answer: str | None = None
+    chunks: list[str] = field(default_factory=list)
+    markdown_chunks: list[str] = field(default_factory=list)
+
+
+def _json_pointer_tokens(path: str) -> list[str]:
+    """Decode an RFC 6901 JSON Pointer path."""
+    if path == "":
+        return []
+    if not path.startswith("/"):
+        raise ValueError(f"Invalid JSON Patch path: {path!r}")
+    return [part.replace("~1", "/").replace("~0", "~") for part in path[1:].split("/")]
+
+
+def _apply_json_patch(document: Any, operation: dict[str, Any]) -> None:
+    """Apply the JSON Patch subset emitted by the WebUI.
+
+    Perplexity currently emits ``add``, ``replace`` and ``remove`` operations
+    against object fields and list indexes.  Keeping this small implementation
+    private avoids adding a dependency for a wire-format detail.
+    """
+    op = operation.get("op")
+    tokens = _json_pointer_tokens(str(operation.get("path", "")))
+    if not tokens:
+        raise ValueError("Root JSON Patch operations are not supported")
+
+    target = document
+    for token in tokens[:-1]:
+        target = target[int(token)] if isinstance(target, list) else target[token]
+    key = tokens[-1]
+
+    if isinstance(target, list):
+        if op == "add":
+            if key == "-":
+                target.append(operation.get("value"))
+            else:
+                target.insert(int(key), operation.get("value"))
+        elif op == "replace":
+            target[int(key)] = operation.get("value")
+        elif op == "remove":
+            target.pop(int(key))
+        else:
+            raise ValueError(f"Unsupported JSON Patch operation: {op!r}")
+        return
+
+    if not isinstance(target, dict):
+        raise TypeError("JSON Patch target must be an object or list")
+    if op in {"add", "replace"}:
+        target[key] = operation.get("value")
+    elif op == "remove":
+        target.pop(key, None)
+    else:
+        raise ValueError(f"Unsupported JSON Patch operation: {op!r}")
+
+
+def _process_schematized_blocks(
+    data: dict[str, Any],
+    search_results: list[SearchResultItem],
+    citation_mode: CitationMode,
+    state: SchematizedStreamState,
+) -> tuple[str | None, list[str], list[SearchResultItem], dict[str, Any]]:
+    """Process the ``workflow_block``/``diff_block`` stream format."""
+    raw_blocks = data.get("blocks", [])
+    raw_data: dict[str, Any] = {}
+    for block in raw_blocks if isinstance(raw_blocks, list) else []:
+        if not isinstance(block, dict):
+            continue
+
+        workflow_block = block.get("workflow_block")
+        if isinstance(workflow_block, dict):
+            state.workflow_block = deepcopy(workflow_block)
+            raw_data["workflow_block"] = deepcopy(workflow_block)
+
+        diff_block = block.get("diff_block")
+        if isinstance(diff_block, dict) and state.workflow_block is not None:
+            for patch in diff_block.get("patches", []):
+                if isinstance(patch, dict):
+                    _apply_json_patch(state.workflow_block, patch)
+            raw_data["diff_block"] = deepcopy(diff_block)
+
+        markdown_block = block.get("markdown_block")
+        if isinstance(markdown_block, dict):
+            _process_markdown_block(markdown_block, citation_mode, state)
+            raw_data["markdown_block"] = deepcopy(markdown_block)
+
+        web_result_block = block.get("web_result_block")
+        if isinstance(web_result_block, dict):
+            updated_results = _extract_web_results(web_result_block)
+            if updated_results is not None:
+                search_results = updated_results
+            raw_data["web_result_block"] = deepcopy(web_result_block)
+
+    if state.workflow_block is not None:
+        extracted = _extract_workflow_text(state.workflow_block, citation_mode, search_results)
+        if extracted is not None:
+            state.answer, state.chunks, search_results = extracted
+
+    is_final = bool(data.get("text_completed") or data.get("final_sse_message") or data.get("final"))
+    if is_final and state.answer is None and state.markdown_chunks:
+        state.answer = format_citations("".join(state.markdown_chunks), citation_mode, search_results)
+    answer = state.answer if is_final else None
+    if state.workflow_block is not None:
+        raw_data["workflow_block"] = deepcopy(state.workflow_block)
+    raw = raw_data
+    return answer, list(state.chunks), search_results, raw
+
+
+def _process_markdown_block(
+    markdown_block: dict[str, Any],
+    citation_mode: CitationMode,
+    state: SchematizedStreamState,
+) -> None:
+    """Merge an incremental markdown block into the stream state."""
+    raw_chunks = markdown_block.get("chunks", [])
+    if isinstance(raw_chunks, list):
+        offset = markdown_block.get("chunk_starting_offset", 0)
+        if not isinstance(offset, int) or offset < 0:
+            offset = 0
+        if offset == 0:
+            state.markdown_chunks = []
+        while len(state.markdown_chunks) < offset:
+            state.markdown_chunks.append("")
+        for index, chunk in enumerate(raw_chunks):
+            value = format_citations(str(chunk), citation_mode, []) if chunk is not None else ""
+            target = offset + index
+            if target == len(state.markdown_chunks):
+                state.markdown_chunks.append(value or "")
+            elif target < len(state.markdown_chunks):
+                state.markdown_chunks[target] = value or ""
+            else:
+                state.markdown_chunks.extend([""] * (target - len(state.markdown_chunks)))
+                state.markdown_chunks.append(value or "")
+
+    answer = markdown_block.get("answer")
+    if isinstance(answer, str) and answer:
+        state.answer = format_citations(answer, citation_mode, [])
+    state.chunks = list(state.markdown_chunks) or state.chunks
+
+
+def _extract_web_results(web_result_block: dict[str, Any]) -> list[SearchResultItem] | None:
+    """Convert schematized web results to the public search-result model."""
+    from perplexity_webui_scraper.core.response import SearchResultItem  # noqa: PLC0415
+
+    raw_results = web_result_block.get("web_results")
+    if not isinstance(raw_results, list):
+        return None
+    return [
+        SearchResultItem(
+            title=result.get("name"),
+            snippet=result.get("snippet"),
+            url=result.get("url"),
+        )
+        for result in raw_results
+        if isinstance(result, dict)
+    ]
+
+
+def _extract_workflow_text(
+    workflow_block: dict[str, Any],
+    citation_mode: CitationMode,
+    search_results: list[SearchResultItem],
+) -> tuple[str | None, list[str], list[SearchResultItem]] | None:
+    """Extract answer text and chunks from a schematized workflow block."""
+    steps = workflow_block.get("steps", [])
+    for step in steps if isinstance(steps, list) else []:
+        if not isinstance(step, dict):
+            continue
+        items = step.get("items", [])
+        for item in items if isinstance(items, list) else []:
+            if not isinstance(item, dict):
+                continue
+            payload = item.get("payload", {})
+            text_payload = payload.get("text_payload", {}) if isinstance(payload, dict) else {}
+            if not isinstance(text_payload, dict):
+                continue
+            raw_chunks = text_payload.get("chunks", [])
+            chunks = [str(chunk) for chunk in raw_chunks if chunk is not None] if isinstance(raw_chunks, list) else []
+            text = text_payload.get("text")
+            answer = format_citations(text if isinstance(text, str) and text else None, citation_mode, search_results)
+            if chunks:
+                chunks = [format_citations(chunk, citation_mode, search_results) or "" for chunk in chunks]
+            if answer is not None or chunks:
+                return answer, chunks, search_results
+    return None
+
+
 def parse_sse_line(line: str | bytes) -> dict[str, Any] | None:
     """Parse a single SSE data line into a dict.
 
     SSE lines follow the format ``data: <json-payload>``.  Any line that does
-    not start with this prefix is silently ignored.
+    not start with this prefix is silently ignored.  The optional space after
+    the colon is accepted because both variants occur in browser streams.
 
     Args:
         line: A raw SSE line as bytes or a string.
@@ -45,10 +239,16 @@ def parse_sse_line(line: str | bytes) -> dict[str, Any] | None:
         Deserialized JSON dict, or ``None`` if the line is not a data line.
     """
     if isinstance(line, bytes):
-        if line.startswith(b"data: "):
-            return loads(line[6:])
-    elif line.startswith("data: "):
-        return loads(line[6:])
+        if line.startswith(b"data:"):
+            payload = line[5:].lstrip()
+            if payload == b"[DONE]":
+                return None
+            return loads(payload)
+    elif line.startswith("data:"):
+        payload = line[5:].lstrip()
+        if payload == "[DONE]":
+            return None
+        return loads(payload)
 
     return None
 
@@ -57,6 +257,7 @@ def process_sse_data(
     data: dict[str, Any],
     search_results: list[SearchResultItem],
     citation_mode: CitationMode,
+    schematized_state: SchematizedStreamState | None = None,
 ) -> tuple[str | None, list[str], list[SearchResultItem], dict[str, Any]]:
     """Process a single SSE data chunk and extract state updates.
 
@@ -69,6 +270,8 @@ def process_sse_data(
         search_results: Current list of search results (used for citation
             formatting).
         citation_mode: Current citation rendering mode.
+        schematized_state: Optional state used to apply incremental WebUI
+            workflow patches across multiple SSE events.
 
     Returns:
         A 4-tuple of ``(answer, chunks, updated_search_results, raw_data)``.
@@ -100,7 +303,16 @@ def process_sse_data(
             raw_data=str(data),
         )
 
-    if "text" not in data and "blocks" not in data:
+    if "blocks" in data:
+        if schematized_state is None:
+            schematized_state = SchematizedStreamState()
+        return _process_schematized_blocks(data, search_results, citation_mode, schematized_state)
+
+    if "text" not in data:
+        if schematized_state is not None and (
+            data.get("text_completed") or data.get("final_sse_message") or data.get("final")
+        ):
+            return schematized_state.answer, list(schematized_state.chunks), search_results, {}
         return None, [], search_results, {}
 
     try:
