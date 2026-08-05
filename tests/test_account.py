@@ -143,11 +143,11 @@ def test_ensure_model_access_blocks_max_model_for_pro_session() -> None:
     assert exc_info.value.account_tier == "pro"
 
 
-def test_unknown_model_defers_entitlement_check_to_backend() -> None:
+def test_non_available_model_defers_entitlement_check_to_backend() -> None:
     fake_http = _FakeHTTP(_session_payload("pro"))
     conversation = Conversation(
         cast("HTTPClient", fake_http),
-        ConversationConfig(model="anthropic/claude-opus-5", allow_risky_model=True),
+        ConversationConfig(model="anthropic/claude45haiku", allow_risky_model=True),
     )
 
     with warns(ModelRiskWarning):
@@ -157,11 +157,11 @@ def test_unknown_model_defers_entitlement_check_to_backend() -> None:
     assert fake_http.stream_called is True
 
 
-def test_acknowledged_unknown_model_defers_tier_check_to_backend() -> None:
+def test_acknowledged_non_available_model_defers_tier_check_to_backend() -> None:
     fake_http = _FakeHTTP(_session_payload("pro"))
     conversation = Conversation(
         cast("HTTPClient", fake_http),
-        ConversationConfig(model="openai/gpt-5.5-thinking", allow_risky_model=True),
+        ConversationConfig(model="anthropic/claude45haiku", allow_risky_model=True),
     )
 
     with warns(ModelRiskWarning):
@@ -169,7 +169,7 @@ def test_acknowledged_unknown_model_defers_tier_check_to_backend() -> None:
 
     assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, False)]
     assert fake_http.ask_payload is not None
-    assert fake_http.ask_payload["params"]["model_preference"] == "gpt55_thinking"
+    assert fake_http.ask_payload["params"]["model_preference"] == "claude45haiku"
 
 
 def test_best_model_uses_turbo_copilot_for_free_account() -> None:
