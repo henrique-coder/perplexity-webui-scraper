@@ -14,12 +14,11 @@ ModelTier: TypeAlias = Literal["free", "pro", "max"]
 ModelMode: TypeAlias = Literal["copilot", "search", "research"]
 """Internal Perplexity request mode used for a model."""
 
-ModelStatus: TypeAlias = Literal["available", "unstable", "unknown", "unavailable"]
+ModelStatus: TypeAlias = Literal["available", "unknown", "unavailable"]
 """Observed availability state of a model identifier."""
 
 MODEL_STATUS_DESCRIPTIONS: Final[dict[ModelStatus, str]] = {
     "available": "Confirmed to work normally.",
-    "unstable": "Confirmed to work, but not guaranteed to remain available.",
     "unknown": "Current availability has not been confirmed.",
     "unavailable": "Confirmed not to work with the current backend.",
 }
@@ -38,12 +37,13 @@ class Model(BaseModel):
         identifier_by_tier: Optional identifier overrides selected by account tier.
         tool_name: MCP tool name used when registering this model as an MCP tool.
         provider: Provider slug used for catalog grouping.
+        is_official: Whether Perplexity currently lists the model in its official WebUI.
         min_tier: Minimum Perplexity subscription, or ``None`` when unknown.
         mode: API request mode sent in the payload (e.g. ``"copilot"``,
             ``"search"``, ``"research"``).
         mode_by_tier: Optional mode overrides selected by account tier.
         status: Observed availability state. Unknown models require explicit
-            risk acknowledgement and are the default for new entries.
+            risk acknowledgement and are the default until a live test is recorded.
         last_tested_at: UTC timestamp of the test that supports the current
             status, or ``None`` when the model has not been tested.
     """
@@ -58,6 +58,7 @@ class Model(BaseModel):
     tool_name: str
     provider: str
     min_tier: ModelTier | None
+    is_official: bool = False
     mode: ModelMode = "copilot"
     mode_by_tier: dict[ModelTier, ModelMode] = Field(default_factory=dict)
     status: ModelStatus = "unknown"
