@@ -101,7 +101,7 @@ ConversationConfig(model="perplexity/best")
 conversation.ask("...", model="google/gemini-3.1-pro-thinking-low")
 ```
 
-Every model has one status: `available`, `unstable`, `unknown`, or `unavailable`. Only `available` models can be selected without acknowledgement. Set `allow_risky_model=True` to explicitly try any other status; the backend then makes the final access decision. Custom identifiers default to `unknown`.
+Every model has one operational status: `available`, `unknown`, or `unavailable`. Only `available` models can be selected without acknowledgement. `is_official` separately indicates whether the model is listed in Perplexity's official WebUI; it does not imply that the model has been tested. Set `allow_risky_model=True` to explicitly try any non-available status; the backend then makes the final access decision. Custom identifiers default to `unknown` and `is_official=false`.
 
 ```python
 config = ConversationConfig(
@@ -125,88 +125,88 @@ The OpenAI-compatible API exposes the same controls inside the `perplexity` requ
 | Status | Meaning | Runtime behavior |
 | --- | --- | --- |
 | `available` | Confirmed to work normally. | Normal use; the local minimum-tier check applies. |
-| `unstable` | Confirmed to work, but not guaranteed to remain available. | Requires `allow_risky_model`; Perplexity makes the final access decision. |
 | `unknown` | Current availability has not been confirmed. | Requires `allow_risky_model`; this is the default for unverified entries. |
 | `unavailable` | Confirmed not to work with the current backend. | Requires `allow_risky_model`; retained for history and expected to fail. |
 
 ### Model catalog
 
-| Model ID | Internal identifier | Provider | Min. tier | Status | Last tested (UTC) |
-| --- | --- | --- | --- | --- | --- |
-| `perplexity/best` | `turbo` | perplexity | free | `available` | — |
-| `perplexity/deep-research` | `pplx_alpha` | perplexity | pro | `available` | — |
-| `perplexity/sonar-2` | `experimental` | perplexity | pro | `available` | — |
-| `openai/gpt-5.6-terra` | `gpt56_terra` | openai | pro | `available` | — |
-| `openai/gpt-5.6-terra-thinking` | `gpt56_terra_thinking` | openai | pro | `available` | — |
-| `openai/gpt-5.6-sol` | `gpt56_sol` | openai | max | `available` | — |
-| `openai/gpt-5.6-sol-thinking` | `gpt56_sol_thinking` | openai | max | `available` | — |
-| `anthropic/claude-sonnet-5` | `claude50sonnet` | anthropic | pro | `available` | — |
-| `anthropic/claude-sonnet-5-thinking` | `claude50sonnetthinking` | anthropic | pro | `available` | — |
-| `anthropic/claude-opus-4.8` | `claude48opus` | anthropic | max | `available` | — |
-| `anthropic/claude-opus-4.8-thinking` | `claude48opusthinking` | anthropic | max | `available` | — |
-| `z-ai/glm-5.2` | `glm_5_2` | z-ai | pro | `available` | — |
-| `google/gemini-3.1-pro-thinking-low` | `gemini31pro_low` | google | pro | `available` | — |
-| `google/gemini-3.1-pro-thinking-high` | `gemini31pro_high` | google | pro | `available` | — |
-| `moonshot/kimi-k2.6-instant` | `kimik26instant` | moonshot | pro | `available` | — |
-| `moonshot/kimi-k2.6-thinking` | `kimik26thinking` | moonshot | pro | `available` | — |
-| `x-ai/grok-4.5` | `grok45low` | x-ai | pro | `available` | 2026-07-20T23:34:21.320430Z |
-| `x-ai/grok-4.5-thinking` | `grok45medium` | x-ai | pro | `available` | 2026-07-20T23:34:25.402265Z |
-| `nvidia/nemotron-3-super-thinking` | `nv_nemotron_3_super` | nvidia | pro | `available` | — |
-| `nvidia/nemotron-3-ultra-thinking` | `nv_nemotron_3_ultra` | nvidia | pro | `available` | — |
-| `openai/gpt-5.4` | `gpt54` | openai | pro | `unstable` | — |
-| `openai/gpt-5.4-thinking` | `gpt54_thinking` | openai | pro | `unstable` | — |
-| `openai/gpt-5.5-thinking` | `gpt55_thinking` | openai | max | `unstable` | — |
-| `anthropic/claude-opus-4.7` | `claude47opus` | anthropic | max | `unstable` | — |
-| `anthropic/claude-opus-4.7-thinking` | `claude47opusthinking` | anthropic | max | `unstable` | — |
-| `anthropic/claude-sonnet-4.6` | `claude46sonnet` | anthropic | pro | `unstable` | — |
-| `anthropic/claude-sonnet-4.6-thinking` | `claude46sonnetthinking` | anthropic | pro | `unstable` | — |
-| `openai/gpt4o` | `gpt4o` | openai | unknown | `unknown` | — |
-| `openai/gpt41` | `gpt41` | openai | unknown | `unknown` | — |
-| `openai/gpt5` | `gpt5` | openai | unknown | `unknown` | — |
-| `openai/gpt5-thinking` | `gpt5_thinking` | openai | unknown | `unknown` | — |
-| `openai/gpt51` | `gpt51` | openai | unknown | `unknown` | — |
-| `openai/gpt51-thinking` | `gpt51_thinking` | openai | unknown | `unknown` | — |
-| `openai/gpt51-low-thinking` | `gpt51_low_thinking` | openai | unknown | `unknown` | — |
-| `openai/gpt5-mini` | `gpt5_mini` | openai | unknown | `unknown` | — |
-| `openai/gpt5-nano` | `gpt5_nano` | openai | unknown | `unknown` | — |
-| `openai/gpt5-pro` | `gpt5_pro` | openai | unknown | `unknown` | — |
-| `openai/gpt52` | `gpt52` | openai | unknown | `unknown` | — |
-| `openai/gpt52-thinking` | `gpt52_thinking` | openai | unknown | `unknown` | — |
-| `openai/gpt52-pro` | `gpt52_pro` | openai | unknown | `unknown` | — |
-| `openai/gpt55` | `gpt55` | openai | unknown | `unknown` | — |
-| `anthropic/claude2` | `claude2` | anthropic | unknown | `unknown` | — |
-| `anthropic/claude37sonnetthinking` | `claude37sonnetthinking` | anthropic | unknown | `unknown` | — |
-| `anthropic/claude40sonnetthinking` | `claude40sonnetthinking` | anthropic | unknown | `unknown` | — |
-| `google/gemini25pro` | `gemini25pro` | google | unknown | `unknown` | — |
-| `google/gemini30pro` | `gemini30pro` | google | unknown | `unknown` | — |
-| `google/gemini30flash` | `gemini30flash` | google | unknown | `unknown` | — |
-| `google/gemini30flash-high` | `gemini30flash_high` | google | unknown | `unknown` | — |
-| `google/gemini35flash` | `gemini35flash` | google | unknown | `unknown` | — |
-| `google/gemini35flash-medium` | `gemini35flash_medium` | google | unknown | `unknown` | — |
-| `google/gemini35flash-high` | `gemini35flash_high` | google | unknown | `unknown` | — |
-| `x-ai/grok` | `grok` | x-ai | unknown | `unknown` | — |
-| `anthropic/claude40opus` | `claude40opus` | anthropic | unknown | `unknown` | — |
-| `anthropic/claude40opusthinking` | `claude40opusthinking` | anthropic | unknown | `unknown` | — |
-| `anthropic/claude41opus` | `claude41opus` | anthropic | unknown | `unknown` | — |
-| `anthropic/claude41opusthinking` | `claude41opusthinking` | anthropic | unknown | `unknown` | — |
-| `anthropic/claude45opus` | `claude45opus` | anthropic | unknown | `unknown` | — |
-| `anthropic/claude45opusthinking` | `claude45opusthinking` | anthropic | unknown | `unknown` | — |
-| `anthropic/claude46opus` | `claude46opus` | anthropic | unknown | `unknown` | — |
-| `anthropic/claude46opusthinking` | `claude46opusthinking` | anthropic | unknown | `unknown` | — |
-| `anthropic/claude45sonnet` | `claude45sonnet` | anthropic | unknown | `unknown` | — |
-| `anthropic/claude45sonnetthinking` | `claude45sonnetthinking` | anthropic | unknown | `unknown` | — |
-| `anthropic/claude45haiku` | `claude45haiku` | anthropic | unknown | `unknown` | — |
-| `anthropic/claude45haikuthinking` | `claude45haikuthinking` | anthropic | unknown | `unknown` | — |
-| `moonshot/kimik2thinking` | `kimik2thinking` | moonshot | unknown | `unknown` | — |
-| `moonshot/kimik25thinking` | `kimik25thinking` | moonshot | unknown | `unknown` | — |
-| `x-ai/grok4` | `grok4` | x-ai | unknown | `unknown` | — |
-| `x-ai/grok4nonthinking` | `grok4nonthinking` | x-ai | unknown | `unknown` | — |
-| `x-ai/grok41reasoning` | `grok41reasoning` | x-ai | unknown | `unknown` | — |
-| `x-ai/grok41nonreasoning` | `grok41nonreasoning` | x-ai | unknown | `unknown` | — |
-| `openai/o4mini` | `o4mini` | openai | unknown | `unknown` | — |
-| `openai/o3pro` | `o3pro` | openai | unknown | `unknown` | — |
-| `anthropic/claude-opus-5` | `claude50opus` | anthropic | max | `unknown` | — |
-| `anthropic/claude-opus-5-thinking` | `claude50opusthinking` | anthropic | max | `unknown` | — |
+| Model ID | Internal identifier | Provider | Official | Min. tier | Status | Last tested (UTC) |
+| --- | --- | --- | --- | --- | --- | --- |
+| `perplexity/best` | `turbo` | perplexity | `true` | free | `available` | 2026-08-05T23:31:27.726694Z |
+| `perplexity/deep-research` | `pplx_alpha` | perplexity | `true` | pro | `available` | 2026-08-05T23:31:30.488422Z |
+| `perplexity/sonar-2` | `experimental` | perplexity | `true` | pro | `available` | 2026-08-05T23:31:35.277279Z |
+| `openai/gpt-5.6-terra` | `gpt56_terra` | openai | `true` | pro | `available` | 2026-08-05T23:31:39.397301Z |
+| `openai/gpt-5.6-terra-thinking` | `gpt56_terra_thinking` | openai | `true` | pro | `available` | 2026-08-05T23:31:43.633312Z |
+| `openai/gpt-5.6-sol` | `gpt56_sol` | openai | `true` | max | `available` | 2026-08-05T23:31:48.536501Z |
+| `openai/gpt-5.6-sol-thinking` | `gpt56_sol_thinking` | openai | `true` | max | `available` | 2026-08-05T23:31:54.067766Z |
+| `anthropic/claude-sonnet-5` | `claude50sonnet` | anthropic | `true` | pro | `available` | 2026-08-05T23:31:57.917346Z |
+| `anthropic/claude-sonnet-5-thinking` | `claude50sonnetthinking` | anthropic | `true` | pro | `available` | 2026-08-05T23:32:01.771184Z |
+| `z-ai/glm-5.2` | `glm_5_2` | z-ai | `true` | pro | `available` | 2026-08-05T23:32:05.681327Z |
+| `google/gemini-3.1-pro-thinking-high` | `gemini31pro_high` | google | `true` | pro | `available` | 2026-08-05T23:32:09.529962Z |
+| `moonshot/kimi-k3-thinking` | `kimik3thinking` | moonshot | `true` | pro | `available` | 2026-08-05T23:32:13.388185Z |
+| `x-ai/grok-4.5` | `grok45low` | x-ai | `true` | pro | `available` | 2026-08-05T23:32:17.793450Z |
+| `x-ai/grok-4.5-thinking` | `grok45medium` | x-ai | `true` | pro | `available` | 2026-08-05T23:32:21.682832Z |
+| `nvidia/nemotron-3-ultra-thinking` | `nv_nemotron_3_ultra` | nvidia | `true` | pro | `available` | 2026-08-05T23:32:26.248167Z |
+| `anthropic/claude-opus-5` | `claude50opus` | anthropic | `true` | max | `available` | 2026-08-05T23:32:30.076411Z |
+| `anthropic/claude-opus-5-thinking` | `claude50opusthinking` | anthropic | `true` | max | `available` | 2026-08-05T23:32:35.570998Z |
+| `anthropic/claude-opus-4.8` | `claude48opus` | anthropic | `false` | max | `available` | 2026-08-05T23:32:40.127829Z |
+| `anthropic/claude-opus-4.8-thinking` | `claude48opusthinking` | anthropic | `false` | max | `available` | 2026-08-05T23:32:43.944074Z |
+| `google/gemini-3.1-pro-thinking-low` | `gemini31pro_low` | google | `false` | pro | `available` | 2026-08-05T23:32:46.838191Z |
+| `moonshot/kimi-k2.6-instant` | `kimik26instant` | moonshot | `false` | pro | `available` | 2026-08-05T23:32:49.769820Z |
+| `moonshot/kimi-k2.6-thinking` | `kimik26thinking` | moonshot | `false` | pro | `available` | 2026-08-05T23:32:52.594354Z |
+| `nvidia/nemotron-3-super-thinking` | `nv_nemotron_3_super` | nvidia | `false` | pro | `available` | 2026-08-05T23:32:55.399808Z |
+| `openai/gpt-5.4` | `gpt54` | openai | `false` | pro | `available` | 2026-08-05T23:32:57.888766Z |
+| `openai/gpt-5.4-thinking` | `gpt54_thinking` | openai | `false` | pro | `available` | 2026-08-05T23:33:08.325486Z |
+| `openai/gpt-5.5-thinking` | `gpt55_thinking` | openai | `false` | max | `available` | 2026-08-05T23:33:11.939198Z |
+| `anthropic/claude-opus-4.7` | `claude47opus` | anthropic | `false` | max | `available` | 2026-08-05T23:33:17.004817Z |
+| `anthropic/claude-opus-4.7-thinking` | `claude47opusthinking` | anthropic | `false` | max | `available` | 2026-08-05T23:33:21.643555Z |
+| `anthropic/claude-sonnet-4.6` | `claude46sonnet` | anthropic | `false` | pro | `available` | 2026-08-05T23:33:24.724002Z |
+| `anthropic/claude-sonnet-4.6-thinking` | `claude46sonnetthinking` | anthropic | `false` | pro | `available` | 2026-08-05T23:33:27.861669Z |
+| `openai/gpt4o` | `gpt4o` | openai | `false` | unknown | `available` | 2026-08-05T23:33:31.502542Z |
+| `openai/gpt41` | `gpt41` | openai | `false` | unknown | `available` | 2026-08-05T23:33:34.451036Z |
+| `openai/gpt5` | `gpt5` | openai | `false` | unknown | `available` | 2026-08-05T23:33:37.081277Z |
+| `openai/gpt5-thinking` | `gpt5_thinking` | openai | `false` | unknown | `available` | 2026-08-05T23:33:40.097475Z |
+| `openai/gpt51` | `gpt51` | openai | `false` | unknown | `available` | 2026-08-05T23:33:43.180232Z |
+| `openai/gpt51-thinking` | `gpt51_thinking` | openai | `false` | unknown | `available` | 2026-08-05T23:33:45.785394Z |
+| `openai/gpt51-low-thinking` | `gpt51_low_thinking` | openai | `false` | unknown | `available` | 2026-08-05T23:33:48.638838Z |
+| `openai/gpt5-mini` | `gpt5_mini` | openai | `false` | unknown | `available` | 2026-08-05T23:33:53.467647Z |
+| `openai/gpt5-nano` | `gpt5_nano` | openai | `false` | unknown | `available` | 2026-08-05T23:33:56.805390Z |
+| `openai/gpt5-pro` | `gpt5_pro` | openai | `false` | unknown | `available` | 2026-08-05T23:34:01.165691Z |
+| `openai/gpt52` | `gpt52` | openai | `false` | unknown | `available` | 2026-08-05T23:34:04.095823Z |
+| `openai/gpt52-thinking` | `gpt52_thinking` | openai | `false` | unknown | `available` | 2026-08-05T23:34:07.087989Z |
+| `openai/gpt52-pro` | `gpt52_pro` | openai | `false` | unknown | `available` | 2026-08-05T23:34:11.454227Z |
+| `openai/gpt55` | `gpt55` | openai | `false` | unknown | `available` | 2026-08-05T23:34:15.837430Z |
+| `anthropic/claude2` | `claude2` | anthropic | `false` | unknown | `available` | 2026-08-05T23:34:18.806306Z |
+| `anthropic/claude37sonnetthinking` | `claude37sonnetthinking` | anthropic | `false` | unknown | `available` | 2026-08-05T23:34:22.075182Z |
+| `anthropic/claude40sonnetthinking` | `claude40sonnetthinking` | anthropic | `false` | unknown | `available` | 2026-08-05T23:34:26.521079Z |
+| `google/gemini25pro` | `gemini25pro` | google | `false` | unknown | `available` | 2026-08-05T23:38:44.044228Z |
+| `google/gemini30pro` | `gemini30pro` | google | `false` | unknown | `available` | 2026-08-05T23:38:47.111485Z |
+| `google/gemini30flash` | `gemini30flash` | google | `false` | unknown | `available` | 2026-08-05T23:38:50.036192Z |
+| `google/gemini30flash-high` | `gemini30flash_high` | google | `false` | unknown | `available` | 2026-08-05T23:38:55.887205Z |
+| `google/gemini35flash` | `gemini35flash` | google | `false` | unknown | `available` | 2026-08-05T23:38:59.146680Z |
+| `google/gemini35flash-medium` | `gemini35flash_medium` | google | `false` | unknown | `available` | 2026-08-05T23:39:02.043511Z |
+| `google/gemini35flash-high` | `gemini35flash_high` | google | `false` | unknown | `available` | 2026-08-05T23:39:05.934013Z |
+| `x-ai/grok` | `grok` | x-ai | `false` | unknown | `available` | 2026-08-05T23:39:08.797817Z |
+| `anthropic/claude40opus` | `claude40opus` | anthropic | `false` | unknown | `available` | 2026-08-05T23:39:11.760884Z |
+| `anthropic/claude40opusthinking` | `claude40opusthinking` | anthropic | `false` | unknown | `available` | 2026-08-05T23:39:15.658726Z |
+| `anthropic/claude41opus` | `claude41opus` | anthropic | `false` | unknown | `available` | 2026-08-05T23:39:20.431045Z |
+| `anthropic/claude41opusthinking` | `claude41opusthinking` | anthropic | `false` | unknown | `available` | 2026-08-05T23:39:24.984906Z |
+| `anthropic/claude45opus` | `claude45opus` | anthropic | `false` | unknown | `available` | 2026-08-05T23:39:29.543839Z |
+| `anthropic/claude45opusthinking` | `claude45opusthinking` | anthropic | `false` | unknown | `available` | 2026-08-05T23:39:33.615918Z |
+| `anthropic/claude46opus` | `claude46opus` | anthropic | `false` | unknown | `available` | 2026-08-05T23:39:41.127287Z |
+| `anthropic/claude46opusthinking` | `claude46opusthinking` | anthropic | `false` | unknown | `available` | 2026-08-05T23:39:46.076227Z |
+| `anthropic/claude45sonnet` | `claude45sonnet` | anthropic | `false` | unknown | `available` | 2026-08-05T23:39:49.423367Z |
+| `anthropic/claude45sonnetthinking` | `claude45sonnetthinking` | anthropic | `false` | unknown | `available` | 2026-08-05T23:39:52.219963Z |
+| `anthropic/claude45haiku` | `claude45haiku` | anthropic | `false` | unknown | `unavailable` | 2026-08-05T23:39:58.315774Z |
+| `anthropic/claude45haikuthinking` | `claude45haikuthinking` | anthropic | `false` | unknown | `unavailable` | 2026-08-05T23:40:05.034769Z |
+| `moonshot/kimik2thinking` | `kimik2thinking` | moonshot | `false` | unknown | `available` | 2026-08-05T23:40:08.660424Z |
+| `moonshot/kimik25thinking` | `kimik25thinking` | moonshot | `false` | unknown | `available` | 2026-08-05T23:40:11.576027Z |
+| `x-ai/grok4` | `grok4` | x-ai | `false` | unknown | `available` | 2026-08-05T23:40:14.422712Z |
+| `x-ai/grok4nonthinking` | `grok4nonthinking` | x-ai | `false` | unknown | `available` | 2026-08-05T23:40:17.401221Z |
+| `x-ai/grok41reasoning` | `grok41reasoning` | x-ai | `false` | unknown | `available` | 2026-08-05T23:35:53.563433Z |
+| `x-ai/grok41nonreasoning` | `grok41nonreasoning` | x-ai | `false` | unknown | `available` | 2026-08-05T23:35:56.433394Z |
+| `openai/o4mini` | `o4mini` | openai | `false` | unknown | `available` | 2026-08-05T23:35:59.335468Z |
+| `openai/o3pro` | `o3pro` | openai | `false` | unknown | `available` | 2026-08-05T23:36:02.896320Z |
 
 <!-- END GENERATED MODEL CATALOG -->
 
@@ -494,9 +494,9 @@ response = client.chat.completions.create(
             "source_focus": "academic",
             "time_range": "year",
             "citation_mode": "markdown",
-            "save_to_library": True
+            "save_to_library": True,
         }
-    }
+    },
 )
 
 print(response.choices[0].message.content)
@@ -528,11 +528,7 @@ The UUID is different from the URL slug — see [ConversationConfig](#conversati
 response = client.chat.completions.create(
     model="perplexity/best",
     messages=[{"role": "user", "content": "Research notes for project X"}],
-    extra_body={
-        "perplexity": {
-            "space_uuid": "12345678-1234-1234-1234-123456789abc"
-        }
-    }
+    extra_body={"perplexity": {"space_uuid": "12345678-1234-1234-1234-123456789abc"}},
 )
 ```
 
@@ -561,13 +557,10 @@ response = client.chat.completions.create(
             "role": "user",
             "content": [
                 {"type": "text", "text": "What is in this document?"},
-                {
-                    "type": "image_url",
-                    "image_url": {"url": f"data:application/pdf;base64,{pdf_b64}"}
-                }
-            ]
+                {"type": "image_url", "image_url": {"url": f"data:application/pdf;base64,{pdf_b64}"}},
+            ],
         }
-    ]
+    ],
 )
 
 print(response.choices[0].message.content)
