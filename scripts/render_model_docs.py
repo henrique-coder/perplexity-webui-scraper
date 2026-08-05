@@ -17,10 +17,9 @@ from perplexity_webui_scraper.models.types import MODEL_STATUS_DESCRIPTIONS, Mod
 ROOT = Path(__file__).resolve().parents[1]
 BEGIN = "<!-- BEGIN GENERATED MODEL CATALOG -->"
 END = "<!-- END GENERATED MODEL CATALOG -->"
-STATUS_ORDER: tuple[ModelStatus, ...] = ("available", "unstable", "unknown", "unavailable")
+STATUS_ORDER: tuple[ModelStatus, ...] = ("available", "unknown", "unavailable")
 STATUS_BEHAVIOR: dict[ModelStatus, str] = {
     "available": "Normal use; the local minimum-tier check applies.",
-    "unstable": "Requires `allow_risky_model`; Perplexity makes the final access decision.",
     "unknown": "Requires `allow_risky_model`; this is the default for unverified entries.",
     "unavailable": "Requires `allow_risky_model`; retained for history and expected to fail.",
 }
@@ -56,13 +55,14 @@ def _api_catalog(models: list[Model]) -> str:
     lines: list[str] = [BEGIN, *_status_reference(), "### Model catalog", ""]
     lines.extend(
         (
-            "| Model ID | Internal identifier | Provider | Min. tier | Status | Last tested (UTC) |",
-            "| --- | --- | --- | --- | --- | --- |",
+            "| Model ID | Internal identifier | Provider | Official | Min. tier | Status | Last tested (UTC) |",
+            "| --- | --- | --- | --- | --- | --- | --- |",
         )
     )
     lines.extend(
         "| "
-        f"`{model.id}` | `{model.identifier}` | {model.provider} | {_tier(model)} | "
+        f"`{model.id}` | `{model.identifier}` | {model.provider} | "
+        f"`{str(model.is_official).lower()}` | {_tier(model)} | "
         f"`{model.status}` | {_last_tested(model)} |"
         for model in models
     )
@@ -75,13 +75,13 @@ def _mcp_catalog(models: list[Model]) -> str:
     lines: list[str] = [BEGIN, *_status_reference(), "### Model tools", ""]
     lines.extend(
         (
-            "| Tool | Model ID | Name | Min. tier | Status | Last tested (UTC) |",
-            "| --- | --- | --- | --- | --- | --- |",
+            "| Tool | Model ID | Name | Official | Min. tier | Status | Last tested (UTC) |",
+            "| --- | --- | --- | --- | --- | --- | --- |",
         )
     )
     lines.extend(
         "| "
-        f"`{model.tool_name}` | `{model.id}` | {model.name} | {_tier(model)} | "
+        f"`{model.tool_name}` | `{model.id}` | {model.name} | `{str(model.is_official).lower()}` | {_tier(model)} | "
         f"`{model.status}` | {_last_tested(model)} |"
         for model in models
     )
