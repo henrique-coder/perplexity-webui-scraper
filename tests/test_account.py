@@ -143,21 +143,21 @@ def test_ensure_model_access_blocks_max_model_for_pro_session() -> None:
     assert exc_info.value.account_tier == "pro"
 
 
-def test_conversation_checks_session_before_prompt_request() -> None:
+def test_unknown_model_defers_entitlement_check_to_backend() -> None:
     fake_http = _FakeHTTP(_session_payload("pro"))
     conversation = Conversation(
         cast("HTTPClient", fake_http),
-        ConversationConfig(model="anthropic/claude-opus-4.8"),
+        ConversationConfig(model="anthropic/claude-opus-5", allow_risky_model=True),
     )
 
-    with raises(ModelAccessError):
+    with warns(ModelRiskWarning):
         conversation.ask("hello")
 
     assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, False)]
-    assert fake_http.stream_called is False
+    assert fake_http.stream_called is True
 
 
-def test_acknowledged_unstable_model_defers_tier_check_to_backend() -> None:
+def test_acknowledged_unknown_model_defers_tier_check_to_backend() -> None:
     fake_http = _FakeHTTP(_session_payload("pro"))
     conversation = Conversation(
         cast("HTTPClient", fake_http),
@@ -176,7 +176,7 @@ def test_best_model_uses_turbo_copilot_for_free_account() -> None:
     fake_http = _FakeHTTP(_free_session_payload())
     conversation = Conversation(
         cast("HTTPClient", fake_http),
-        ConversationConfig(model="perplexity/best"),
+        ConversationConfig(model="perplexity/best", allow_risky_model=True),
     )
 
     conversation.ask("hello")
@@ -191,7 +191,7 @@ def test_best_model_uses_pro_upgraded_copilot_for_pro_account() -> None:
     fake_http = _FakeHTTP(_session_payload("pro"))
     conversation = Conversation(
         cast("HTTPClient", fake_http),
-        ConversationConfig(model="perplexity/best"),
+        ConversationConfig(model="perplexity/best", allow_risky_model=True),
     )
 
     conversation.ask("hello")
@@ -228,7 +228,7 @@ def test_unknown_session_tier_falls_back_to_user_settings() -> None:
     )
     conversation = Conversation(
         cast("HTTPClient", fake_http),
-        ConversationConfig(model="perplexity/best"),
+        ConversationConfig(model="perplexity/best", allow_risky_model=True),
     )
 
     conversation.ask("hello")
@@ -243,7 +243,7 @@ def test_free_account_cannot_send_files() -> None:
     fake_http = _FakeHTTP(_free_session_payload())
     conversation = Conversation(
         cast("HTTPClient", fake_http),
-        ConversationConfig(model="perplexity/best"),
+        ConversationConfig(model="perplexity/best", allow_risky_model=True),
     )
 
     with raises(FileAccessError) as exc_info:

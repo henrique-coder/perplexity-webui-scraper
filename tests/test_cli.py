@@ -280,6 +280,7 @@ def test_chat_retries_best_as_writing_on_processing_failure() -> None:
             save=False,
             copy=False,
             raw=True,
+            allow_risky_model=True,
             token="test-token",
         )
 

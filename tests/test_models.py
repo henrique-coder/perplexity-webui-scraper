@@ -27,11 +27,11 @@ def test_bundled_model_registry_is_valid() -> None:
     ids = [model.id for model in models]
     tool_names = [model.tool_name for model in models]
 
-    assert len(models) == 74
-    assert sum(model.status == "available" for model in models) == 20
-    assert sum(model.status == "unstable" for model in models) == 7
-    assert sum(model.status == "unknown" for model in models) == 47
+    assert len(models) == 75
+    assert sum(model.status == "available" for model in models) == 0
+    assert sum(model.status == "unknown" for model in models) == 75
     assert not any(model.status == "unavailable" for model in models)
+    assert sum(model.is_official for model in models) == 16
     assert all("last_tested_at" in model.model_fields_set for model in models)
     assert len(ids) == len(set(ids))
     assert len(tool_names) == len(set(tool_names))
@@ -55,16 +55,19 @@ def test_bundled_model_registry_is_valid() -> None:
     assert MODELS.resolve("anthropic/claude-opus-5").min_tier == "max"
     assert MODELS.resolve("nvidia/nemotron-3-ultra-thinking").identifier == "nv_nemotron_3_ultra"
     assert MODELS.resolve("nvidia/nemotron-3-ultra-thinking").min_tier == "pro"
+    assert MODELS.resolve("moonshot/kimi-k3-thinking").identifier == "kimik3thinking"
+    assert MODELS.resolve("moonshot/kimi-k3-thinking").min_tier == "pro"
+    assert MODELS.resolve("moonshot/kimi-k3-thinking").is_official is True
     assert MODELS.resolve("x-ai/grok-4.5").identifier == "grok45low"
-    assert MODELS.resolve("x-ai/grok-4.5").status == "available"
-    assert MODELS.resolve("x-ai/grok-4.5").last_tested_at is not None
+    assert MODELS.resolve("x-ai/grok-4.5").is_official is True
+    assert MODELS.resolve("x-ai/grok-4.5").last_tested_at is None
     assert MODELS.resolve("x-ai/grok-4.5-thinking").identifier == "grok45medium"
-    assert MODELS.resolve("x-ai/grok-4.5-thinking").status == "available"
-    assert MODELS.resolve("x-ai/grok-4.5-thinking").last_tested_at is not None
+    assert MODELS.resolve("x-ai/grok-4.5-thinking").is_official is True
+    assert MODELS.resolve("x-ai/grok-4.5-thinking").last_tested_at is None
     assert MODELS.resolve("openai/gpt4o").last_tested_at is None
     assert MODELS.resolve("openai/gpt-5.4").tool_name == "pplx_gpt54"
     assert MODELS.resolve("anthropic/claude-sonnet-4.6-thinking").tool_name == "pplx_claude_s46_think"
-    assert MODELS.resolve("openai/gpt-5.4").status == "unstable"
+    assert MODELS.resolve("openai/gpt-5.4").is_official is False
     assert MODELS.resolve("openai/gpt4o").status == "unknown"
 
 
@@ -104,10 +107,10 @@ def test_model_rejects_legacy_availability_fields(legacy_field: str) -> None:
         Model.model_validate({**_MODEL, legacy_field: True})
 
 
-def test_unstable_model_requires_acknowledgement() -> None:
+def test_unknown_model_requires_acknowledgement() -> None:
     with raises(ModelStatusError) as exc_info:
         MODELS.resolve_for_use("openai/gpt-5.4")
-    assert exc_info.value.status == "unstable"
+    assert exc_info.value.status == "unknown"
 
     with warns(ModelRiskWarning):
         model = MODELS.resolve_for_use("openai/gpt-5.4", allow_risky_model=True)
