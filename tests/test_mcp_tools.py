@@ -23,6 +23,7 @@ class _FakeMCP:
     def tool(self, *, name: str, description: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         def decorator(function: Callable[..., Any]) -> Callable[..., Any]:
             self.tools.append((name, description, function))
+
             return function
 
         return decorator

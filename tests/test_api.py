@@ -43,6 +43,7 @@ def _make_mock_conversation() -> MagicMock:
         conv.answer = f"Response to: {query}"
 
     conv.ask = MagicMock(side_effect=ask_side_effect)
+
     return conv
 
 
