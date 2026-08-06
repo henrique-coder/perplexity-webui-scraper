@@ -36,6 +36,7 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
         "workflows": any(_matches(path, WORKFLOW_PATHS) for path in changed),
     }
     result["metadata"] = bool(changed) and not any(result.values())
+
     return result
 
 
@@ -46,6 +47,7 @@ def _changed_paths(base: str, head: str, *, cwd: Path | None = None) -> list[str
         cwd=cwd,
         text=True,
     )
+
     return output.splitlines()
 
 
@@ -53,10 +55,13 @@ def _write_outputs(result: dict[str, bool]) -> None:
     """Write GitHub Actions outputs, or print them when run locally."""
     lines = [f"{name}={str(enabled).lower()}" for name, enabled in result.items()]
     output_path = environ.get("GITHUB_OUTPUT")
+
     if output_path:
         with Path(output_path).open("a", encoding="utf-8") as output_file:
             output_file.write("\n".join(lines) + "\n")
+
         return
+
     stdout.write("\n".join(lines) + "\n")
 
 
@@ -70,11 +75,14 @@ def main() -> int:
 
     if args.all:
         _write_outputs(dict.fromkeys(CHECKS, True))
+
         return 0
 
     if not args.base or not args.head:
         parser.error("base and head are required unless --all is used")
+
     _write_outputs(classify_paths(_changed_paths(args.base, args.head)))
+
     return 0
 
 
