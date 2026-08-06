@@ -50,6 +50,7 @@ def _json_pointer_tokens(path: str) -> list[str]:
         return []
     if not path.startswith("/"):
         raise ValueError(f"Invalid JSON Patch path: {path!r}")
+
     return [part.replace("~1", "/").replace("~0", "~") for part in path[1:].split("/")]
 
 
@@ -82,6 +83,7 @@ def _apply_json_patch(document: Any, operation: dict[str, Any]) -> None:
             target.pop(int(key))
         else:
             raise ValueError(f"Unsupported JSON Patch operation: {op!r}")
+
         return
 
     if not isinstance(target, dict):
@@ -143,6 +145,7 @@ def _process_schematized_blocks(
     if state.workflow_block is not None:
         raw_data["workflow_block"] = deepcopy(state.workflow_block)
     raw = raw_data
+
     return answer, list(state.chunks), search_results, raw
 
 
@@ -306,6 +309,7 @@ def process_sse_data(
     if "blocks" in data:
         if schematized_state is None:
             schematized_state = SchematizedStreamState()
+
         return _process_schematized_blocks(data, search_results, citation_mode, schematized_state)
 
     if "text" not in data:
@@ -328,6 +332,7 @@ def process_sse_data(
 
     if isinstance(json_data, dict):
         updated_results, answer, chunks, raw = _extract_state(json_data, search_results, citation_mode)
+
         return answer, chunks, updated_results, raw
 
     raise ResponseParsingError(
@@ -463,6 +468,7 @@ def _process_block_list(
                 answer_data = raw_content
 
             updated, answer, chunks, raw = _extract_state(answer_data, search_results, citation_mode)
+
             return answer, chunks, updated, raw
 
     return None, [], search_results, {}

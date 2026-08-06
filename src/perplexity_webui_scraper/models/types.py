@@ -70,4 +70,5 @@ class Model(BaseModel):
         """Reject test timestamps that are missing a UTC offset."""
         if value is not None and value.utcoffset() != timedelta(0):
             raise ValueError("last_tested_at must use UTC")
+
         return value

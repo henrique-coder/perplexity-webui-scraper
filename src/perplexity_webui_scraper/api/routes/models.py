@@ -30,4 +30,5 @@ async def list_models() -> JSONResponse:
             for m in MODELS.list_all()
         ]
     )
+
     return JSONResponse(content=data.model_dump(mode="json"))

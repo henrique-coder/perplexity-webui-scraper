@@ -124,6 +124,7 @@ async def chat_completions(
 
     if request.stream:
         conversation.ask(query, files=files or None, stream=True)
+
         return StreamingResponse(
             _stream_response(
                 conversation,

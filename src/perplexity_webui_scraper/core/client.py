@@ -89,17 +89,20 @@ class Perplexity:
         the account tier into ``free``, ``pro``, ``max``, or ``unknown``.
         """
         response = self._http.get(ENDPOINT_AUTH_SESSION, rate_limited=False)
+
         return AccountSession.model_validate(response.json())
 
     def get_account_settings(self) -> AccountSettings:
         """Return typed user settings for the current token."""
         response = self._http.get(ENDPOINT_USER_SETTINGS, rate_limited=False)
+
         return AccountSettings.model_validate(response.json())
 
     def get_account_profile(self) -> AccountProfile:
         """Return combined account data, using settings when session tier is incomplete."""
         session = self.get_account_session()
         settings = self.get_account_settings() if session.account_tier == "unknown" else None
+
         return AccountProfile(session=session, settings=settings)
 
     def close(self) -> None:

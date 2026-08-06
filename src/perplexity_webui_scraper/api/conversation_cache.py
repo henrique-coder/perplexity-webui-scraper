@@ -46,6 +46,7 @@ class ConversationCache:
             return None
 
         cached.last_access = time()
+
         return cached.conversation
 
     def set(self, token: str, thread_uuid: str, conversation: Conversation) -> None:

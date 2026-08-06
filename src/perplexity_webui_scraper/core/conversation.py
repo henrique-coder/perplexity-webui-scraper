@@ -213,6 +213,7 @@ class Conversation:
         if model.status == "available":
             ensure_model_access(effective_session, model)
         ensure_file_access(account_tier, has_files)
+
         return model_for_account(model, account_tier)
 
     def _reset_state(self) -> None:
