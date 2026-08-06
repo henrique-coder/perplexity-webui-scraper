@@ -351,6 +351,7 @@ def _prompt_and_save_token(console: object) -> None:
 
     if not entered_token or not entered_token.strip():
         rich_console.print("[red]  Token cannot be empty.[/red]")
+
         return
 
     save_token(entered_token.strip())
@@ -387,6 +388,7 @@ def _prompt_and_save_model(console: object) -> None:
             chosen = models[idx].id
         else:
             rich_console.print("[red]  Invalid number.[/red]")
+
             return
     else:
         chosen = choice
@@ -395,6 +397,7 @@ def _prompt_and_save_model(console: object) -> None:
         chosen_model = MODELS.resolve(chosen)
     except ValueError:
         rich_console.print(f"[red]  Unknown model: {chosen!r}[/red]")
+
         return
 
     if chosen_model.status != "available":

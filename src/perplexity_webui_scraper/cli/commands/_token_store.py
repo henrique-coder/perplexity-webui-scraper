@@ -28,6 +28,7 @@ def _get_or_create_key() -> bytes:
     key = Fernet.generate_key()
     _KEY_FILE.write_bytes(key)
     _KEY_FILE.chmod(0o600)
+
     return key
 
 
@@ -73,6 +74,7 @@ def load_token() -> str | None:
 
     try:
         fernet = _get_fernet()
+
         return fernet.decrypt(encrypted.encode()).decode()
     except InvalidToken:
         return None
@@ -88,6 +90,7 @@ def delete_token() -> None:
 def get_default_model() -> str:
     """Return the user's default model, falling back to ``perplexity/best``."""
     config = _load_config()
+
     return str(config.get("default_model", "perplexity/best"))
 
 

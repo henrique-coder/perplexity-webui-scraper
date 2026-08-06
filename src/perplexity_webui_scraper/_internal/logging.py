@@ -49,6 +49,7 @@ def configure_logging(
     if level_str == "DISABLED":
         logger.disable("perplexity_webui_scraper")
         _logging_configured = False
+
         return
 
     logger.enable("perplexity_webui_scraper")

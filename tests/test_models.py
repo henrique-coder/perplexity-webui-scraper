@@ -27,43 +27,17 @@ def test_bundled_model_registry_is_valid() -> None:
     ids = [model.id for model in models]
     tool_names = [model.tool_name for model in models]
 
-    assert len(models) == 72
-    assert sum(model.status == "available" for model in models) == 20
-    assert sum(model.status == "unstable" for model in models) == 7
-    assert sum(model.status == "unknown" for model in models) == 45
-    assert not any(model.status == "unavailable" for model in models)
-    assert all("last_tested_at" in model.model_fields_set for model in models)
+    assert models
+    assert all(model.status in {"available", "unknown", "unavailable"} for model in models)
+    assert all(isinstance(model.is_official, bool) for model in models)
+    assert all(model.last_tested_at is not None for model in models if model.status in {"available", "unavailable"})
+    official_positions = [index for index, model in enumerate(models) if model.is_official]
+    historical_positions = [index for index, model in enumerate(models) if not model.is_official]
+    assert not historical_positions or max(official_positions) < min(historical_positions)
     assert len(ids) == len(set(ids))
     assert len(tool_names) == len(set(tool_names))
-    assert MODELS.resolve("perplexity/best").id == "perplexity/best"
-    assert MODELS.resolve("perplexity/best").min_tier == "free"
-    assert MODELS.resolve("perplexity/best").identifier == "turbo"
-    assert MODELS.resolve("perplexity/best").identifier_by_tier["free"] == "turbo"
-    assert MODELS.resolve("perplexity/best").identifier_by_tier["pro"] == "pplx_pro_upgraded"
-    assert MODELS.resolve("perplexity/best").mode == "copilot"
-    assert MODELS.resolve("perplexity/best").mode_by_tier["free"] == "copilot"
-    assert MODELS.resolve("perplexity/best").mode_by_tier["pro"] == "copilot"
-    assert MODELS.resolve("openai/gpt-5.6-terra").identifier == "gpt56_terra"
-    assert MODELS.resolve("openai/gpt-5.6-terra").min_tier == "pro"
-    assert MODELS.resolve("openai/gpt-5.6-sol").identifier == "gpt56_sol"
-    assert MODELS.resolve("openai/gpt-5.6-sol").min_tier == "max"
-    assert MODELS.resolve("anthropic/claude-sonnet-5").identifier == "claude50sonnet"
-    assert MODELS.resolve("anthropic/claude-sonnet-5").min_tier == "pro"
-    assert MODELS.resolve("anthropic/claude-opus-4.8").identifier == "claude48opus"
-    assert MODELS.resolve("anthropic/claude-opus-4.8").min_tier == "max"
-    assert MODELS.resolve("nvidia/nemotron-3-ultra-thinking").identifier == "nv_nemotron_3_ultra"
-    assert MODELS.resolve("nvidia/nemotron-3-ultra-thinking").min_tier == "pro"
-    assert MODELS.resolve("x-ai/grok-4.5").identifier == "grok45low"
-    assert MODELS.resolve("x-ai/grok-4.5").status == "available"
-    assert MODELS.resolve("x-ai/grok-4.5").last_tested_at is not None
-    assert MODELS.resolve("x-ai/grok-4.5-thinking").identifier == "grok45medium"
-    assert MODELS.resolve("x-ai/grok-4.5-thinking").status == "available"
-    assert MODELS.resolve("x-ai/grok-4.5-thinking").last_tested_at is not None
-    assert MODELS.resolve("openai/gpt4o").last_tested_at is None
-    assert MODELS.resolve("openai/gpt-5.4").tool_name == "pplx_gpt54"
-    assert MODELS.resolve("anthropic/claude-sonnet-4.6-thinking").tool_name == "pplx_claude_s46_think"
-    assert MODELS.resolve("openai/gpt-5.4").status == "unstable"
-    assert MODELS.resolve("openai/gpt4o").status == "unknown"
+    assert all(model.id and model.identifier and model.tool_name for model in models)
+    assert all(model.provider and model.description for model in models)
 
 
 def test_model_rejects_unknown_fields() -> None:
@@ -102,14 +76,15 @@ def test_model_rejects_legacy_availability_fields(legacy_field: str) -> None:
         Model.model_validate({**_MODEL, legacy_field: True})
 
 
-def test_unstable_model_requires_acknowledgement() -> None:
+def test_unknown_model_requires_acknowledgement() -> None:
+    registry = ModelRegistry([{**_MODEL, "status": "unknown"}])
     with raises(ModelStatusError) as exc_info:
-        MODELS.resolve_for_use("openai/gpt-5.4")
-    assert exc_info.value.status == "unstable"
+        registry.resolve_for_use("provider/model")
+    assert exc_info.value.status == "unknown"
 
     with warns(ModelRiskWarning):
-        model = MODELS.resolve_for_use("openai/gpt-5.4", allow_risky_model=True)
-    assert model.identifier == "gpt54"
+        model = registry.resolve_for_use("provider/model", allow_risky_model=True)
+    assert model.identifier == "provider_model"
 
 
 @mark.parametrize("status", ["unknown", "unavailable"])

@@ -79,6 +79,7 @@ def _make_mock_client(conv: MagicMock | None = None) -> MagicMock:
         conv = _make_mock_conversation()
 
     client.create_conversation = MagicMock(return_value=conv)
+
     return client
 
 

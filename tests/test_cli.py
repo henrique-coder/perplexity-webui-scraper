@@ -29,6 +29,7 @@ def _stub_module(name: str, attr: str) -> tuple[dict[str, ModuleType], Mock]:
     mock = Mock()
     module = ModuleType(name)
     setattr(module, attr, mock)
+
     return {name: module}, mock
 
 
@@ -243,6 +244,7 @@ def test_chat_retries_best_as_writing_on_processing_failure() -> None:
                 raise ResponseParsingError("Query processing failed: Error in processing query.")
 
             self.answer = "ok"
+
             return iter(())
 
     class _Client:
@@ -259,6 +261,7 @@ def test_chat_retries_best_as_writing_on_processing_failure() -> None:
         def create_conversation(self, config: Any) -> _Conversation:
             self.configs.append(config)
             self.calls += 1
+
             return _Conversation(fail=self.calls == 1)
 
     fake_client = _Client("token")
@@ -280,6 +283,7 @@ def test_chat_retries_best_as_writing_on_processing_failure() -> None:
             save=False,
             copy=False,
             raw=True,
+            allow_risky_model=True,
             token="test-token",
         )
 

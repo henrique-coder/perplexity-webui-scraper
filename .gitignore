@@ -11,6 +11,9 @@ node_modules/
 .claude/
 .debug/
 
+# Files
+example*.py
+
 # Extensions
 *.env
 *.log

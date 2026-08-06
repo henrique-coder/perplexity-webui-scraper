@@ -107,6 +107,7 @@ def chat(
         from perplexity_webui_scraper.cli.commands.chat import setup as run_setup  # noqa: PLC0415
 
         run_setup()
+
         return
 
     # Start REPL or single query if query is provided

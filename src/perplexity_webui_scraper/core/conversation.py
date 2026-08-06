@@ -15,7 +15,11 @@ from perplexity_webui_scraper.core.account import (
     model_for_account,
 )
 from perplexity_webui_scraper.core.files import _FileInfo, upload_file, validate_files
-from perplexity_webui_scraper.core.parser import parse_sse_line, process_sse_data
+from perplexity_webui_scraper.core.parser import (
+    SchematizedStreamState,
+    parse_sse_line,
+    process_sse_data,
+)
 from perplexity_webui_scraper.core.payload import build_payload
 from perplexity_webui_scraper.core.response import Response, SearchResultItem
 from perplexity_webui_scraper.models.registry import MODELS
@@ -60,6 +64,7 @@ class Conversation:
         "_http",
         "_raw_data",
         "_read_write_token",
+        "_schematized_state",
         "_search_results",
         "_stream_generator",
     )
@@ -74,6 +79,7 @@ class Conversation:
         self._chunks: list[str] = []
         self._search_results: list[SearchResultItem] = []
         self._raw_data: dict[str, Any] = {}
+        self._schematized_state = SchematizedStreamState()
         self._stream_generator: Generator[Response, None, None] | None = None
 
     # ------------------------------------------------------------------
@@ -207,6 +213,7 @@ class Conversation:
         if model.status == "available":
             ensure_model_access(effective_session, model)
         ensure_file_access(account_tier, has_files)
+
         return model_for_account(model, account_tier)
 
     def _reset_state(self) -> None:
@@ -215,6 +222,7 @@ class Conversation:
         self._chunks = []
         self._search_results = []
         self._raw_data = {}
+        self._schematized_state = SchematizedStreamState()
         self._stream_generator = None
 
     def _apply_sse_data(self, data: dict[str, Any]) -> None:
@@ -228,7 +236,12 @@ class Conversation:
         if "read_write_token" in data:
             self._read_write_token = data["read_write_token"]
 
-        answer, chunks, updated_results, raw_data = process_sse_data(data, self._search_results, self._citation_mode)
+        answer, chunks, updated_results, raw_data = process_sse_data(
+            data,
+            self._search_results,
+            self._citation_mode,
+            self._schematized_state,
+        )
 
         if updated_results is not self._search_results:
             self._search_results = updated_results

@@ -260,6 +260,7 @@ class HTTPClient:
             response = self._session.get(url, params=params)
             log_response("GET", url, response.status_code, elapsed_ms=(monotonic() - t0) * 1000)
             self._raise_for_status(response, f"GET {endpoint}: ")
+
             return response
 
         try:
@@ -306,6 +307,7 @@ class HTTPClient:
             response = self._session.post(url, json=json, stream=stream)
             log_response("POST", url, response.status_code, elapsed_ms=(monotonic() - t0) * 1000)
             self._raise_for_status(response, f"POST {endpoint}: ")
+
             return response
 
         try:

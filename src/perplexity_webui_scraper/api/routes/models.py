@@ -22,6 +22,7 @@ async def list_models() -> JSONResponse:
                 owned_by=m.provider,
                 perplexity=ModelCatalogMetadata(
                     min_tier=m.min_tier,
+                    is_official=m.is_official,
                     status=m.status,
                     last_tested_at=m.last_tested_at,
                 ),
@@ -29,4 +30,5 @@ async def list_models() -> JSONResponse:
             for m in MODELS.list_all()
         ]
     )
+
     return JSONResponse(content=data.model_dump(mode="json"))

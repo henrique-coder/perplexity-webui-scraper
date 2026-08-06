@@ -2,8 +2,9 @@ repos:
   - repo: local
     hooks:
       - id: lint
-        name: lint
+        name: project lint (pre-push)
         entry: just lint
         language: system
         pass_filenames: false
         always_run: true
+        stages: [pre-push]

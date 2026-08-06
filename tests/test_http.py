@@ -28,10 +28,12 @@ class _FakeSession:
 
     def get(self, url: str, params: dict[str, Any] | None = None) -> _FakeResponse:
         self.calls += 1
+
         return _FakeResponse(200)
 
     def post(self, url: str, json: dict[str, Any] | None = None, stream: bool = False) -> _FakeResponse:
         self.calls += 1
+
         return _FakeResponse(429 if self.calls == 1 else 200)
 
     def close(self) -> None:

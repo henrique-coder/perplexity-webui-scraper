@@ -68,7 +68,10 @@ AUTH_BEARER_PREFIX: Final[str] = "Bearer "
 
 DEFAULT_HEADERS: Final[dict[str, str]] = {
     "Accept": "text/event-stream, application/json",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Cache-Control": "no-cache",
     "Content-Type": "application/json",
+    "Pragma": "no-cache",
     "Referer": f"{API_BASE_URL}/",
     "Origin": API_BASE_URL,
 }
@@ -78,11 +81,11 @@ DEFAULT_HEADERS: Final[dict[str, str]] = {
 # Request payload flags
 # ---------------------------------------------------------------------------
 
-SEND_BACK_TEXT: Final[bool] = True
+SEND_BACK_TEXT: Final[bool] = False
 """Whether to receive full text in each streaming chunk (replace mode)."""
 
-USE_SCHEMATIZED_API: Final[bool] = False
-"""Whether to use the schematized API format."""
+USE_SCHEMATIZED_API: Final[bool] = True
+"""Whether to use the current schematized WebUI stream format."""
 
 PROMPT_SOURCE: Final[str] = "user"
 """Source identifier for prompts."""

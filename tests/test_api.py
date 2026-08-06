@@ -43,6 +43,7 @@ def _make_mock_conversation() -> MagicMock:
         conv.answer = f"Response to: {query}"
 
     conv.ask = MagicMock(side_effect=ask_side_effect)
+
     return conv
 
 
@@ -114,23 +115,25 @@ def test_model_catalog_exposes_risk_metadata(client: TestClient) -> None:
     response = client.get("/v1/models")
     assert response.status_code == 200
     data = response.json()["data"]
-    assert len(data) == 72
-    unstable = next(item for item in data if item["id"] == "openai/gpt-5.4")
-    assert unstable["owned_by"] == "openai"
-    assert unstable["perplexity"] == {"min_tier": "pro", "status": "unstable", "last_tested_at": None}
-    grok = next(item for item in data if item["id"] == "x-ai/grok-4.5")
-    assert grok["perplexity"] == {
-        "min_tier": "pro",
-        "status": "available",
-        "last_tested_at": "2026-07-20T23:34:21.320430Z",
-    }
+    expected = {model.id: model for model in MODELS.list_all()}
+    assert {item["id"] for item in data} == set(expected)
+    for item in data:
+        model = expected[item["id"]]
+        metadata = item["perplexity"]
+        assert item["owned_by"] == model.provider
+        assert metadata["min_tier"] == model.min_tier
+        assert metadata["is_official"] == model.is_official
+        assert metadata["status"] == model.status
+        expected_tested_at = model.last_tested_at.isoformat().replace("+00:00", "Z") if model.last_tested_at else None
+        assert metadata["last_tested_at"] == expected_tested_at
 
 
 def test_risky_model_api_requires_and_accepts_acknowledgement(client: TestClient) -> None:
+    risky_model_id = next(model.id for model in MODELS.list_all() if model.status != "available")
     with patch("perplexity_webui_scraper.api.routes.completions.MODELS", MODELS):
         denied = client.post(
             "/v1/chat/completions",
-            json={"model": "openai/gpt-5.4", "messages": [{"role": "user", "content": "Hello"}]},
+            json={"model": risky_model_id, "messages": [{"role": "user", "content": "Hello"}]},
             headers={"Authorization": AUTH_HEADER},
         )
     assert denied.status_code == 400
@@ -149,7 +152,7 @@ def test_risky_model_api_requires_and_accepts_acknowledgement(client: TestClient
         allowed = client.post(
             "/v1/chat/completions",
             json={
-                "model": "openai/gpt-5.4",
+                "model": risky_model_id,
                 "messages": [{"role": "user", "content": "Hello"}],
                 "perplexity": {"allow_risky_model": True},
             },
