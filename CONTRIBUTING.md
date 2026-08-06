@@ -79,14 +79,14 @@ Keep the catalog ordered for people reading it: default entry points first (`per
 When adding or correcting a model, use Perplexity's internal model config endpoint when available:
 
 ```text
-https://www.perplexity.ai/rest/models/config
+https://www.perplexity.ai/rest/models/config/v2
 ```
 
 The WebUI network panel can also be used as a fallback to confirm `model_preference`, mode, provider, and tier behavior. Always redact cookies, session tokens, request headers, account IDs, and private prompt data before sharing evidence in an issue or pull request.
 
 The picker is only a subset of the backend registry: absence from the picker does not prove that a model identifier has stopped working. Never delete an existing `models.json` entry. Set `is_official` to `true` only when the model is listed by the official WebUI. Use exactly one operational `status`: `available` for models confirmed to work normally, `unknown` for unverified models (the default for new or custom identifiers), and `unavailable` only after backend failure is confirmed. Official listing does not imply that a model has been tested, and account-tier denial alone does not make a model unavailable. Historical entries remain documented for compatibility.
 
-Set `last_tested_at` to the UTC timestamp of the live test that supports the current `status`. Leave it as `null` when no conclusive live test has been performed; presence in `/rest/models/config` alone is not a successful model test.
+Set `last_tested_at` to the UTC timestamp of the live test that supports the current `status`. Leave it as `null` when no conclusive live test has been performed; presence in `/rest/models/config/v2` alone is not a successful model test.
 
 Tests and generated documentation must derive model IDs, counts, statuses, and timestamps from the loaded registry. Do not hardcode a snapshot of `models.json`; use small synthetic registry fixtures for status behavior and reserve literal model IDs for explicit public-compatibility tests only.
 
