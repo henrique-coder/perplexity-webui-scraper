@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Model metadata:** Synchronized registered model names, descriptions, and providers with Perplexity's `/rest/models/config` response, separated official WebUI listing (`is_official`) from operational status, and recorded UTC results from Pro-account streaming probes for all 75 catalog entries. The 17 official models are `available`; 73 entries are `available` and two historical Claude Haiku identifiers are `unavailable` after three failed probes each. Registry tests and generated catalogs now derive their metadata instead of relying on hardcoded snapshots.
+- **Model metadata:** Synchronized registered model names, descriptions, and providers with Perplexity's `/rest/models/config/v2` response, separated official WebUI listing (`is_official`) from operational status, and recorded UTC results from Pro-account streaming probes for all 75 catalog entries. The 17 official models are `available`; 73 entries are `available` and two historical Claude Haiku identifiers are `unavailable` after three failed probes each. Registry tests and generated catalogs now derive their metadata instead of relying on hardcoded snapshots.
 
 ### Removed
 
