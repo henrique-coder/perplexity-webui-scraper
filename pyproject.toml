@@ -52,7 +52,7 @@ cli = [
 ]
 api = [
     "fastapi~=0.141.0",
-    "uvicorn[standard]~=0.51.0",
+    "uvicorn[standard]>=0.51,<0.53",
 ]
 mcp = [
     "fastmcp~=3.4.0",
