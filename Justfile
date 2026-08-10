@@ -1,7 +1,7 @@
 default:
     @just --list
 
-install:
+update:
     uv sync --upgrade --all-extras --all-groups
     pnpm update
 
