@@ -52,7 +52,7 @@ cli = [
 ]
 api = [
     "fastapi~=0.141.0",
-    "uvicorn[standard]~=0.51.0",
+    "uvicorn[standard]~=0.52.0",
 ]
 mcp = [
     "fastmcp~=3.4.0",
@@ -66,7 +66,7 @@ dev = [
     { include-group = "docs" },
     { include-group = "lint" },
     { include-group = "test" },
-    "prek~=0.4.10",
+    "prek~=0.4.0",
 ]
 docs = [
     "mkdocs~=1.6.0",
