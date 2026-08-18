@@ -47,9 +47,9 @@ def extract_token(authorization: str | None) -> str:
 class ClientPool:
     """Per-token cache of :class:`~perplexity_webui_scraper.Perplexity` client instances.
 
-    Avoids recreating the curl-cffi session (and its rate limiter) on every
-    API request.  Clients are keyed by their session token and never evicted
-    — tokens are long-lived relative to server uptime.
+    Avoids recreating the curl-cffi session and rate limiter for every API
+    request. Clients are keyed by session token and remain cached for the
+    lifetime of the process.
 
     Usage::
 

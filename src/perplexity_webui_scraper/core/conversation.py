@@ -1,4 +1,4 @@
-"""Conversation class — manages query lifecycle and streaming state."""
+"""Conversation query lifecycle and streaming state."""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ _DEFAULT_MODEL: str = "perplexity/best"
 class Conversation:
     """Manage a Perplexity conversation thread with multi-turn and streaming support.
 
-    Create instances via ``client.create_conversation()`` — do not instantiate directly.
+    Create instances through ``client.create_conversation()`` instead of instantiating this class directly.
 
     Example:
         ```python

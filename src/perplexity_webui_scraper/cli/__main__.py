@@ -138,7 +138,7 @@ def chat(
 
 @chat_app.command()
 def setup() -> None:
-    """Interactive setup wizard — configure token and default model."""
+    """Configure the saved token and default model."""
     from perplexity_webui_scraper.cli.commands.chat import setup as run_setup  # noqa: PLC0415
 
     run_setup()

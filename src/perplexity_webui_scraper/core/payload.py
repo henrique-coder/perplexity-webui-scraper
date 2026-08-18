@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 # ---------------------------------------------------------------------------
-# Mapping tables (module-level constants — defined once, imported by MCP)
+# Mapping tables shared with the MCP tools.
 # ---------------------------------------------------------------------------
 
 SOURCE_MAP: Final[dict[str, str]] = {
@@ -105,7 +105,7 @@ def build_payload(
         "version": API_VERSION,
     }
 
-    # Space (collection) support — overrides incognito mode
+    # Space requests override incognito mode.
     if config.space_uuid:
         params["target_collection_uuid"] = config.space_uuid
         params["target_thread_access_level"] = 1

@@ -6,6 +6,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from perplexity_webui_scraper import __version__
 from perplexity_webui_scraper._internal.exceptions import (
     FileAccessError,
     ModelAccessError,
@@ -19,22 +20,22 @@ from perplexity_webui_scraper.api.schemas.errors import ErrorDetail, ErrorRespon
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application.
 
-    Returns a fully configured :class:`fastapi.FastAPI` instance with:
+    The application includes:
 
-    - CORS middleware (allow all origins — configure in production).
+    - CORS middleware that allows all origins.
     - ``GET /v1/models`` and ``POST /v1/chat/completions`` routes.
-    - OpenAI-compatible error format for all HTTP exceptions.
+    - OpenAI-compatible error objects for HTTP exceptions.
 
     Returns:
         Configured :class:`fastapi.FastAPI` instance.
     """
     application = FastAPI(
-        title="Perplexity WebUI Scraper — OpenAI-compatible API",
+        title="Perplexity WebUI Scraper - OpenAI-compatible API",
         description=(
-            "Drop-in OpenAI-compatible API powered by Perplexity WebUI Scraper. "
-            "Pass your Perplexity session token as: **Authorization: Bearer <token>**."
+            "OpenAI-compatible chat completions backed by Perplexity's WebUI. "
+            "Pass the Perplexity session token as **Authorization: Bearer <token>**."
         ),
-        version="1.0.0",
+        version=__version__,
         docs_url="/docs",
         redoc_url="/redoc",
     )

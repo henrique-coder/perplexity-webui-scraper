@@ -1,4 +1,4 @@
-"""MCP tools package — registers per-model ask tools onto a FastMCP instance."""
+"""Register model-specific query tools on a FastMCP instance."""
 
 from __future__ import annotations
 

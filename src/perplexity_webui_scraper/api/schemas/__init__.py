@@ -1,4 +1,4 @@
-"""API schemas package — re-exports all request and response schemas."""
+"""Request and response schema exports."""
 
 from __future__ import annotations
 

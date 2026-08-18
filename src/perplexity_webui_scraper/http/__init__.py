@@ -1,4 +1,4 @@
-"""HTTP package — re-exports HTTPClient."""
+"""HTTP client export."""
 
 from __future__ import annotations
 

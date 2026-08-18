@@ -142,8 +142,8 @@ class PerplexityExtensions(BaseModel):
             and sends only the last user message as a follow-up.
         response_format: Hint for the response format.  ``"text"`` (default)
             returns plain text; ``"json_object"`` adds a JSON-output instruction
-            to the system prompt.  Note: Perplexity has no native structured
-            output support — this is a best-effort prompt injection.
+            to the system prompt. Perplexity has no native structured-output
+            mode, so this setting cannot guarantee valid JSON.
         allow_risky_model: Explicitly acknowledge any non-available model status.
         custom_model_mode: Backend mode used with ``model="custom:<identifier>"``.
     """
@@ -197,9 +197,9 @@ class PerplexityExtensions(BaseModel):
 class ChatCompletionRequest(BaseModel):
     """OpenAI-compatible chat completion request.
 
-    Standard OpenAI fields that Perplexity does not support (``temperature``,
-    ``top_p``, ``n``, ``max_tokens``, …) are accepted for drop-in client
-    compatibility but silently ignored via ``extra="allow"``.
+    Unsupported OpenAI fields such as ``temperature``, ``top_p``, ``n``, and
+    ``max_tokens`` are accepted for client compatibility and ignored through
+    ``extra="allow"``.
 
     The optional ``perplexity`` block exposes all Perplexity-specific settings::
 

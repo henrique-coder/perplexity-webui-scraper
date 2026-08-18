@@ -1,4 +1,4 @@
-"""get-session-token CLI command — extracts the Perplexity session cookie.
+"""Extract a Perplexity session cookie through the email authentication flow.
 
 Uses the email → OTP code → redirect-link → cookie extraction flow via curl-cffi.
 """
@@ -42,7 +42,7 @@ def _show_header() -> None:
             "[bold white]Perplexity WebUI Scraper[/bold white]\n\n"
             "Automatic session token generator via email authentication.\n"
             "[dim]All session data will be cleared on exit.[/dim]",
-            title="🔐 Token Generator",
+            title="Token Generator",
             border_style="cyan",
         )
     )
@@ -50,7 +50,7 @@ def _show_header() -> None:
 
 def _show_exit_message() -> None:
     """Display the security note and wait for the user to press ENTER before clearing the screen."""
-    console.print("\n[bold yellow]⚠️ Security Note:[/bold yellow]")
+    console.print("\n[bold yellow]Security note:[/bold yellow]")
     console.print("Press [bold white]ENTER[/bold white] to clear screen and exit.")
     console.input()
 
@@ -74,7 +74,7 @@ def _prompt_email(provided: str | None) -> str:
 
 def _fetch_csrf(session: Session) -> str:
     """Obtain a CSRF token from Perplexity's auth endpoint."""
-    with console.status("[bold green]Initializing secure connection...", spinner="dots"):
+    with console.status("[bold green]Initializing connection...", spinner="dots"):
         session.get(API_BASE_URL)
         csrf_response = session.get(f"{API_BASE_URL}{ENDPOINT_AUTH_CSRF}")
         csrf_response.raise_for_status()
@@ -147,7 +147,7 @@ def _follow_callback(session: Session, redirect_url: str) -> str | None:
 
         return challenge_token
 
-    # Normal flow — follow the redirect
+    # Complete the normal redirect flow.
     follow_url = location if location.startswith("http") else f"{API_BASE_URL}{location}"
     session.get(follow_url)
 
@@ -181,7 +181,7 @@ def _verify_totp(session: Session, challenge_token: str) -> None:
                     totp_data = totp_verify_response.json()
 
                     if "error" in totp_data:
-                        console.print(f"[red]  ❌ {totp_data.get('error')}[/red]")
+                        console.print(f"[red]  {totp_data.get('error')}[/red]")
                         continue
 
                 raise
@@ -198,7 +198,7 @@ def _verify_totp(session: Session, challenge_token: str) -> None:
             totp_data = totp_verify_response.json()
 
             if "error" in totp_data:
-                console.print(f"[red]  ❌ {totp_data.get('error')}[/red]")
+                console.print(f"[red]  {totp_data.get('error')}[/red]")
                 continue
 
             next_redirect = totp_data.get("redirect", "")
@@ -217,7 +217,7 @@ def _extract_and_present_token(session: Session) -> None:
     if not session_token:
         raise ValueError("Authentication successful, but token not found.")
 
-    console.print("\n[bold green]✅ Token generated successfully![/bold green]")
+    console.print("\n[bold green]Token generated.[/bold green]")
     console.print(f"\n[bold white]Your session token:[/bold white]\n[green]{session_token}[/green]\n")
 
     if Confirm.ask("Copy token to clipboard?", default=False, console=console):
@@ -268,7 +268,7 @@ def run(
                         break
                     except ValueError as e:
                         if "Verification failed" in str(e):
-                            console.print(f"[red]  ❌ {e}[/red]")
+                            console.print(f"[red]  {e}[/red]")
                             console.print(
                                 "[yellow]  The previous request was invalidated. Resending a new code...[/yellow]"
                             )
@@ -286,7 +286,7 @@ def run(
         except KeyboardInterrupt:
             raise typer.Exit(code=0) from None
         except Exception as error:
-            console.print(f"\n[bold red]⛔ Error:[/bold red] {error}")
+            console.print(f"\n[bold red]Error:[/bold red] {error}")
             console.input("[dim]Press ENTER to exit...[/dim]")
 
             raise typer.Exit(code=1) from error

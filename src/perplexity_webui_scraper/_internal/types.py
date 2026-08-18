@@ -14,7 +14,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 # ---------------------------------------------------------------------------
-# Coordinates — defined here (not in core.response) to avoid circular imports
+# Coordinates live here to avoid a circular import with core.response.
 # ---------------------------------------------------------------------------
 
 
@@ -39,40 +39,40 @@ class Coordinates(BaseModel):
 CitationMode = Literal["default", "markdown", "clean"]
 """Controls how citation markers are rendered in the final answer.
 
-- ``"default"`` — leave ``[1]``, ``[2]`` … markers as-is.
-- ``"markdown"`` — convert markers to ``[1](url)`` Markdown links.
-- ``"clean"`` — strip all citation markers from the text.
+- ``"default"``: leave ``[1]``, ``[2]`` … markers as-is.
+- ``"markdown"``: convert markers to ``[1](url)`` Markdown links.
+- ``"clean"``: strip all citation markers from the text.
 """
 
 SearchFocus = Literal["web", "writing"]
 """Selects the search/generation mode.
 
-- ``"web"`` — web search is enabled; sources are cited.
-- ``"writing"`` — no sources; purely generative response.
+- ``"web"``: enable web search and cited sources.
+- ``"writing"``: generate a response without sources.
 """
 
 SourceFocus = Literal["web", "academic", "social", "finance", "all"]
 """Filters which source categories Perplexity searches.
 
-- ``"web"`` — general web results.
-- ``"academic"`` — scholarly / academic databases.
-- ``"social"`` — social media posts and discussions.
-- ``"finance"`` — SEC EDGAR filings and financial data.
-- ``"all"`` — combine web, academic, and social.
+- ``"web"``: general web results.
+- ``"academic"``: scholarly and academic databases.
+- ``"social"``: social media posts and discussions.
+- ``"finance"``: SEC EDGAR filings and financial data.
+- ``"all"``: combine web, academic, and social.
 """
 
 TimeRange = Literal["all", "day", "week", "month", "year"]
 """Recency filter applied to web search results.
 
-- ``"all"`` — no time restriction.
-- ``"day"`` / ``"week"`` / ``"month"`` / ``"year"`` — restrict to that window.
+- ``"all"``: no time restriction.
+- ``"day"`` / ``"week"`` / ``"month"`` / ``"year"``: restrict to that window.
 """
 
 LogLevel = Literal["disabled", "debug", "info", "warning", "error", "critical"]
 """Log verbosity level.
 
-- ``"disabled"`` — no log output (default).
-- ``"debug"`` through ``"critical"`` — standard severity levels.
+- ``"disabled"``: no log output (default).
+- ``"debug"`` through ``"critical"``: standard severity levels.
 """
 
 # ---------------------------------------------------------------------------
@@ -82,8 +82,8 @@ LogLevel = Literal["disabled", "debug", "info", "warning", "error", "critical"]
 FileInput = str | PathLike[str] | bytes | tuple[bytes, str] | tuple[bytes, str, str]
 """Accepted file inputs for ``Conversation.ask(files=...)``.
 
-- ``str | PathLike[str]`` — local filesystem path; file is read at upload time.
-- ``bytes`` — raw bytes; filename defaults to ``"file"``, MIME auto-detected.
-- ``tuple[bytes, str]`` — ``(data, filename)``; MIME guessed from filename.
-- ``tuple[bytes, str, str]`` — ``(data, filename, mimetype)``; fully explicit.
+- ``str | PathLike[str]``: local filesystem path; read at upload time.
+- ``bytes``: raw bytes; filename defaults to ``"file"`` and MIME type is detected.
+- ``tuple[bytes, str]``: ``(data, filename)``; MIME type is guessed from the filename.
+- ``tuple[bytes, str, str]``: ``(data, filename, mimetype)``.
 """

@@ -16,7 +16,7 @@ class ModelObject(BaseModel):
     Attributes:
         id: Canonical model ID (e.g. ``"perplexity/best"``).
         object: Always ``"model"``.
-        created: Unix timestamp (always ``0`` — not tracked).
+        created: Unix timestamp. Model registration time is not tracked, so this is ``0``.
         owned_by: Model provider string.
     """
 
@@ -77,7 +77,7 @@ class ChatCompletionChoice(BaseModel):
     """A single completion choice (non-streaming).
 
     Attributes:
-        index: Choice index (always ``0`` — single choice only).
+        index: Choice index. The API returns one choice, so this is ``0``.
         message: The :class:`ChatCompletionMessage`.
         finish_reason: Stop reason (always ``"stop"``).
     """
@@ -90,7 +90,7 @@ class ChatCompletionChoice(BaseModel):
 class ChatCompletionUsage(BaseModel):
     """Token usage statistics.
 
-    All values are ``0`` — the scraper does not have access to token counts.
+    The scraper does not receive token counts, so all values are ``0``.
 
     Attributes:
         prompt_tokens: Always ``0``.

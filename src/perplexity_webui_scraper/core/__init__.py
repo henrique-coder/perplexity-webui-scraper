@@ -1,4 +1,4 @@
-"""Core package — re-exports primary client, conversation, and account types."""
+"""Core client, conversation, and account exports."""
 
 from __future__ import annotations
 
