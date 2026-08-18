@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dependency layout:** Modernized project metadata with PEP 639 licensing, completed the API, test, lint, hook, and workflow groups, removed the private `examples` group, and kept rounded minimum versions with upper bounds only for the build backend and compatibility-sensitive packages.
 - **API tests:** Replaced the direct HTTPX test dependency with Niquests' in-process ASGI session. The library continues to use curl-cffi for Perplexity requests.
 - **Development commands:** Updated CI and Justfile commands to install only the extras and dependency groups required by each check, including workflow linting with zizmor.
+- **Model registry:** Synchronized the official WebUI models with the v2 configuration, recorded successful health checks for Gemini 3.7 Flash and Grok 4.6 variants, and kept GLM 5.2 represented as a thinking-only model.
 - **Project text:** Corrected unsupported compatibility claims, stale examples, inaccurate descriptions, CLI messages, API metadata, comments, and docstrings across current project files.
 
 ## [1.1.4] - 2026-08-05
