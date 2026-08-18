@@ -7,9 +7,10 @@ session token or network access.
 from __future__ import annotations
 
 from time import time
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
-from fastapi.testclient import TestClient
+from niquests import Session
 from orjson import loads
 from pytest import fixture
 
@@ -17,6 +18,10 @@ from perplexity_webui_scraper.api.app import app
 from perplexity_webui_scraper.api.conversation_cache import _CachedConversation
 from perplexity_webui_scraper.api.routes.completions import _client_pool, _conversation_cache
 from perplexity_webui_scraper.core import Conversation
+
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 # Constants
@@ -27,11 +32,8 @@ THREAD_UUID = "test-thread-uuid-1234"
 MODEL_ID = "openai/gpt-5.6-terra"
 
 
-# Model validation mock
-# The existing MODELS registry uses Pydantic iteration which yields
-# (field_name, Model) tuples, making model ID membership checks always False.
-# We mock the ``resolve`` method and bypass the ``in`` check so tests can
-# focus on the thread continuation logic.
+# Keep model lookup independent from the bundled registry so these tests cover
+# only thread continuation.
 
 
 class _MockModelRegistry:
@@ -100,15 +102,13 @@ def _clean_caches():
 
 
 @fixture
-def http_client() -> TestClient:
-    """FastAPI test client."""
-    return TestClient(app)
+def http_client() -> Generator[Session, None, None]:
+    """Create a Niquests session connected directly to the FastAPI app."""
+    with Session(app=app) as session:
+        yield session
 
 
-# Test 1: New conversation — no thread_uuid
-
-
-def test_new_conversation_returns_thread_uuid(http_client: TestClient) -> None:
+def test_new_conversation_returns_thread_uuid(http_client: Session) -> None:
     """A request without thread_uuid should create a new conversation and return perplexity.thread_uuid."""
     mock_conv = _make_mock_conversation()
     mock_client = _make_mock_client(mock_conv)
@@ -130,10 +130,7 @@ def test_new_conversation_returns_thread_uuid(http_client: TestClient) -> None:
     assert data["perplexity"]["thread_uuid"] == THREAD_UUID
 
 
-# Test 2: Follow-up with thread_uuid
-
-
-def test_followup_with_thread_uuid(http_client: TestClient) -> None:
+def test_followup_with_thread_uuid(http_client: Session) -> None:
     """A request with a valid cached thread_uuid should continue using only the last message."""
     mock_conv = _make_mock_conversation()
     mock_client = _make_mock_client(mock_conv)
@@ -173,10 +170,7 @@ def test_followup_with_thread_uuid(http_client: TestClient) -> None:
     mock_client.create_conversation.assert_not_called()
 
 
-# Test 3: Non-existent thread_uuid returns 404
-
-
-def test_invalid_thread_uuid_returns_404(http_client: TestClient) -> None:
+def test_invalid_thread_uuid_returns_404(http_client: Session) -> None:
     """A request with an uncached thread_uuid should return a 404 error with a clear message."""
     mock_client = _make_mock_client()
 
@@ -195,10 +189,7 @@ def test_invalid_thread_uuid_returns_404(http_client: TestClient) -> None:
     assert "not found or expired" in resp.json()["error"]["message"]
 
 
-# Test 4: Streaming with thread_uuid
-
-
-def test_streaming_new_conversation_includes_thread_uuid(http_client: TestClient) -> None:
+def test_streaming_new_conversation_includes_thread_uuid(http_client: Session) -> None:
     """A streaming request without thread_uuid should include it in the final chunk."""
     mock_conv = _make_mock_conversation()
     mock_client = _make_mock_client(mock_conv)
@@ -223,6 +214,7 @@ def test_streaming_new_conversation_includes_thread_uuid(http_client: TestClient
     assert resp.status_code == 200
 
     # Parse SSE lines to find the final chunk with finish_reason
+    assert resp.text is not None
     lines = resp.text.strip().split("\n")
     final_chunk = None
 
@@ -241,10 +233,7 @@ def test_streaming_new_conversation_includes_thread_uuid(http_client: TestClient
     assert final_chunk["perplexity"]["thread_uuid"] == THREAD_UUID
 
 
-# Test 5: space_uuid and thread_uuid together
-
-
-def test_space_uuid_and_thread_uuid_together(http_client: TestClient) -> None:
+def test_space_uuid_and_thread_uuid_together(http_client: Session) -> None:
     """Passing both space_uuid and thread_uuid should not conflict."""
     mock_conv = _make_mock_conversation()
     mock_client = _make_mock_client(mock_conv)
@@ -276,10 +265,7 @@ def test_space_uuid_and_thread_uuid_together(http_client: TestClient) -> None:
     mock_client.create_conversation.assert_not_called()
 
 
-# Test 6: TTL eviction
-
-
-def test_expired_conversation_is_evicted(http_client: TestClient) -> None:
+def test_expired_conversation_is_evicted(http_client: Session) -> None:
     """A conversation that has exceeded the TTL should be evicted and return a 404."""
     mock_conv = _make_mock_conversation()
     mock_client = _make_mock_client(mock_conv)
@@ -305,10 +291,7 @@ def test_expired_conversation_is_evicted(http_client: TestClient) -> None:
     assert "not found or expired" in resp.json()["error"]["message"]
 
 
-# Test 7: Backward compatibility — no perplexity block at all
-
-
-def test_no_perplexity_block_works_as_before(http_client: TestClient) -> None:
+def test_no_perplexity_block_works_as_before(http_client: Session) -> None:
     """A request with no perplexity block should work identically to the original behavior."""
     mock_conv = _make_mock_conversation()
     mock_client = _make_mock_client(mock_conv)
