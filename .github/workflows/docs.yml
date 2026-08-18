@@ -33,10 +33,10 @@ jobs:
           enable-cache: false
 
       - name: Install Dependencies
-        run: uv sync --only-group docs --no-install-project
+        run: uv sync --frozen --no-dev --group docs
 
       - name: Build MkDocs
-        run: uv run mkdocs build --strict
+        run: uv run --no-sync mkdocs build --strict
 
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
