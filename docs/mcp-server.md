@@ -1,10 +1,10 @@
 # MCP Server (Model Context Protocol)
 
-The library includes an MCP server that exposes every model as a separate tool for AI assistants like Claude Desktop and Antigravity. Enable only the models you need to keep agent context size small.
+The MCP server exposes each registered model as a separate tool. Enable only the tools your MCP client needs.
 
 ## Configuration
 
-Add to your MCP config file (no installation required via npm, handled by python `uvx` native tools):
+Add one of the following entries to your MCP client configuration. `uvx` creates an isolated Python environment for the server.
 
 **Claude Desktop** (`~/.config/claude/claude_desktop_config.json`):
 

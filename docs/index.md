@@ -2,16 +2,16 @@
 
 Python scraper to extract AI responses from [Perplexity's](https://www.perplexity.ai) web interface.
 
-This library allows you to interact with Perplexity programmatically, start conversations, upload files, and stream responses back, all using the same web interface endpoints used by the browser, but powered by Python and managed cleanly.
+The library uses Perplexity's internal WebUI endpoints with a browser session token. It provides a Python client, file uploads, streamed responses, an MCP server, and an OpenAI-compatible REST API.
 
 ## Key Features
 
-- Full support for the latest Perplexity AI models
-- Conversation history tracking
-- File attachments (Documents and Images)
-- Asynchronous streaming capabilities
-- MCP (Model Context Protocol) Server support out-of-the-box
-- OpenAI-compatible REST API server (drop-in replacement for any OpenAI client)
+- JSON-backed model registry with availability metadata
+- Multi-turn conversations
+- Document and image attachments
+- Synchronous response streaming
+- MCP server with one tool per registered model
+- REST API for the supported OpenAI chat-completions fields
 
 ## Disclaimer
 

@@ -12,18 +12,13 @@ Python scraper to extract AI responses from [Perplexity's](https://www.perplexit
 
 </div>
 
----
+Documentation: [henrique-coder.github.io/perplexity-webui-scraper](https://henrique-coder.github.io/perplexity-webui-scraper)
 
-**📚 Full Documentation & Advanced Guide:** [https://henrique-coder.github.io/perplexity-webui-scraper](https://henrique-coder.github.io/perplexity-webui-scraper)
+## About
 
----
+This unofficial library uses Perplexity's internal WebUI endpoints with a browser session token. It supports conversations, file uploads, streaming, an MCP server, and an OpenAI-compatible REST API.
 
-## What is this?
-
-This library lets you interact with Perplexity AI programmatically using the same web endpoints as the browser — no official API key required. It supports conversations, file uploads, streaming, an MCP server for AI agents, and a drop-in OpenAI-compatible REST API.
-
-- **Requirements:** A Perplexity account and your browser session token. Free accounts support text prompts; paid tiers are required for Pro/Max models and file uploads.
-- **Key Features:** JSON-backed model catalog with explicit availability status, file attachments (images, PDFs, …), streaming, MCP Server for AI agents, OpenAI-compatible REST API, multi-turn conversation thread continuation.
+A Perplexity account and its browser session token are required. Free accounts support text prompts; paid tiers are required for Pro/Max models and file uploads.
 
 ## Community
 
@@ -40,23 +35,23 @@ Install the package depending on your use case:
 
 This project is distributed as a Python package on PyPI and as optional container images on GHCR. GitHub Releases contain the Python wheel and source distribution; native standalone executables are not published.
 
-### As a Core Library
+### Core library
 
-Install only the core python library without any extra dependencies.
+Install the core Python library without optional features.
 
 ```bash
 uv add perplexity-webui-scraper
 ```
 
-### Full Installation (Everything)
+### All optional features
 
-Install all optional dependencies (`cli`, `api`, `mcp`) in one go. Recommended if you want to use all tools out-of-the-box.
+Install the `cli`, `api`, and `mcp` extras together.
 
 ```bash
 uv add "perplexity-webui-scraper[all]"
 ```
 
-### CLI Tools
+### CLI tools
 
 Install with terminal UX dependencies to use the interactive `chat` and `token` CLI commands.
 
@@ -64,7 +59,7 @@ Install with terminal UX dependencies to use the interactive `chat` and `token` 
 uv add "perplexity-webui-scraper[cli]"
 ```
 
-### External Servers
+### Servers
 
 Install dependencies required for the MCP Server or the OpenAI-compatible REST API.
 
@@ -81,7 +76,7 @@ uv add "perplexity-webui-scraper[api]"
 ### 1. Get your session token
 
 ```bash
-# Interactive CLI wizard — walks you through email auth
+# Interactive email authentication
 uv run perplexity-webui-scraper token
 ```
 
@@ -127,7 +122,7 @@ conversation.ask("Solve this step by step: ...")
 print(conversation.answer)
 ```
 
-### 5. List all available models
+### 5. List registered models
 
 ```python
 from perplexity_webui_scraper import MODELS
@@ -148,7 +143,7 @@ for model in MODELS.list_all():
 
 ## OpenAI-Compatible API
 
-Run a local server that accepts OpenAI-formatted requests and forwards them to Perplexity. Works as a **drop-in replacement** for any OpenAI client — authentication is done per-request via `Authorization: Bearer`, exactly like the real API.
+Run a local server that accepts the supported OpenAI chat-completions fields and forwards requests to Perplexity. Each request passes the Perplexity session token through `Authorization: Bearer`.
 
 ```bash
 # Start the server (no token needed at startup)
@@ -204,7 +199,7 @@ podman run --rm -it -e PERPLEXITY_SESSION_TOKEN=your_token perplexity-mcp
 
 ### Authentication
 
-Pass your Perplexity session token as the API key in every request — exactly like the OpenAI API:
+Pass your Perplexity session token as the API key in every request:
 
 ```bash
 # curl
@@ -239,7 +234,7 @@ print(response.choices[0].message.content)
 
 | Method | Path                   | Description                                 |
 | ------ | ---------------------- | ------------------------------------------- |
-| `GET`  | `/v1/models`           | List all available models                   |
+| `GET`  | `/v1/models`           | List registered models                      |
 | `POST` | `/v1/chat/completions` | Chat completion (streaming + non-streaming) |
 | `GET`  | `/docs`                | Interactive Swagger UI                      |
 | `GET`  | `/redoc`               | ReDoc documentation                         |
@@ -267,7 +262,7 @@ Expose every Perplexity model as a separate tool for AI agents (Claude Desktop, 
 }
 ```
 
-See the [full MCP documentation](https://henrique-coder.github.io/perplexity-webui-scraper/mcp-server/) for all tools and configuration details.
+See the [MCP documentation](https://henrique-coder.github.io/perplexity-webui-scraper/mcp-server/) for tools and configuration.
 
 ## Disclaimer
 
