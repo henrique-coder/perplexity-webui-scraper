@@ -1,4 +1,4 @@
-"""Configuration package — re-exports ClientConfig and ConversationConfig."""
+"""Client and conversation configuration exports."""
 
 from __future__ import annotations
 

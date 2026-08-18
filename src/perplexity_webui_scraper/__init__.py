@@ -1,6 +1,6 @@
 """Extract AI responses from Perplexity's web interface.
 
-Public API surface — import everything from here::
+Import public objects from this module::
 
     from perplexity_webui_scraper import (
         Perplexity,

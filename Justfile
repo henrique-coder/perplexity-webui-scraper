@@ -1,34 +1,35 @@
 default:
     @just --list
 
-install:
+update:
     uv sync --upgrade --all-extras --all-groups
     pnpm update
 
 format:
-    uv run ruff check --fix
-    uv run ruff format
+    uv run --no-dev --group lint ruff check --fix
+    uv run --no-dev --group lint ruff format
     pnpm prettier --write .
     pnpm taplo format *.toml
 
 lint:
-    uv run ruff check
-    uv run ty check
+    uv run --no-dev --group lint --group test ruff check
+    uv run --no-dev --group lint --group test ty check
     pnpm prettier --check .
     pnpm taplo lint *.toml
-    uv run scripts/render_model_docs.py --check
+    uv run --no-dev --group lint --group test zizmor .github/workflows
+    uv run --no-dev --group lint --group test scripts/render_model_docs.py --check
 
 model-docs:
-    uv run scripts/render_model_docs.py
+    uv run --no-dev scripts/render_model_docs.py
 
 model-docs-check:
-    uv run scripts/render_model_docs.py --check
+    uv run --no-dev scripts/render_model_docs.py --check
 
 test:
-    uv run pytest
+    uv run --no-dev --group test pytest
 
 docs:
-    uv run mkdocs serve --watch docs --watch src
+    uv run --no-dev --group docs mkdocs serve --watch docs --watch src
 
 build-container:
     podman build -t perplexity-webui-scraper .

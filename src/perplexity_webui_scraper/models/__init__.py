@@ -1,4 +1,4 @@
-"""Models package — re-exports ModelRegistry singleton and Model type."""
+"""Model registry and model type exports."""
 
 from __future__ import annotations
 

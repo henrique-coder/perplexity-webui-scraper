@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
-from fastapi.testclient import TestClient
+from niquests import Session
 from pytest import fixture, warns
 
 from perplexity_webui_scraper._internal.exceptions import FileAccessError, ModelAccessError, ModelRiskWarning
 from perplexity_webui_scraper.api.app import app
 from perplexity_webui_scraper.core import Conversation
 from perplexity_webui_scraper.models.registry import MODELS
+
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 # Constants
@@ -55,11 +60,12 @@ def _patch_models():
 
 
 @fixture
-def client() -> TestClient:
-    return TestClient(app)
+def client() -> Generator[Session, None, None]:
+    with Session(app=app) as session:
+        yield session
 
 
-def test_missing_auth_header(client: TestClient) -> None:
+def test_missing_auth_header(client: Session) -> None:
     """Request without Authorization header should return 401."""
     response = client.post(
         "/v1/chat/completions",
@@ -70,7 +76,7 @@ def test_missing_auth_header(client: TestClient) -> None:
     assert "Missing or invalid Authorization header" in response.json()["error"]["message"]
 
 
-def test_malformed_auth_header(client: TestClient) -> None:
+def test_malformed_auth_header(client: Session) -> None:
     """Request with malformed Authorization header (not Bearer) should return 401."""
     response = client.post(
         "/v1/chat/completions",
@@ -81,7 +87,7 @@ def test_malformed_auth_header(client: TestClient) -> None:
     assert "Missing or invalid Authorization header" in response.json()["error"]["message"]
 
 
-def test_invalid_model(client: TestClient) -> None:
+def test_invalid_model(client: Session) -> None:
     """Request with an unregistered model should return 400 Bad Request."""
     response = client.post(
         "/v1/chat/completions",
@@ -92,7 +98,7 @@ def test_invalid_model(client: TestClient) -> None:
     assert "Unknown model" in response.json()["error"]["message"]
 
 
-def test_invalid_custom_model_exposes_validation_error(client: TestClient) -> None:
+def test_invalid_custom_model_exposes_validation_error(client: Session) -> None:
     """Invalid custom identifiers should not be reported as unknown catalog models."""
     with patch("perplexity_webui_scraper.api.routes.completions.MODELS", MODELS):
         response = client.post(
@@ -111,7 +117,7 @@ def test_invalid_custom_model_exposes_validation_error(client: TestClient) -> No
     assert "Available:" not in message
 
 
-def test_model_catalog_exposes_risk_metadata(client: TestClient) -> None:
+def test_model_catalog_exposes_risk_metadata(client: Session) -> None:
     response = client.get("/v1/models")
     assert response.status_code == 200
     data = response.json()["data"]
@@ -128,7 +134,7 @@ def test_model_catalog_exposes_risk_metadata(client: TestClient) -> None:
         assert metadata["last_tested_at"] == expected_tested_at
 
 
-def test_risky_model_api_requires_and_accepts_acknowledgement(client: TestClient) -> None:
+def test_risky_model_api_requires_and_accepts_acknowledgement(client: Session) -> None:
     risky_model_id = next(model.id for model in MODELS.list_all() if model.status != "available")
     with patch("perplexity_webui_scraper.api.routes.completions.MODELS", MODELS):
         denied = client.post(
@@ -162,7 +168,7 @@ def test_risky_model_api_requires_and_accepts_acknowledgement(client: TestClient
 
 
 @patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create")
-def test_model_access_error_returns_403(mock_get_or_create: MagicMock, client: TestClient) -> None:
+def test_model_access_error_returns_403(mock_get_or_create: MagicMock, client: Session) -> None:
     """Model tier failures should return an OpenAI-compatible 403 error."""
     mock_client_instance = MagicMock()
     mock_conv = _make_mock_conversation()
@@ -184,7 +190,7 @@ def test_model_access_error_returns_403(mock_get_or_create: MagicMock, client: T
 
 
 @patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create")
-def test_file_access_error_returns_403(mock_get_or_create: MagicMock, client: TestClient) -> None:
+def test_file_access_error_returns_403(mock_get_or_create: MagicMock, client: Session) -> None:
     """Free-tier file failures should return an OpenAI-compatible 403 error."""
     mock_client_instance = MagicMock()
     mock_conv = _make_mock_conversation()
@@ -206,7 +212,7 @@ def test_file_access_error_returns_403(mock_get_or_create: MagicMock, client: Te
 
 
 @patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create")
-def test_perplexity_extensions_are_parsed(mock_get_or_create: MagicMock, client: TestClient) -> None:
+def test_perplexity_extensions_are_parsed(mock_get_or_create: MagicMock, client: Session) -> None:
     """Verify that Perplexity extensions are parsed into the config."""
     mock_client_instance = MagicMock()
     mock_conv = _make_mock_conversation()
@@ -241,7 +247,7 @@ def test_perplexity_extensions_are_parsed(mock_get_or_create: MagicMock, client:
 
 
 @patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create")
-def test_system_prompt_concatenation(mock_get_or_create: MagicMock, client: TestClient) -> None:
+def test_system_prompt_concatenation(mock_get_or_create: MagicMock, client: Session) -> None:
     """Verify that a 'system' message is prepended to the final query string sent to Perplexity."""
     mock_client_instance = MagicMock()
     mock_conv = _make_mock_conversation()

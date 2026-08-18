@@ -1,4 +1,4 @@
-"""Model registry — loads all AI model definitions from the static data file."""
+"""Load model definitions from the bundled JSON registry."""
 
 from __future__ import annotations
 

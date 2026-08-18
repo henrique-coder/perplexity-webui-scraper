@@ -1,4 +1,4 @@
-"""POST /v1/chat/completions route — streaming and non-streaming."""
+"""Streaming and non-streaming ``POST /v1/chat/completions`` route."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
 router = APIRouter()
 
-# Shared singletons — injected from app.py via dependency or passed directly.
+# Shared clients used by the application routes.
 # Using module-level singletons is acceptable here because the API server is
 # a single-process application; the cache is not shared across processes.
 _client_pool = ClientPool()

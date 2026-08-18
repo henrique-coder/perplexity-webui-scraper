@@ -1,6 +1,6 @@
 # Model Registry
 
-The `ModelRegistry` provides programmatic access to all available Perplexity AI models.
+The `ModelRegistry` provides programmatic access to the bundled model catalog, including availability metadata.
 
 ## Model
 

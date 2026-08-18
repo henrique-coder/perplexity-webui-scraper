@@ -2,7 +2,7 @@
 
 ## `Perplexity(session_token, config?)`
 
-Main client — create once and reuse across multiple conversations.
+Create one client per session token and reuse it across conversations.
 
 | Parameter       | Type           | Description                                               |
 | --------------- | -------------- | --------------------------------------------------------- |
@@ -33,7 +33,7 @@ client = Perplexity(
 | `get_account_profile()`        | `AccountProfile`  | Read session data, falling back to settings if needed |
 | `close()`                      | `None`            | Close the HTTP session                                |
 
-Supports context manager (`with` statement) — closes automatically on exit.
+The client supports a context manager and closes its HTTP session on exit.
 
 ---
 
@@ -94,7 +94,7 @@ Before every prompt request, the library performs a fast `/api/auth/session` che
 
 ## Models
 
-Models are specified as plain strings — the same style as the OpenAI SDK:
+Models are specified as strings:
 
 ```python
 ConversationConfig(model="perplexity/best")
@@ -142,13 +142,17 @@ The OpenAI-compatible API exposes the same controls inside the `perplexity` requ
 | `anthropic/claude-sonnet-5` | `claude50sonnet` | anthropic | `true` | pro | `available` | 2026-08-05T23:31:57.917346Z |
 | `anthropic/claude-sonnet-5-thinking` | `claude50sonnetthinking` | anthropic | `true` | pro | `available` | 2026-08-05T23:32:01.771184Z |
 | `z-ai/glm-5.2` | `glm_5_2` | z-ai | `true` | pro | `available` | 2026-08-05T23:32:05.681327Z |
-| `google/gemini-3.1-pro-thinking-high` | `gemini31pro_high` | google | `true` | pro | `available` | 2026-08-05T23:32:09.529962Z |
+| `google/gemini-3.7-flash` | `gemini37flash` | google | `true` | pro | `available` | 2026-08-18T06:24:44Z |
 | `moonshot/kimi-k3-thinking` | `kimik3thinking` | moonshot | `true` | pro | `available` | 2026-08-05T23:32:13.388185Z |
-| `x-ai/grok-4.5` | `grok45low` | x-ai | `true` | pro | `available` | 2026-08-05T23:32:17.793450Z |
-| `x-ai/grok-4.5-thinking` | `grok45medium` | x-ai | `true` | pro | `available` | 2026-08-05T23:32:21.682832Z |
+| `google/gemini-3.7-flash-thinking` | `gemini37flashthinking` | google | `true` | pro | `available` | 2026-08-18T06:24:50Z |
+| `x-ai/grok-4.6` | `grok46low` | x-ai | `true` | pro | `available` | 2026-08-18T06:24:56Z |
+| `x-ai/grok-4.6-thinking` | `grok46medium` | x-ai | `true` | pro | `available` | 2026-08-18T06:25:02Z |
 | `nvidia/nemotron-3-ultra-thinking` | `nv_nemotron_3_ultra` | nvidia | `true` | pro | `available` | 2026-08-05T23:32:26.248167Z |
 | `anthropic/claude-opus-5` | `claude50opus` | anthropic | `true` | max | `available` | 2026-08-05T23:32:30.076411Z |
 | `anthropic/claude-opus-5-thinking` | `claude50opusthinking` | anthropic | `true` | max | `available` | 2026-08-05T23:32:35.570998Z |
+| `google/gemini-3.1-pro-thinking-high` | `gemini31pro_high` | google | `false` | pro | `available` | 2026-08-05T23:32:09.529962Z |
+| `x-ai/grok-4.5` | `grok45low` | x-ai | `false` | pro | `available` | 2026-08-05T23:32:17.793450Z |
+| `x-ai/grok-4.5-thinking` | `grok45medium` | x-ai | `false` | pro | `available` | 2026-08-05T23:32:21.682832Z |
 | `anthropic/claude-opus-4.8` | `claude48opus` | anthropic | `false` | max | `available` | 2026-08-05T23:32:40.127829Z |
 | `anthropic/claude-opus-4.8-thinking` | `claude48opusthinking` | anthropic | `false` | max | `available` | 2026-08-05T23:32:43.944074Z |
 | `google/gemini-3.1-pro-thinking-low` | `gemini31pro_low` | google | `false` | pro | `available` | 2026-08-05T23:32:46.838191Z |
@@ -258,10 +262,7 @@ config = ConversationConfig(citation_mode="markdown")
 | `allow_risky_model` | `bool` | `False` | Acknowledge any non-available model status |
 | `custom_model_mode` | `Literal["copilot", "search", "research"]` | `"copilot"` | Mode for `custom:<identifier>` |
 
-> **How to obtain `space_uuid`:** The URL slug (e.g. `questions-abcdef123456`) is **not** the UUID. Use one of these methods:
->
-> - **Browser DevTools** — open the Space on perplexity.ai, make any query, open the Network tab, find the `perplexity_ask` request, and copy the `target_collection_uuid` value from the JSON payload.
-> - **[Complexity browser extension](https://github.com/pnd280/complexity)** — surfaces Space metadata (including UUIDs) directly in the Perplexity UI.
+The Space URL slug, such as `questions-abcdef123456`, is not its UUID. Submit a query inside the Space, inspect the `perplexity_ask` request in the browser Network panel, and copy `target_collection_uuid` from its JSON payload.
 
 ### `ClientConfig`
 
@@ -349,7 +350,7 @@ try:
 except ResearchClarifyingQuestionsError as e:
     print("Needs clarification:", e.questions)
 except AuthenticationError:
-    print("Token expired — refresh your session token")
+    print("Token expired; refresh your session token")
 except PerplexityError as e:
     print(f"Library error: {e}")
 ```
@@ -366,7 +367,7 @@ uv add "perplexity-webui-scraper[api]"
 
 ### `perplexity-webui-scraper api`
 
-Starts the server. No token is configured at startup — authentication is done **per-request** via `Authorization: Bearer`, exactly like the real OpenAI API.
+Starts the server without a configured token. Each request supplies a Perplexity session token through `Authorization: Bearer`.
 
 | Option        | Short | Default     | Description                                                         |
 | ------------- | ----- | ----------- | ------------------------------------------------------------------- |
@@ -376,7 +377,7 @@ Starts the server. No token is configured at startup — authentication is done 
 | `--log-level` |       | `info`      | Uvicorn log level (`debug`, `info`, `warning`, `error`, `critical`) |
 
 ```bash
-# Minimal — binds to localhost:8000
+# Bind to localhost:8000
 perplexity-webui-scraper api
 
 # Expose on the network
@@ -409,7 +410,7 @@ podman run --rm -e PERPLEXITY_SESSION_TOKEN=your_token perplexity-mcp
 
 ### Authentication
 
-Pass your Perplexity session token as the Bearer token in every request — clients are cached by token server-side so no session overhead on repeated calls:
+Pass your Perplexity session token as the Bearer token in every request. The server caches clients by token and reuses their sessions:
 
 ```bash
 curl http://localhost:8000/v1/chat/completions \
@@ -424,7 +425,7 @@ Returns `HTTP 401` if the header is missing or malformed.
 
 | Method | Path                   | Description                                 |
 | ------ | ---------------------- | ------------------------------------------- |
-| `GET`  | `/v1/models`           | List all available models                   |
+| `GET`  | `/v1/models`           | List registered models                      |
 | `POST` | `/v1/chat/completions` | Chat completion (streaming + non-streaming) |
 | `GET`  | `/docs`                | Interactive Swagger UI                      |
 | `GET`  | `/redoc`               | ReDoc API documentation                     |
@@ -479,7 +480,7 @@ print(response.choices[0].message.content)
 
 ### Passing Optional Arguments
 
-You can pass Perplexity-specific configurations (like `search_focus`, `citation_mode`, or `coordinates`) through the `extra_body` dictionary natively via the OpenAI SDK. The API intercepts the `"perplexity"` block.
+Pass Perplexity-specific settings such as `search_focus`, `citation_mode`, or `coordinates` through the OpenAI SDK's `extra_body` dictionary. The API reads them from the `"perplexity"` block.
 
 ```python
 from openai import OpenAI
@@ -502,7 +503,7 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-With `curl`, simply append `"perplexity"` to the base JSON payload:
+With `curl`, add `"perplexity"` to the JSON payload:
 
 ```bash
 curl http://localhost:8000/v1/chat/completions \
@@ -522,7 +523,7 @@ curl http://localhost:8000/v1/chat/completions \
 ### Posting to a Perplexity Space
 
 Set `space_uuid` in the `perplexity` block to route the thread into a specific Space (collection).
-The UUID is different from the URL slug — see [ConversationConfig](#conversationconfig) for how to obtain it.
+The UUID is different from the URL slug. See [ConversationConfig](#conversationconfig) for how to obtain it.
 
 ```python
 response = client.chat.completions.create(
@@ -532,11 +533,11 @@ response = client.chat.completions.create(
 )
 ```
 
-### Multimodal Uploads / Images
+### Multimodal uploads
 
-The REST API fully implements OpenAI's Vision API standard. This means **any compatible chatbot frontend** (like Open WebUI, LibreChat, Chatbox, or AnythingLLM) will work out-of-the-box. When users upload files in these generic UIs, the chatbot automatically encodes the file to a base64 Data URI and sends it to our API as an `image_url` part.
+The REST API accepts OpenAI-style message content containing `text` parts and base64 Data URLs in `image_url` parts. It does not implement remote image URLs or every OpenAI Vision input form.
 
-Base64-encoded Data URIs are automatically extracted and uploaded securely to Perplexity before querying the model.
+The server decodes each Data URL and uploads the resulting file to Perplexity before sending the prompt.
 
 **Example with OpenAI Python SDK:**
 

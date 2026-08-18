@@ -1,4 +1,4 @@
-"""MCP server package — re-exports run_server."""
+"""MCP server export."""
 
 from __future__ import annotations
 

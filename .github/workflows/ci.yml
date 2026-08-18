@@ -86,17 +86,14 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
 
-      - name: Install just
-        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
-
       - name: Install Dependencies
-        run: uv sync --frozen --all-extras --group lint --group test
+        run: uv sync --frozen --no-dev --group lint --group test
 
       - name: Check Code Quality
         run: |
-          uv run ruff check
-          uv run ty check
-          just model-docs-check
+          uv run --no-sync ruff check
+          uv run --no-sync ty check
+          uv run --no-sync scripts/render_model_docs.py --check
 
   documentation:
     name: Documentation
@@ -120,10 +117,10 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install Dependencies
-        run: uv sync --frozen --all-extras --group docs
+        run: uv sync --frozen --no-dev --group docs
 
       - name: Build Documentation
-        run: uv run mkdocs build --strict
+        run: uv run --no-sync mkdocs build --strict
 
   formatting:
     name: Formatting & Configuration
@@ -144,7 +141,7 @@ jobs:
           persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
         with:
           version: 11.17.0
           run_install: false
@@ -176,10 +173,10 @@ jobs:
           version: "latest"
 
       - name: Install Workflow Linter
-        run: uv sync --frozen --group lint --no-install-project
+        run: uv sync --frozen --only-group workflow --no-install-project
 
       - name: Scan Workflows
-        run: uv run zizmor .github/workflows
+        run: uv run --no-sync zizmor .github/workflows
 
   tests:
     name: Tests (${{ matrix.os }}, Python ${{ matrix.python }})
@@ -219,10 +216,10 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install Dependencies
-        run: uv sync --frozen --all-extras --group test
+        run: uv sync --frozen --no-dev --group test
 
       - name: Run Test Suite
-        run: uv run pytest
+        run: uv run --no-sync pytest
 
   build:
     name: Build Distribution

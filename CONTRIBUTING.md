@@ -29,21 +29,21 @@ pnpm install
 
 Useful commands:
 
-| Command                                     | Purpose                                                                                                                 |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `just format`                               | Format Python, Markdown, YAML, TOML, and related project files.                                                         |
-| `just lint`                                 | Run Ruff, ty, Prettier, and Taplo checks.                                                                               |
-| `just test`                                 | Run the pytest suite.                                                                                                   |
-| `uv run --group docs mkdocs build --strict` | Build the documentation site with MkDocs using the `docs` dependency group. `--strict` fails on documentation warnings. |
-| `uv build`                                  | Build the Python source distribution and wheel.                                                                         |
+| Command                                              | Purpose                                                                                                                              |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `just format`                                        | Format Python, Markdown, YAML, TOML, and related project files.                                                                      |
+| `just lint`                                          | Run Ruff, ty, Prettier, and Taplo checks.                                                                                            |
+| `just test`                                          | Run the pytest suite.                                                                                                                |
+| `uv run --no-dev --group docs mkdocs build --strict` | Build the documentation site with MkDocs using only the project and `docs` dependencies. `--strict` fails on documentation warnings. |
+| `uv build`                                           | Build the Python source distribution and wheel.                                                                                      |
 
 Install the Git hook once per checkout:
 
 ```bash
-uv run prek install --hook-type pre-push
+uv run --only-group hooks --no-install-project prek install --hook-type pre-push
 ```
 
-The full `just lint` check runs at `git push`, not at `git add` or `git commit`, so local commits remain quick while pushes are checked before they leave the machine. The CI workflow remains the authoritative check for the branch. If an exceptional situation requires bypassing the local hook, use `git push --no-verify` only after running the checks manually.
+The `just lint` check runs at `git push`, not at `git add` or `git commit`. CI remains authoritative. Use `git push --no-verify` only after running the checks manually.
 
 `mkdocs` is the documentation generator used by this project. The command above does not publish anything; it only verifies that the local documentation can be built successfully.
 
@@ -68,7 +68,7 @@ The full `just lint` check runs at `git push`, not at `git add` or `git commit`,
 - Update README, MkDocs pages, and `CHANGELOG.md` when user-facing behavior changes.
 - Keep model metadata in `src/perplexity_webui_scraper/_static/models.json`.
 - Do not commit local secrets, `.env`, debug logs, generated docs output, virtual environments, or build artifacts.
-- Run `just lint`, `just test`, `uv run --group docs mkdocs build --strict`, and `uv build` before requesting review.
+- Run `just lint`, `just test`, `uv run --no-dev --group docs mkdocs build --strict`, and `uv build` before requesting review.
 
 ## Model Metadata
 

@@ -4,7 +4,7 @@ Use the right channel so the project stays maintainable.
 
 ## Questions and Usage Help
 
-Use GitHub Discussions if enabled. Discussions are the best place for setup questions, usage help, ideas, and examples that are not confirmed bugs.
+Use GitHub Discussions for setup questions, usage help, ideas, and examples that are not confirmed bugs.
 
 ## Bugs
 

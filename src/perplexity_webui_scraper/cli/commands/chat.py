@@ -1,4 +1,4 @@
-"""chat CLI command — query Perplexity AI directly from the terminal.
+"""Query Perplexity from the terminal.
 
 Streams tokens in real-time using Rich Live panels. Reads the session
 token from encrypted local storage (see ``setup`` subcommand) or from
@@ -83,7 +83,7 @@ def run(
 
     session_token = _resolve_token(token)
     if not session_token:
-        console.print("[red]⛔ No session token configured.[/red]")
+        console.print("[red]No session token configured.[/red]")
         console.print("Run [bold cyan]perplexity-webui-scraper chat setup[/bold cyan] to configure your token.")
         raise Exit(code=1)
 
@@ -97,20 +97,20 @@ def run(
         )
     except ValueError as exc:
         if resolved_model.startswith("custom:"):
-            console.print(f"[red]⛔ Invalid custom model: {exc}[/red]")
+            console.print(f"[red]Invalid custom model: {exc}[/red]")
             raise Exit(code=1) from exc
-        console.print(f"[red]⛔ Unknown model: {resolved_model!r}[/red]")
+        console.print(f"[red]Unknown model: {resolved_model!r}[/red]")
         console.print("Run [bold cyan]perplexity-webui-scraper chat setup[/bold cyan] to change your default model.")
         raise Exit(code=1) from exc
     except ModelStatusError as exc:
-        console.print(f"[red]⛔ {exc}[/red]")
+        console.print(f"[red]{exc}[/red]")
         raise Exit(code=1) from exc
 
     if model_metadata.status != "available":
-        console.print(f"[yellow]⚠ {MODEL_STATUS_DESCRIPTIONS[model_metadata.status]}[/yellow]")
+        console.print(f"[yellow]{MODEL_STATUS_DESCRIPTIONS[model_metadata.status]}[/yellow]")
 
     if (latitude is None) != (longitude is None):
-        console.print("[red]⛔ Latitude and longitude must be provided together.[/red]")
+        console.print("[red]Latitude and longitude must be provided together.[/red]")
         raise Exit(code=1)
 
     coords = (
@@ -156,7 +156,7 @@ def run(
                 console.print()
                 console.print(
                     Panel(
-                        "[bold cyan]Perplexity WebUI Scraper — Chat[/bold cyan]\n"
+                        "[bold cyan]Perplexity WebUI Scraper: Chat[/bold cyan]\n"
                         f"Model: [green]{resolved_model}[/green]",
                         border_style="cyan",
                     )
@@ -269,21 +269,21 @@ def run(
 
     except Exception as exc:
         if isinstance(exc, ModelAccessError | ModelStatusError):
-            console.print(f"[red]⛔ {exc}[/red]")
+            console.print(f"[red]{exc}[/red]")
             raise Exit(code=1) from exc
 
         if isinstance(exc, FileAccessError):
-            console.print(f"[red]⛔ {exc}[/red]")
+            console.print(f"[red]{exc}[/red]")
             raise Exit(code=1) from exc
 
         if isinstance(exc, ResponseParsingError):
-            console.print(f"[red]⛔ Perplexity failed to process this query: {exc.message}[/red]")
+            console.print(f"[red]Perplexity failed to process this query: {exc.message}[/red]")
             console.print("Try again or run with [bold cyan]--search-focus writing[/bold cyan].")
             raise Exit(code=1) from exc
 
         error_msg = str(exc)
         if "authentication" in error_msg.lower() or "session" in error_msg.lower() or "401" in error_msg:
-            console.print("[red]⛔ Authentication failed. Your token may be invalid or expired.[/red]")
+            console.print("[red]Authentication failed. Your token may be invalid or expired.[/red]")
             console.print("Run [bold cyan]perplexity-webui-scraper chat setup[/bold cyan] to reconfigure.")
             raise Exit(code=1)  # noqa: B904
         raise
@@ -301,7 +301,7 @@ def setup() -> None:
     console.print()
     console.print(
         Panel(
-            "[bold cyan]Perplexity WebUI Scraper — Chat Setup[/bold cyan]",
+            "[bold cyan]Perplexity WebUI Scraper: Chat Setup[/bold cyan]",
             border_style="cyan",
             subtitle=f"Config: {get_config_dir()}",
         )
@@ -316,11 +316,11 @@ def setup() -> None:
         if Confirm.ask("  Replace with a new token?", console=console, default=False):
             _prompt_and_save_token(console)
     else:
-        console.print("  [yellow]⚠ No token configured yet.[/yellow]")
+        console.print("  [yellow]No token configured yet.[/yellow]")
         _prompt_and_save_token(console)
 
     if not is_configured():
-        console.print("[red]⛔ Setup incomplete — no token saved.[/red]")
+        console.print("[red]Setup incomplete; no token was saved.[/red]")
         raise Exit(code=1)
 
     console.print()
@@ -331,7 +331,7 @@ def setup() -> None:
     try:
         MODELS.resolve(current_model)
     except ValueError:
-        console.print(f"  [red]⚠ Model {current_model!r} no longer exists in the registry.[/red]")
+        console.print(f"  [red]Model {current_model!r} no longer exists in the registry.[/red]")
         console.print("  Please select a valid model.")
         _prompt_and_save_model(console)
     else:
@@ -339,7 +339,7 @@ def setup() -> None:
             _prompt_and_save_model(console)
 
     console.print()
-    console.print("[bold green]✅ Setup complete! You can now use:[/bold green]")
+    console.print("[bold green]Setup complete. Run:[/bold green]")
     console.print('  [cyan]perplexity-webui-scraper chat "Your question here"[/cyan]')
     console.print()
 
@@ -401,7 +401,7 @@ def _prompt_and_save_model(console: object) -> None:
         return
 
     if chosen_model.status != "available":
-        rich_console.print(f"[yellow]  ⚠ {MODEL_STATUS_DESCRIPTIONS[chosen_model.status]}[/yellow]")
+        rich_console.print(f"[yellow]  {MODEL_STATUS_DESCRIPTIONS[chosen_model.status]}[/yellow]")
         rich_console.print("[yellow]  This default requires --allow-risky-model when used.[/yellow]")
 
     set_default_model(chosen)
