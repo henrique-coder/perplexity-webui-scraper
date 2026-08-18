@@ -36,26 +36,26 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "curl-cffi~=0.16.0",
-    "loguru~=0.7.0",
-    "orjson~=3.11.0",
+    "curl-cffi>=0.16.0",
+    "loguru>=0.7.0",
+    "orjson>=3.11.0",
     "pydantic>=2.13.0, <3.0.0",
-    "typer~=0.27.0",
+    "typer>=0.27.0",
 ]
 
 [project.optional-dependencies]
 cli = [
     "cryptography>=50.0.0, <51.0.0",
-    "platformdirs~=4.11.0",
-    "pyperclip~=1.11.0",
-    "rich~=15.0.0",
+    "platformdirs>=4.11.0",
+    "pyperclip>=1.11.0",
+    "rich>=15.0.0",
 ]
 api = [
-    "fastapi~=0.141.0",
-    "uvicorn[standard]~=0.52.0",
+    "fastapi>=0.141.0",
+    "uvicorn[standard]>=0.52.0",
 ]
 mcp = [
-    "fastmcp~=3.4.0",
+    "fastmcp>=3.4.0",
 ]
 all = [
     "perplexity-webui-scraper[cli,api,mcp]",
@@ -66,21 +66,21 @@ dev = [
     { include-group = "docs" },
     { include-group = "lint" },
     { include-group = "test" },
-    "prek~=0.4.0",
+    "prek>=0.4.0",
 ]
 docs = [
-    "mkdocs~=1.6.0",
-    "mkdocs-material~=9.7.0",
-    "mkdocstrings[python]~=1.0.0",
+    "mkdocs>=1.6.0",
+    "mkdocs-material>=9.7.0",
+    "mkdocstrings[python]>=1.0.0",
 ]
 lint = [
-    "ruff~=0.16.0",
-    "ty~=0.0.60",
-    "zizmor~=1.28.0",
+    "ruff>=0.16.0",
+    "ty>=0.0.60",
+    "zizmor>=1.28.0",
 ]
 test = [
-    "httpx~=0.28.0",
-    "pytest~=9.1.0",
+    "httpx>=0.28.0",
+    "pytest>=9.1.0",
 ]
 
 [project.scripts]
