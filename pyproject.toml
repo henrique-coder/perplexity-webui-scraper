@@ -7,20 +7,21 @@ build-backend = "uv_build"
 [project]
 name = "perplexity-webui-scraper"
 version = "1.1.4"
-description = "An advanced, high-performance Python client, MCP server, and REST API for reverse-engineering Perplexity AI's WebUI."
+description = "Python client, CLI, MCP server, and OpenAI-compatible REST API for Perplexity's WebUI."
 authors = [
     { name = "Henrique Moreira", email = "78804989+henrique-coder@users.noreply.github.com" },
 ]
-license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.11, <3.15"
+license = "MIT"
+license-files = ["LICENSE"]
 keywords = [
-    "perplexity",
     "ai",
-    "scraper",
-    "mcp",
     "fastapi",
+    "mcp",
     "openai-compatible",
+    "perplexity",
+    "scraper",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -43,58 +44,72 @@ dependencies = [
     "typer>=0.27.0",
 ]
 
+[project.scripts]
+perplexity-webui-scraper = "perplexity_webui_scraper.cli.__main__:main"
+
+[project.urls]
+Changelog = "https://github.com/henrique-coder/perplexity-webui-scraper/blob/prod/CHANGELOG.md"
+Discussions = "https://github.com/henrique-coder/perplexity-webui-scraper/discussions"
+Documentation = "https://henrique-coder.github.io/perplexity-webui-scraper"
+Funding = "https://github.com/sponsors/henrique-coder"
+Homepage = "https://github.com/henrique-coder/perplexity-webui-scraper"
+Issues = "https://github.com/henrique-coder/perplexity-webui-scraper/issues"
+Repository = "https://github.com/henrique-coder/perplexity-webui-scraper.git"
+Security = "https://github.com/henrique-coder/perplexity-webui-scraper/security/policy"
+
 [project.optional-dependencies]
+all = [
+    "perplexity-webui-scraper[api,cli,mcp]",
+]
+api = [
+    "fastapi>=0.141.0",
+    "rich>=15.0.0",
+    "uvicorn[standard]>=0.52.0",
+]
 cli = [
     "cryptography>=50.0.0, <51.0.0",
     "platformdirs>=4.11.0",
     "pyperclip>=1.11.0",
     "rich>=15.0.0",
 ]
-api = [
-    "fastapi>=0.141.0",
-    "uvicorn[standard]>=0.52.0",
-]
 mcp = [
     "fastmcp>=3.4.0",
-]
-all = [
-    "perplexity-webui-scraper[cli,api,mcp]",
 ]
 
 [dependency-groups]
 dev = [
     { include-group = "docs" },
+    { include-group = "hooks" },
     { include-group = "lint" },
     { include-group = "test" },
-    "prek>=0.4.0",
 ]
 docs = [
     "mkdocs>=1.6.0",
     "mkdocs-material>=9.7.0",
     "mkdocstrings[python]>=1.0.0",
+    "ruff>=0.16.0",
+]
+hooks = [
+    "prek>=0.4.0",
 ]
 lint = [
+    { include-group = "workflow" },
     "ruff>=0.16.0",
     "ty>=0.0.60",
-    "zizmor>=1.28.0",
 ]
 test = [
-    "httpx>=0.28.0",
+    "cryptography>=50.0.0, <51.0.0",
+    "fastapi>=0.141.0",
+    "fastmcp>=3.4.0",
+    "niquests>=3.20.0",
+    "platformdirs>=4.11.0",
+    "pyperclip>=1.11.0",
     "pytest>=9.1.0",
+    "rich>=15.0.0",
 ]
-
-[project.scripts]
-perplexity-webui-scraper = "perplexity_webui_scraper.cli.__main__:main"
-
-[project.urls]
-Homepage = "https://github.com/henrique-coder/perplexity-webui-scraper"
-Documentation = "https://github.com/henrique-coder/perplexity-webui-scraper#readme"
-Repository = "https://github.com/henrique-coder/perplexity-webui-scraper.git"
-Issues = "https://github.com/henrique-coder/perplexity-webui-scraper/issues"
-Discussions = "https://github.com/henrique-coder/perplexity-webui-scraper/discussions"
-Funding = "https://github.com/sponsors/henrique-coder"
-Security = "https://github.com/henrique-coder/perplexity-webui-scraper/security/policy"
-Changelog = "https://github.com/henrique-coder/perplexity-webui-scraper/releases"
+workflow = [
+    "zizmor>=1.28.0",
+]
 
 [tool.ruff]
 line-length = 120
@@ -103,46 +118,37 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = [
-    "F",
-    "E",
-    "W",
-    "I",
-    "N",
-    "UP",
     "ANN",
-    "FA",
-    "ICN",
     "B",
-    "SIM",
     "C4",
-    "PIE",
+    "D",
+    "E",
+    "ERA",
+    "F",
+    "FA",
+    "FURB",
+    "G",
+    "I",
+    "ICN",
     "ISC",
-    "RSE",
-    "RET",
+    "LOG",
+    "N",
+    "PERF",
+    "PIE",
+    "PL",
     "PTH",
+    "RET",
+    "RSE",
+    "RUF",
+    "SIM",
     "T20",
     "TCH",
-    "G",
-    "LOG",
     "TRY",
-    "ERA",
-    "PERF",
-    "FURB",
-    "PL",
-    "RUF",
-    "D",
+    "UP",
+    "W",
 ]
 ignore = [
-    "ISC001",
-    "TRY003",
-    "TRY301",
-    "G004",
-    "PLE1205",
-    "PLR0912",
-    "PLR0913",
-    "PLR0915",
-    "PLR2004",
-    "PLR0917",
+    "ANN401",
     "D100",
     "D101",
     "D102",
@@ -153,7 +159,16 @@ ignore = [
     "D107",
     "D203",
     "D213",
-    "ANN401",
+    "G004",
+    "ISC001",
+    "PLE1205",
+    "PLR0912",
+    "PLR0913",
+    "PLR0915",
+    "PLR0917",
+    "PLR2004",
+    "TRY003",
+    "TRY301",
 ]
 fixable = ["ALL"]
 unfixable = []
@@ -165,37 +180,32 @@ line-ending = "lf"
 docstring-code-format = true
 skip-magic-trailing-comma = false
 
-[tool.ruff.lint.isort]
-lines-after-imports = 2
-force-sort-within-sections = true
-split-on-trailing-comma = true
-known-first-party = ["perplexity_webui_scraper"]
-
-[tool.ruff.lint.pydocstyle]
-convention = "google"
-
-[tool.ruff.lint.flake8-quotes]
-docstring-quotes = "double"
-
 [tool.ruff.lint.flake8-annotations]
 suppress-none-returning = true
 allow-star-arg-any = true
 
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+known-first-party = ["perplexity_webui_scraper"]
+lines-after-imports = 2
+split-on-trailing-comma = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
 [tool.ty.rules]
+division-by-zero = "warn"
+index-out-of-bounds = "warn"
 invalid-argument-type = "error"
 invalid-return-type = "error"
 missing-argument = "error"
+possibly-missing-attribute = "warn"
+redundant-cast = "warn"
 too-many-positional-arguments = "error"
 unresolved-attribute = "error"
 unresolved-import = "error"
-unsupported-operator = "error"
-possibly-missing-attribute = "warn"
-redundant-cast = "warn"
 unused-ignore-comment = "warn"
-division-by-zero = "warn"
-index-out-of-bounds = "warn"
-
-[tool.pyright]
-venvPath = "."
-venv = ".venv"
-typeCheckingMode = "basic"
+unsupported-operator = "error"
