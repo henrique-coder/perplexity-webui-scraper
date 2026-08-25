@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.6] - 2026-08-25
+
 ### Fixed
 
 - **Deep Research automation:** Deep Research now automatically answers clarification prompts using reasonable assumptions and continues the same conversation once. Set `research_interaction="manual"` to retain the exception-based flow.
