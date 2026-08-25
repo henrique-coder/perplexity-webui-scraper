@@ -6,7 +6,7 @@ build-backend = "uv_build"
 
 [project]
 name = "perplexity-webui-scraper"
-version = "1.1.5"
+version = "1.1.6"
 description = "Python client, CLI, MCP server, and OpenAI-compatible REST API for Perplexity's WebUI."
 authors = [
     { name = "Henrique Moreira", email = "78804989+henrique-coder@users.noreply.github.com" },
@@ -39,9 +39,9 @@ classifiers = [
 dependencies = [
     "curl-cffi>=0.16.0",
     "loguru>=0.7.0",
-    "orjson>=3.11.0",
-    "pydantic>=2.13.0, <3.0.0",
-    "typer>=0.27.0",
+    "orjson>=3.12.0",
+    "pydantic>=2.12.0, <3.0.0",
+    "typer>=0.20.0",
 ]
 
 [project.scripts]
@@ -62,18 +62,18 @@ all = [
     "perplexity-webui-scraper[api,cli,mcp]",
 ]
 api = [
-    "fastapi>=0.141.0",
-    "rich>=15.0.0",
-    "uvicorn[standard]>=0.52.0",
+    "fastapi>=0.120.0",
+    "rich>=13.0.0",
+    "uvicorn[standard]>=0.30.0",
 ]
 cli = [
     "cryptography>=50.0.0, <51.0.0",
-    "platformdirs>=4.11.0",
-    "pyperclip>=1.11.0",
-    "rich>=15.0.0",
+    "platformdirs>=4.0.0",
+    "pyperclip>=1.9.0",
+    "rich>=13.0.0",
 ]
 mcp = [
-    "fastmcp>=3.4.0",
+    "fastmcp>=3.0.0",
 ]
 
 [dependency-groups]
@@ -99,13 +99,13 @@ lint = [
 ]
 test = [
     "cryptography>=50.0.0, <51.0.0",
-    "fastapi>=0.141.0",
-    "fastmcp>=3.4.0",
+    "fastapi>=0.120.0",
+    "fastmcp>=3.0.0",
     "niquests>=3.20.0",
-    "platformdirs>=4.11.0",
-    "pyperclip>=1.11.0",
-    "pytest>=9.1.0",
-    "rich>=15.0.0",
+    "platformdirs>=4.0.0",
+    "pyperclip>=1.9.0",
+    "pytest>=8.0.0",
+    "rich>=13.0.0",
 ]
 workflow = [
     "zizmor>=1.28.0",

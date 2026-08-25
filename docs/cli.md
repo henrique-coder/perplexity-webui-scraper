@@ -84,6 +84,9 @@ File attachments require a paid Perplexity account. Free accounts can still use 
 
 `perplexity/best` adapts to the authenticated account: free accounts use Perplexity's internal `turbo` preference, while Pro/Max accounts use `pplx_pro_upgraded`; both use `copilot` mode.
 
+Deep Research clarification prompts are answered automatically with reasonable
+assumptions. Use `--research-interaction manual` to expose them instead.
+
 Useful options:
 
 | Option                       | Values                                        | Description                                        |

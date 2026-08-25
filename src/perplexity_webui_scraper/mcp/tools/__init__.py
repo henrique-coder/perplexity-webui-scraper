@@ -60,6 +60,7 @@ def _register_model_tool(
         latitude: float | None = None,
         longitude: float | None = None,
         allow_risky_model: bool = False,
+        research_interaction: str = "auto",
     ) -> dict[str, Any]:
         """Search Perplexity AI and return the answer with citations.
 
@@ -74,6 +75,7 @@ def _register_model_tool(
             latitude: Optional latitude for location-aware results.
             longitude: Optional longitude for location-aware results.
             allow_risky_model: Acknowledge any non-available model status.
+            research_interaction: Deep Research clarification handling: ``"auto"`` or ``"manual"``.
 
         Returns:
             Dict with ``answer``, ``search_results``, and ``conversation_uuid``.
@@ -89,6 +91,7 @@ def _register_model_tool(
             latitude=latitude,
             longitude=longitude,
             allow_risky_model=allow_risky_model,
+            research_interaction=research_interaction,
         )
 
 
@@ -113,6 +116,7 @@ def _register_custom_tool(mcp: Any, get_client: Callable[[], Perplexity]) -> Non
         latitude: float | None = None,
         longitude: float | None = None,
         allow_risky_model: bool = False,
+        research_interaction: str = "auto",
     ) -> dict[str, Any]:
         """Query a custom internal identifier after explicit risk acknowledgement."""
         model_id = model if model.startswith("custom:") else f"custom:{model}"
@@ -136,4 +140,5 @@ def _register_custom_tool(mcp: Any, get_client: Callable[[], Perplexity]) -> Non
             latitude=latitude,
             longitude=longitude,
             allow_risky_model=allow_risky_model,
+            research_interaction=research_interaction,
         )

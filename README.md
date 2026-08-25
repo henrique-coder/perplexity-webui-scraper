@@ -203,14 +203,15 @@ Pass your Perplexity session token as the API key in every request:
 
 ```bash
 # curl
+export PERPLEXITY_SESSION_TOKEN="your_session_token"
 curl http://localhost:8000/v1/chat/completions \
-  -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
+  -H "Authorization: Bearer $PERPLEXITY_SESSION_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello!"}]}'
 
 # Streaming
 curl -N http://localhost:8000/v1/chat/completions \
-  -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
+  -H "Authorization: Bearer $PERPLEXITY_SESSION_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello!"}], "stream": true}'
 ```

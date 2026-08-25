@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from perplexity_webui_scraper import __version__
@@ -22,7 +21,6 @@ def create_app() -> FastAPI:
 
     The application includes:
 
-    - CORS middleware that allows all origins.
     - ``GET /v1/models`` and ``POST /v1/chat/completions`` routes.
     - OpenAI-compatible error objects for HTTP exceptions.
 
@@ -38,14 +36,6 @@ def create_app() -> FastAPI:
         version=__version__,
         docs_url="/docs",
         redoc_url="/redoc",
-    )
-
-    application.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
     )
 
     application.include_router(models_router)

@@ -110,6 +110,7 @@ def test_chat_subcommand_delegates_with_defaults() -> None:
         raw=False,
         allow_risky_model=False,
         custom_model_mode="copilot",
+        research_interaction="auto",
         token=None,
     )
 
@@ -163,6 +164,7 @@ def test_chat_subcommand_delegates_with_all_options() -> None:
         raw=True,
         allow_risky_model=True,
         custom_model_mode="search",
+        research_interaction="auto",
         token="my-token",
     )
 

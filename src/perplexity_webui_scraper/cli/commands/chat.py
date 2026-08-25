@@ -46,7 +46,13 @@ from perplexity_webui_scraper.models.types import MODEL_STATUS_DESCRIPTIONS
 
 
 if TYPE_CHECKING:
-    from perplexity_webui_scraper._internal.types import CitationMode, SearchFocus, SourceFocus, TimeRange
+    from perplexity_webui_scraper._internal.types import (
+        CitationMode,
+        ResearchInteraction,
+        SearchFocus,
+        SourceFocus,
+        TimeRange,
+    )
     from perplexity_webui_scraper.models.types import ModelMode
 
 
@@ -76,6 +82,7 @@ def run(
     raw: bool,
     allow_risky_model: bool = False,
     custom_model_mode: str = "copilot",
+    research_interaction: str = "auto",
     token: str | None = None,
 ) -> None:
     """Execute a single query against Perplexity AI with streaming output."""
@@ -130,6 +137,7 @@ def run(
         space_uuid=space_uuid,
         allow_risky_model=allow_risky_model,
         custom_model_mode=cast("ModelMode", custom_model_mode),
+        research_interaction=cast("ResearchInteraction", research_interaction),
     )
 
     typed_files = cast("list[Any] | None", list(files) if files else None)  # FileInput accepts str

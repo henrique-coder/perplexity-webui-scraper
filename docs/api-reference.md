@@ -261,6 +261,7 @@ config = ConversationConfig(citation_mode="markdown")
 | `space_uuid`      | `str \| None`                                    | `None`                       | UUID of the Perplexity Space to post the thread to |
 | `allow_risky_model` | `bool` | `False` | Acknowledge any non-available model status |
 | `custom_model_mode` | `Literal["copilot", "search", "research"]` | `"copilot"` | Mode for `custom:<identifier>` |
+| `research_interaction` | `Literal["auto", "manual"]` | `"auto"` | Deep Research clarification handling |
 
 The Space URL slug, such as `questions-abcdef123456`, is not its UUID. Submit a query inside the Space, inspect the `perplexity_ask` request in the browser Network panel, and copy `target_collection_uuid` from its JSON payload.
 
@@ -414,7 +415,7 @@ Pass your Perplexity session token as the Bearer token in every request. The ser
 
 ```bash
 curl http://localhost:8000/v1/chat/completions \
-  -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
+  -H "Authorization: Bearer $PERPLEXITY_SESSION_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello!"}]}'
 ```
@@ -507,7 +508,7 @@ With `curl`, add `"perplexity"` to the JSON payload:
 
 ```bash
 curl http://localhost:8000/v1/chat/completions \
-  -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
+  -H "Authorization: Bearer $PERPLEXITY_SESSION_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "perplexity/best",
@@ -571,7 +572,7 @@ print(response.choices[0].message.content)
 
 ```bash
 curl http://localhost:8000/v1/chat/completions \
-  -H "Authorization: Bearer YOUR_SESSION_TOKEN" \
+  -H "Authorization: Bearer $PERPLEXITY_SESSION_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "perplexity/best",
