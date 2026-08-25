@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from perplexity_webui_scraper._internal.exceptions import (
     FileAccessError,
@@ -15,6 +15,7 @@ from perplexity_webui_scraper.core.response import Coordinates
 
 if TYPE_CHECKING:
     from perplexity_webui_scraper._internal.types import (
+        ResearchInteraction,
         SearchFocus,
         SourceFocus,
         TimeRange,
@@ -34,6 +35,7 @@ def _ask(
     latitude: float | None = None,
     longitude: float | None = None,
     allow_risky_model: bool = False,
+    research_interaction: str = "auto",
 ) -> dict[str, Any]:
     """Execute a single Perplexity query and return a structured result dict.
 
@@ -48,6 +50,7 @@ def _ask(
         latitude: Optional latitude for localised results.
         longitude: Optional longitude for localised results.
         allow_risky_model: Acknowledge any non-available model status.
+        research_interaction: Deep Research clarification handling: ``"auto"`` or ``"manual"``.
 
     Returns:
         Dict with ``answer``, ``search_results``, and ``conversation_uuid`` keys.
@@ -67,6 +70,7 @@ def _ask(
         coordinates=coordinates,
         allow_risky_model=allow_risky_model,
         custom_model_mode=model.mode,
+        research_interaction=cast("ResearchInteraction", research_interaction),
     )
 
     conversation = client.create_conversation(config)

@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from perplexity_webui_scraper._internal.types import (  # noqa: TC001
     CitationMode,
     Coordinates,
+    ResearchInteraction,
     SearchFocus,
     SourceFocus,
     TimeRange,
@@ -38,6 +39,8 @@ class ConversationConfig(BaseModel):
         space_uuid: UUID of a Perplexity Space (collection) to post into.
         allow_risky_model: Explicitly acknowledge any non-available model status.
         custom_model_mode: Backend mode for ``custom:<identifier>`` models.
+        research_interaction: Deep Research clarification handling. ``"auto"``
+            answers with reasonable assumptions; ``"manual"`` raises an exception.
     """
 
     model: str | None = None
@@ -52,3 +55,4 @@ class ConversationConfig(BaseModel):
     space_uuid: str | None = None
     allow_risky_model: bool = False
     custom_model_mode: ModelMode = "copilot"
+    research_interaction: ResearchInteraction = "auto"

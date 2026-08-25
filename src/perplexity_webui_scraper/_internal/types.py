@@ -44,6 +44,9 @@ CitationMode = Literal["default", "markdown", "clean"]
 - ``"clean"``: strip all citation markers from the text.
 """
 
+ResearchInteraction = Literal["auto", "manual"]
+"""Controls how Deep Research clarification prompts are handled."""
+
 SearchFocus = Literal["web", "writing"]
 """Selects the search/generation mode.
 

@@ -261,6 +261,7 @@ config = ConversationConfig(citation_mode="markdown")
 | `space_uuid`      | `str \| None`                                    | `None`                       | UUID of the Perplexity Space to post the thread to |
 | `allow_risky_model` | `bool` | `False` | Acknowledge any non-available model status |
 | `custom_model_mode` | `Literal["copilot", "search", "research"]` | `"copilot"` | Mode for `custom:<identifier>` |
+| `research_interaction` | `Literal["auto", "manual"]` | `"auto"` | Deep Research clarification handling |
 
 The Space URL slug, such as `questions-abcdef123456`, is not its UUID. Submit a query inside the Space, inspect the `perplexity_ask` request in the browser Network panel, and copy `target_collection_uuid` from its JSON payload.
 

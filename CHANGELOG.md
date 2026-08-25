@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Deep Research automation:** Deep Research now automatically answers clarification prompts using reasonable assumptions and continues the same conversation once. Set `research_interaction="manual"` to retain the exception-based flow.
 - **API CORS policy:** Removed the wildcard CORS configuration so arbitrary browser origins cannot access the local API.
 - **Authentication examples:** Updated `curl` examples to read session tokens from `PERPLEXITY_SESSION_TOKEN` instead of embedding token-shaped literals.
 

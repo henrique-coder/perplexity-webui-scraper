@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Any
 
 from perplexity_webui_scraper._internal.constants import ENDPOINT_AUTH_SESSION, ENDPOINT_USER_SETTINGS
+from perplexity_webui_scraper._internal.exceptions import ResearchClarifyingQuestionsError
 from perplexity_webui_scraper.core.account import (
     AccountProfile,
     AccountSession,
@@ -193,9 +194,9 @@ class Conversation:
         self._http.init_search(query)
 
         if stream:
-            self._stream_generator = self._stream(payload)
+            self._stream_generator = self._stream(payload, model)
         else:
-            self._complete(payload)
+            self._complete(payload, model)
 
     def _validate_request_access(self, model: Model, has_files: bool) -> Model:
         """Ensure the account can use the selected model and attachments."""
@@ -218,12 +219,16 @@ class Conversation:
 
     def _reset_state(self) -> None:
         """Reset all mutable response state before a new query."""
+        self._reset_response_state()
+        self._stream_generator = None
+
+    def _reset_response_state(self) -> None:
+        """Reset response fields while retaining conversation continuation tokens."""
         self._answer = None
         self._chunks = []
         self._search_results = []
         self._raw_data = {}
         self._schematized_state = SchematizedStreamState()
-        self._stream_generator = None
 
     def _apply_sse_data(self, data: dict[str, Any]) -> None:
         """Apply a single parsed SSE data chunk to the conversation state.
@@ -266,8 +271,18 @@ class Conversation:
             raw_data=dict(self._raw_data),
         )
 
-    def _complete(self, payload: dict[str, Any]) -> None:
-        """Run the SSE stream to completion (non-streaming mode)."""
+    def _complete(self, payload: dict[str, Any], model: Model) -> None:
+        """Run the SSE stream to completion, retrying clarification automatically."""
+        try:
+            self._consume(payload)
+        except ResearchClarifyingQuestionsError as error:
+            if self._config.research_interaction == "manual":
+                raise
+
+            self._consume(self._build_research_followup_payload(model, error))
+
+    def _consume(self, payload: dict[str, Any]) -> None:
+        """Consume an SSE stream without yielding intermediate responses."""
         for line in self._http.stream_ask(payload):
             data = parse_sse_line(line)
 
@@ -277,8 +292,18 @@ class Conversation:
                 if data.get("final"):
                     break
 
-    def _stream(self, payload: dict[str, Any]) -> Generator[Response, None, None]:
-        """Yield :class:`Response` snapshots for each SSE data frame."""
+    def _stream(self, payload: dict[str, Any], model: Model) -> Generator[Response, None, None]:
+        """Yield response snapshots and retry clarification automatically when configured."""
+        try:
+            yield from self._stream_payload(payload)
+        except ResearchClarifyingQuestionsError as error:
+            if self._config.research_interaction == "manual":
+                raise
+
+            yield from self._stream_payload(self._build_research_followup_payload(model, error))
+
+    def _stream_payload(self, payload: dict[str, Any]) -> Generator[Response, None, None]:
+        """Yield response snapshots for one SSE request."""
         for line in self._http.stream_ask(payload):
             data = parse_sse_line(line)
 
@@ -288,3 +313,29 @@ class Conversation:
 
                 if data.get("final"):
                     break
+
+    def _build_research_followup_payload(
+        self,
+        model: Model,
+        error: ResearchClarifyingQuestionsError,
+    ) -> dict[str, Any]:
+        """Build one autonomous follow-up after a Deep Research clarification."""
+        questions = "\n".join(f"{index}. {question}" for index, question in enumerate(error.questions, start=1))
+        query = (
+            "Continue the Deep Research task without asking the user for input. "
+            "Answer the clarification questions below by choosing the most "
+            "reasonable options from the original context. If ambiguity remains, "
+            "state the assumption briefly and proceed with the research.\n\n"
+            f"Clarification questions:\n{questions}"
+        )
+
+        self._reset_response_state()
+        self._http.init_search(query)
+        return build_payload(
+            query=query,
+            model=model,
+            file_urls=[],
+            config=self._config,
+            backend_uuid=self._backend_uuid,
+            read_write_token=self._read_write_token,
+        )

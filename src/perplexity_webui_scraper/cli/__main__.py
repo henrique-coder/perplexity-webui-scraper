@@ -94,6 +94,10 @@ def chat(
         str,
         Option("--custom-model-mode", help="Backend mode for custom:<identifier> models."),
     ] = "copilot",
+    research_interaction: Annotated[
+        str,
+        Option("--research-interaction", help="Deep Research clarification handling: 'auto' or 'manual'."),
+    ] = "auto",
     token: Annotated[
         str | None,
         Option("--token", "-t", help="Session token override (skips saved token)."),
@@ -132,6 +136,7 @@ def chat(
         raw=raw,
         allow_risky_model=allow_risky_model,
         custom_model_mode=custom_model_mode,
+        research_interaction=research_interaction,
         token=token,
     )
 
