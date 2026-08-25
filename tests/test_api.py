@@ -76,6 +76,14 @@ def test_missing_auth_header(client: Session) -> None:
     assert "Missing or invalid Authorization header" in response.json()["error"]["message"]
 
 
+def test_api_does_not_allow_cross_origin_requests(client: Session) -> None:
+    """Requests from arbitrary browser origins must not receive CORS permission."""
+    response = client.get("/v1/models", headers={"Origin": "https://attacker.example"})
+
+    assert response.status_code == 200
+    assert "access-control-allow-origin" not in response.headers
+
+
 def test_malformed_auth_header(client: Session) -> None:
     """Request with malformed Authorization header (not Bearer) should return 401."""
     response = client.post(

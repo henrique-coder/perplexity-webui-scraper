@@ -2,7 +2,7 @@ default:
     @just --list
 
 update:
-    uv sync --upgrade --all-extras --all-groups
+    uv sync --upgrade --all-groups --all-extras
     pnpm update
 
 format:
