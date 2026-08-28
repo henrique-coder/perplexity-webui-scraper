@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/icon.png" width="128" alt="Logo">
+<img src="https://raw.githubusercontent.com/henrique-coder/perplexity-webui-scraper/prod/docs/assets/icon.png" width="128" alt="Logo">
 
 # Perplexity WebUI Scraper
 
@@ -8,11 +8,11 @@ Python scraper to extract AI responses from [Perplexity's](https://www.perplexit
 
 [![PyPI](https://img.shields.io/pypi/v/perplexity-webui-scraper?color=blue)](https://pypi.org/project/perplexity-webui-scraper)
 [![Python](https://img.shields.io/pypi/pyversions/perplexity-webui-scraper)](https://pypi.org/project/perplexity-webui-scraper)
-[![License](https://img.shields.io/github/license/henrique-coder/perplexity-webui-scraper?color=green)](./LICENSE)
+[![License](https://img.shields.io/github/license/henrique-coder/perplexity-webui-scraper?color=green)](https://github.com/henrique-coder/perplexity-webui-scraper/blob/prod/LICENSE)
 
 </div>
 
-Documentation: [henrique-coder.github.io/perplexity-webui-scraper](https://henrique-coder.github.io/perplexity-webui-scraper)
+Documentation: [perplexity-webui-scraper.readthedocs.io](https://perplexity-webui-scraper.readthedocs.io)
 
 ## About
 
@@ -22,10 +22,10 @@ A Perplexity account and its browser session token are required. Free accounts s
 
 ## Community
 
-- [Contributing guide](./CONTRIBUTING.md)
-- [Security policy](./SECURITY.md)
-- [Support guide](./SUPPORT.md)
-- [Code of conduct](./CODE_OF_CONDUCT.md)
+- [Contributing guide](https://github.com/henrique-coder/perplexity-webui-scraper/blob/prod/CONTRIBUTING.md)
+- [Security policy](https://github.com/henrique-coder/perplexity-webui-scraper/blob/prod/SECURITY.md)
+- [Support guide](https://github.com/henrique-coder/perplexity-webui-scraper/blob/prod/SUPPORT.md)
+- [Code of conduct](https://github.com/henrique-coder/perplexity-webui-scraper/blob/prod/CODE_OF_CONDUCT.md)
 - [Discussions](https://github.com/henrique-coder/perplexity-webui-scraper/discussions)
 - [Sponsor the project](https://github.com/sponsors/henrique-coder)
 
@@ -263,7 +263,7 @@ Expose every Perplexity model as a separate tool for AI agents (Claude Desktop, 
 }
 ```
 
-See the [MCP documentation](https://henrique-coder.github.io/perplexity-webui-scraper/mcp-server/) for tools and configuration.
+See the [MCP documentation](https://perplexity-webui-scraper.readthedocs.io/page/mcp-server/) for tools and configuration.
 
 ## Disclaimer
 

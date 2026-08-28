@@ -50,7 +50,7 @@ perplexity-webui-scraper = "perplexity_webui_scraper.cli.__main__:main"
 [project.urls]
 Changelog = "https://github.com/henrique-coder/perplexity-webui-scraper/blob/prod/CHANGELOG.md"
 Discussions = "https://github.com/henrique-coder/perplexity-webui-scraper/discussions"
-Documentation = "https://henrique-coder.github.io/perplexity-webui-scraper"
+Documentation = "https://perplexity-webui-scraper.readthedocs.io"
 Funding = "https://github.com/sponsors/henrique-coder"
 Homepage = "https://github.com/henrique-coder/perplexity-webui-scraper"
 Issues = "https://github.com/henrique-coder/perplexity-webui-scraper/issues"
