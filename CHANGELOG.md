@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Schematized SSE parsing:** Preserve the complete answer when incremental markdown or workflow chunks are ahead of the stream's final text field.
+
 ## [1.1.6] - 2026-08-25
 
 ### Fixed
