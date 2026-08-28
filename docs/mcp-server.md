@@ -110,17 +110,17 @@ Tools marked `[AVAILABLE]` can be called normally. `[UNKNOWN]` and `[UNAVAILABLE
 | `pplx_gpt56_terra_thinking` | `openai/gpt-5.6-terra-thinking` | GPT-5.6 Terra Thinking | `true` | pro | `available` | 2026-08-05T23:31:43.633312Z |
 | `pplx_gpt56_sol` | `openai/gpt-5.6-sol` | GPT-5.6 Sol | `true` | max | `available` | 2026-08-05T23:31:48.536501Z |
 | `pplx_gpt56_sol_thinking` | `openai/gpt-5.6-sol-thinking` | GPT-5.6 Sol Thinking | `true` | max | `available` | 2026-08-05T23:31:54.067766Z |
+| `pplx_gemini37_flash` | `google/gemini-3.7-flash` | Gemini 3.7 Flash | `true` | pro | `available` | 2026-08-18T06:24:44Z |
+| `pplx_gemini37_flash_think` | `google/gemini-3.7-flash-thinking` | Gemini 3.7 Flash Thinking | `true` | pro | `available` | 2026-08-18T06:24:50Z |
 | `pplx_claude_s50` | `anthropic/claude-sonnet-5` | Claude Sonnet 5 | `true` | pro | `available` | 2026-08-05T23:31:57.917346Z |
 | `pplx_claude_s50_think` | `anthropic/claude-sonnet-5-thinking` | Claude Sonnet 5 Thinking | `true` | pro | `available` | 2026-08-05T23:32:01.771184Z |
-| `pplx_glm52` | `z-ai/glm-5.2` | GLM 5.2 Thinking | `true` | pro | `available` | 2026-08-05T23:32:05.681327Z |
-| `pplx_gemini37_flash` | `google/gemini-3.7-flash` | Gemini 3.7 Flash | `true` | pro | `available` | 2026-08-18T06:24:44Z |
+| `pplx_claude_o50` | `anthropic/claude-opus-5` | Claude Opus 5 | `true` | max | `available` | 2026-08-05T23:32:30.076411Z |
+| `pplx_claude_o50_think` | `anthropic/claude-opus-5-thinking` | Claude Opus 5 Thinking | `true` | max | `available` | 2026-08-05T23:32:35.570998Z |
 | `pplx_kimi_k3_thinking` | `moonshot/kimi-k3-thinking` | Kimi K3 Thinking | `true` | pro | `available` | 2026-08-05T23:32:13.388185Z |
-| `pplx_gemini37_flash_think` | `google/gemini-3.7-flash-thinking` | Gemini 3.7 Flash Thinking | `true` | pro | `available` | 2026-08-18T06:24:50Z |
+| `pplx_glm52` | `z-ai/glm-5.2` | GLM 5.2 Thinking | `true` | pro | `available` | 2026-08-05T23:32:05.681327Z |
 | `pplx_grok46` | `x-ai/grok-4.6` | Grok 4.6 | `true` | pro | `available` | 2026-08-18T06:24:56Z |
 | `pplx_grok46_think` | `x-ai/grok-4.6-thinking` | Grok 4.6 Thinking | `true` | pro | `available` | 2026-08-18T06:25:02Z |
 | `pplx_nemotron3_ultra_think` | `nvidia/nemotron-3-ultra-thinking` | Nemotron 3 Ultra | `true` | pro | `available` | 2026-08-05T23:32:26.248167Z |
-| `pplx_claude_o50` | `anthropic/claude-opus-5` | Claude Opus 5 | `true` | max | `available` | 2026-08-05T23:32:30.076411Z |
-| `pplx_claude_o50_think` | `anthropic/claude-opus-5-thinking` | Claude Opus 5 Thinking | `true` | max | `available` | 2026-08-05T23:32:35.570998Z |
 | `pplx_gemini31_pro_think_high` | `google/gemini-3.1-pro-thinking-high` | Gemini 3.1 Pro Thinking | `false` | pro | `available` | 2026-08-05T23:32:09.529962Z |
 | `pplx_grok45` | `x-ai/grok-4.5` | Grok 4.5 | `false` | pro | `available` | 2026-08-05T23:32:17.793450Z |
 | `pplx_grok45_think` | `x-ai/grok-4.5-thinking` | Grok 4.5 Thinking | `false` | pro | `available` | 2026-08-05T23:32:21.682832Z |
