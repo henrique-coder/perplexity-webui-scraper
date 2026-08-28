@@ -2,7 +2,7 @@ site_name: Perplexity WebUI Scraper
 site_description: Python scraper to extract AI responses from Perplexity's web interface
 site_author: Henrique Moreira
 repo_url: https://github.com/henrique-coder/perplexity-webui-scraper
-site_url: https://henrique-coder.github.io/perplexity-webui-scraper
+site_url: "https://perplexity-webui-scraper.readthedocs.io"
 
 theme:
   name: material

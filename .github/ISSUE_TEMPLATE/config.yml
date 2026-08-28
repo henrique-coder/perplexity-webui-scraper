@@ -4,5 +4,5 @@ contact_links:
     url: https://github.com/henrique-coder/perplexity-webui-scraper/discussions
     about: Use Discussions for setup help, usage questions, and open-ended ideas.
   - name: Documentation
-    url: https://henrique-coder.github.io/perplexity-webui-scraper
+    url: https://perplexity-webui-scraper.readthedocs.io
     about: Read the full documentation and API reference.

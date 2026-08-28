@@ -6,7 +6,7 @@ build-backend = "uv_build"
 
 [project]
 name = "perplexity-webui-scraper"
-version = "1.1.7"
+version = "1.1.8"
 description = "Python client, CLI, MCP server, and OpenAI-compatible REST API for Perplexity's WebUI."
 authors = [
     { name = "Henrique Moreira", email = "78804989+henrique-coder@users.noreply.github.com" },
@@ -50,7 +50,7 @@ perplexity-webui-scraper = "perplexity_webui_scraper.cli.__main__:main"
 [project.urls]
 Changelog = "https://github.com/henrique-coder/perplexity-webui-scraper/blob/prod/CHANGELOG.md"
 Discussions = "https://github.com/henrique-coder/perplexity-webui-scraper/discussions"
-Documentation = "https://henrique-coder.github.io/perplexity-webui-scraper"
+Documentation = "https://perplexity-webui-scraper.readthedocs.io"
 Funding = "https://github.com/sponsors/henrique-coder"
 Homepage = "https://github.com/henrique-coder/perplexity-webui-scraper"
 Issues = "https://github.com/henrique-coder/perplexity-webui-scraper/issues"

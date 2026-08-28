@@ -8,7 +8,7 @@ This project wraps private Perplexity WebUI endpoints. Changes should be conserv
 
 - Search existing issues first.
 - Make sure you are using the latest released version.
-- Check the documentation at <https://henrique-coder.github.io/perplexity-webui-scraper>.
+- Check the documentation at <https://perplexity-webui-scraper.readthedocs.io>.
 - Do not include session tokens, cookies, account IDs, private prompts, or private files in public issues.
 
 ## Development Setup

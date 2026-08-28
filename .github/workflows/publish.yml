@@ -121,7 +121,17 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Build and Validate Package
+        env:
+          RELEASE_REF: ${{ github.sha }}
         run: |
+          README_BACKUP=$(mktemp)
+          cp README.md "$README_BACKUP"
+          cleanup() {
+            cp "$README_BACKUP" README.md
+            rm -f "$README_BACKUP"
+          }
+          trap cleanup EXIT
+          uv run --no-dev scripts/render_pypi_readme.py --reference "$RELEASE_REF"
           uv build
           uvx twine check dist/*
           sha256sum dist/* > dist/SHA256SUMS
@@ -162,7 +172,7 @@ jobs:
         env:
           PACKAGE_NAME: ${{ needs.validate.outputs.package_name }}
           VERSION: ${{ needs.validate.outputs.version }}
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+          UV_TRUSTED_PUBLISHING: always
         run: |
           if curl --fail --silent --show-error "https://pypi.org/pypi/$PACKAGE_NAME/$VERSION/json" >/dev/null; then
             echo "PyPI already contains $PACKAGE_NAME $VERSION; continuing a previously interrupted release."
@@ -238,19 +248,6 @@ jobs:
           cache-from: type=gha,scope=mcp
           cache-to: type=gha,mode=max,scope=mcp
 
-  deploy_documentation:
-    name: Deploy Documentation
-    needs:
-      - validate
-      - publish_pypi
-      - publish_container
-    if: needs.validate.outputs.publish == 'true' && needs.publish_pypi.result == 'success' && needs.publish_container.result == 'success'
-    uses: ./.github/workflows/docs.yml
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-
   create_github_release:
     name: Create GitHub Release
     needs:
@@ -258,12 +255,10 @@ jobs:
       - build_package
       - publish_pypi
       - publish_container
-      - deploy_documentation
     if: >-
       needs.validate.outputs.publish == 'true' &&
       needs.publish_pypi.result == 'success' &&
-      needs.publish_container.result == 'success' &&
-      needs.deploy_documentation.result == 'success'
+      needs.publish_container.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

@@ -51,6 +51,17 @@ def test_workflow_only_changes_skip_python_checks() -> None:
     }
 
 
+def test_readthedocs_configuration_runs_documentation_checks() -> None:
+    """Read the Docs configuration changes must validate the documentation build."""
+    assert classify_paths([".readthedocs.yaml"]) == {
+        "python": False,
+        "documentation": True,
+        "frontend": False,
+        "workflows": False,
+        "metadata": False,
+    }
+
+
 def test_unclassified_metadata_still_receives_a_lightweight_check() -> None:
     """Repository policy and ownership files are not silently ignored."""
     assert classify_paths([".github/CODEOWNERS"]) == {
