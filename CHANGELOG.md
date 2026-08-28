@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Documentation hosting:** Migrated published documentation from GitHub Pages to Read the Docs with separate `latest` development and `prod` stable versions.
+- **PyPI metadata:** Release builds now point the README logo to the exact immutable release commit while GitHub continues to use the current `prod` logo.
+
 ## [1.1.7] - 2026-08-28
 
 ### Changed
