@@ -172,7 +172,7 @@ jobs:
         env:
           PACKAGE_NAME: ${{ needs.validate.outputs.package_name }}
           VERSION: ${{ needs.validate.outputs.version }}
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+          UV_TRUSTED_PUBLISHING: always
         run: |
           if curl --fail --silent --show-error "https://pypi.org/pypi/$PACKAGE_NAME/$VERSION/json" >/dev/null; then
             echo "PyPI already contains $PACKAGE_NAME $VERSION; continuing a previously interrupted release."
