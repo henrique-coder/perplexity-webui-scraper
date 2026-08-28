@@ -89,6 +89,7 @@ def run(
     console = Console()
 
     session_token = _resolve_token(token)
+
     if not session_token:
         console.print("[red]No session token configured.[/red]")
         console.print("Run [bold cyan]perplexity-webui-scraper chat setup[/bold cyan] to configure your token.")
@@ -106,6 +107,7 @@ def run(
         if resolved_model.startswith("custom:"):
             console.print(f"[red]Invalid custom model: {exc}[/red]")
             raise Exit(code=1) from exc
+
         console.print(f"[red]Unknown model: {resolved_model!r}[/red]")
         console.print("Run [bold cyan]perplexity-webui-scraper chat setup[/bold cyan] to change your default model.")
         raise Exit(code=1) from exc
@@ -198,6 +200,7 @@ def run(
                                 stdout.write("\033[1A\r\033[K")
                                 stdout.flush()
                                 skip_newline = True
+
                             continue
                     except (KeyboardInterrupt, EOFError):
                         if not raw:
@@ -247,8 +250,10 @@ def run(
                         while True:
                             try:
                                 msg_type, msg_data = q.get(timeout=0.1)
+
                                 if msg_type == "chunk":
                                     rendered = msg_data.answer or msg_data.last_chunk
+
                                     if rendered:
                                         first_chunk_received = True
                                         live.update(Markdown(rendered))
@@ -266,6 +271,7 @@ def run(
                 if copy and final_answer:
                     with suppress(PyperclipException):
                         clipboard_copy(final_answer)
+
                         if not raw:
                             console.print("\n[dim]📋 Answer copied to clipboard.[/dim]")
 
@@ -274,7 +280,6 @@ def run(
 
                 if raw and query:
                     break
-
     except Exception as exc:
         if isinstance(exc, ModelAccessError | ModelStatusError):
             console.print(f"[red]{exc}[/red]")
@@ -290,10 +295,12 @@ def run(
             raise Exit(code=1) from exc
 
         error_msg = str(exc)
+
         if "authentication" in error_msg.lower() or "session" in error_msg.lower() or "401" in error_msg:
             console.print("[red]Authentication failed. Your token may be invalid or expired.[/red]")
             console.print("Run [bold cyan]perplexity-webui-scraper chat setup[/bold cyan] to reconfigure.")
             raise Exit(code=1)  # noqa: B904
+
         raise
 
 
@@ -317,6 +324,7 @@ def setup() -> None:
     console.print()
 
     current_token = load_token()
+
     if current_token:
         masked = current_token[:12] + "..." + current_token[-8:]
         console.print(f"  [green]✔ Token configured:[/green] [dim]{masked}[/dim]")
@@ -378,6 +386,7 @@ def _prompt_and_save_model(console: object) -> None:
     table.add_column("Status", style="dim")
 
     models = MODELS.list_all()
+
     for idx, m in enumerate(models, 1):
         table.add_row(str(idx), m.id, m.name, m.min_tier or "unknown", m.status)
 
@@ -392,6 +401,7 @@ def _prompt_and_save_model(console: object) -> None:
 
     if choice.isdigit():
         idx = int(choice) - 1
+
         if 0 <= idx < len(models):
             chosen = models[idx].id
         else:

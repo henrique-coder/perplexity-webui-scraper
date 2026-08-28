@@ -120,6 +120,7 @@ def _register_custom_tool(mcp: Any, get_client: Callable[[], Perplexity]) -> Non
     ) -> dict[str, Any]:
         """Query a custom internal identifier after explicit risk acknowledgement."""
         model_id = model if model.startswith("custom:") else f"custom:{model}"
+
         try:
             resolved = MODELS.resolve_for_use(
                 model_id,

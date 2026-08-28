@@ -211,8 +211,10 @@ class Conversation:
         profile = AccountProfile(session=session, settings=settings)
         account_tier = profile.account_tier
         effective_session = AccountSession.model_validate({"user": {"subscription_tier": account_tier}})
+
         if model.status == "available":
             ensure_model_access(effective_session, model)
+
         ensure_file_access(account_tier, has_files)
 
         return model_for_account(model, account_tier)
@@ -238,6 +240,7 @@ class Conversation:
         """
         if "backend_uuid" in data:
             self._backend_uuid = data["backend_uuid"]
+
         if "read_write_token" in data:
             self._read_write_token = data["read_write_token"]
 
@@ -331,6 +334,7 @@ class Conversation:
 
         self._reset_response_state()
         self._http.init_search(query)
+
         return build_payload(
             query=query,
             model=model,

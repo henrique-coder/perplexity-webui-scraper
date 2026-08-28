@@ -78,8 +78,10 @@ def test_model_rejects_legacy_availability_fields(legacy_field: str) -> None:
 
 def test_unknown_model_requires_acknowledgement() -> None:
     registry = ModelRegistry([{**_MODEL, "status": "unknown"}])
+
     with raises(ModelStatusError) as exc_info:
         registry.resolve_for_use("provider/model")
+
     assert exc_info.value.status == "unknown"
 
     with warns(ModelRiskWarning):
@@ -90,9 +92,12 @@ def test_unknown_model_requires_acknowledgement() -> None:
 @mark.parametrize("status", ["unknown", "unavailable"])
 def test_other_risky_statuses_use_the_same_acknowledgement(status: str) -> None:
     registry = ModelRegistry([{**_MODEL, "status": status}])
+
     with raises(ModelStatusError) as exc_info:
         registry.resolve_for_use("provider/model")
+
     assert exc_info.value.status == status
+
     with warns(ModelRiskWarning):
         assert registry.resolve_for_use("provider/model", allow_risky_model=True).status == status
 
@@ -100,6 +105,7 @@ def test_other_risky_statuses_use_the_same_acknowledgement(status: str) -> None:
 def test_custom_model_is_explicit_and_validated() -> None:
     with raises(ModelStatusError):
         MODELS.resolve_for_use("custom:gpt57")
+
     with warns(ModelRiskWarning):
         model = MODELS.resolve_for_use(
             "custom:gpt57",
@@ -110,7 +116,9 @@ def test_custom_model_is_explicit_and_validated() -> None:
     assert model.mode == "search"
     assert model.min_tier is None
     assert model.status == "unknown"
+
     with raises(ValueError, match="Custom model identifiers"):
         MODELS.resolve_for_use("custom:", allow_risky_model=True)
+
     with raises(ValueError, match="Unknown model"):
         MODELS.resolve_for_use("gpt57", allow_risky_model=True)

@@ -131,6 +131,7 @@ def test_model_catalog_exposes_risk_metadata(client: Session) -> None:
     data = response.json()["data"]
     expected = {model.id: model for model in MODELS.list_all()}
     assert {item["id"] for item in data} == set(expected)
+
     for item in data:
         model = expected[item["id"]]
         metadata = item["perplexity"]
@@ -144,12 +145,14 @@ def test_model_catalog_exposes_risk_metadata(client: Session) -> None:
 
 def test_risky_model_api_requires_and_accepts_acknowledgement(client: Session) -> None:
     risky_model_id = next(model.id for model in MODELS.list_all() if model.status != "available")
+
     with patch("perplexity_webui_scraper.api.routes.completions.MODELS", MODELS):
         denied = client.post(
             "/v1/chat/completions",
             json={"model": risky_model_id, "messages": [{"role": "user", "content": "Hello"}]},
             headers={"Authorization": AUTH_HEADER},
         )
+
     assert denied.status_code == 400
     assert denied.json()["error"]["code"] == "model_status_confirmation_required"
 
@@ -172,6 +175,7 @@ def test_risky_model_api_requires_and_accepts_acknowledgement(client: Session) -
             },
             headers={"Authorization": AUTH_HEADER},
         )
+
     assert allowed.status_code == 200
 
 

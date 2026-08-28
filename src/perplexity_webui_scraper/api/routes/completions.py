@@ -69,6 +69,7 @@ async def chat_completions(
     except ValueError as exc:
         if request.model.startswith("custom:"):
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+
         available = ", ".join(f'"{m.id}"' for m in MODELS.list_all())
         raise HTTPException(
             status_code=400,
@@ -116,7 +117,6 @@ async def chat_completions(
                 status_code=400,
                 detail="Last user message must contain text or images.",
             )
-
     else:
         query, files = build_query_and_files(request)
         config = build_conversation_config(request.model, request.perplexity)
@@ -195,7 +195,6 @@ async def _stream_response(
                         model=model_id,
                         choices=[ChatCompletionChunkChoice(delta=ChatCompletionChunkDelta(content=delta))],
                     ).to_sse_line()
-
     except (ConnectionError, BrokenPipeError, OSError):
         return
 

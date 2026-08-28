@@ -126,6 +126,7 @@ def _process_schematized_blocks(
             for patch in diff_block.get("patches", []):
                 if isinstance(patch, dict):
                     _apply_json_patch(state.workflow_block, patch)
+
             raw_data["diff_block"] = deepcopy(diff_block)
 
         markdown_block = block.get("markdown_block")
@@ -141,6 +142,7 @@ def _process_schematized_blocks(
 
             if updated_results is not None:
                 search_results = updated_results
+
             raw_data["web_result_block"] = deepcopy(web_result_block)
 
     if state.workflow_block is not None:
@@ -153,10 +155,12 @@ def _process_schematized_blocks(
 
     if is_final and state.answer is None and state.markdown_chunks:
         state.answer = format_citations("".join(state.markdown_chunks), citation_mode, search_results)
+
     answer = state.answer if is_final else None
 
     if state.workflow_block is not None:
         raw_data["workflow_block"] = deepcopy(state.workflow_block)
+
     raw = raw_data
 
     return answer, list(state.chunks), search_results, raw
@@ -245,6 +249,7 @@ def _extract_workflow_text(
     for step in steps if isinstance(steps, list) else []:
         if not isinstance(step, dict):
             continue
+
         items = step.get("items", [])
 
         for item in items if isinstance(items, list) else []:

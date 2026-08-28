@@ -74,6 +74,7 @@ def _ask(
     )
 
     conversation = client.create_conversation(config)
+
     try:
         conversation.ask(query)
     except ModelAccessError as exc:
