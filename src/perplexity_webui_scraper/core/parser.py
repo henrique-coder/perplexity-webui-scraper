@@ -48,6 +48,7 @@ def _json_pointer_tokens(path: str) -> list[str]:
     """Decode an RFC 6901 JSON Pointer path."""
     if path == "":
         return []
+
     if not path.startswith("/"):
         raise ValueError(f"Invalid JSON Patch path: {path!r}")
 
@@ -63,10 +64,12 @@ def _apply_json_patch(document: Any, operation: dict[str, Any]) -> None:
     """
     op = operation.get("op")
     tokens = _json_pointer_tokens(str(operation.get("path", "")))
+
     if not tokens:
         raise ValueError("Root JSON Patch operations are not supported")
 
     target = document
+
     for token in tokens[:-1]:
         target = target[int(token)] if isinstance(target, list) else target[token]
     key = tokens[-1]
@@ -88,6 +91,7 @@ def _apply_json_patch(document: Any, operation: dict[str, Any]) -> None:
 
     if not isinstance(target, dict):
         raise TypeError("JSON Patch target must be an object or list")
+
     if op in {"add", "replace"}:
         target[key] = operation.get("value")
     elif op == "remove":
@@ -105,48 +109,71 @@ def _process_schematized_blocks(
     """Process the ``workflow_block``/``diff_block`` stream format."""
     raw_blocks = data.get("blocks", [])
     raw_data: dict[str, Any] = {}
+
     for block in raw_blocks if isinstance(raw_blocks, list) else []:
         if not isinstance(block, dict):
             continue
 
         workflow_block = block.get("workflow_block")
+
         if isinstance(workflow_block, dict):
             state.workflow_block = deepcopy(workflow_block)
             raw_data["workflow_block"] = deepcopy(workflow_block)
 
         diff_block = block.get("diff_block")
+
         if isinstance(diff_block, dict) and state.workflow_block is not None:
             for patch in diff_block.get("patches", []):
                 if isinstance(patch, dict):
                     _apply_json_patch(state.workflow_block, patch)
+
             raw_data["diff_block"] = deepcopy(diff_block)
 
         markdown_block = block.get("markdown_block")
+
         if isinstance(markdown_block, dict):
             _process_markdown_block(markdown_block, citation_mode, state)
             raw_data["markdown_block"] = deepcopy(markdown_block)
 
         web_result_block = block.get("web_result_block")
+
         if isinstance(web_result_block, dict):
             updated_results = _extract_web_results(web_result_block)
+
             if updated_results is not None:
                 search_results = updated_results
+
             raw_data["web_result_block"] = deepcopy(web_result_block)
 
     if state.workflow_block is not None:
         extracted = _extract_workflow_text(state.workflow_block, citation_mode, search_results)
+
         if extracted is not None:
             state.answer, state.chunks, search_results = extracted
 
     is_final = bool(data.get("text_completed") or data.get("final_sse_message") or data.get("final"))
+
     if is_final and state.answer is None and state.markdown_chunks:
         state.answer = format_citations("".join(state.markdown_chunks), citation_mode, search_results)
+
     answer = state.answer if is_final else None
+
     if state.workflow_block is not None:
         raw_data["workflow_block"] = deepcopy(state.workflow_block)
+
     raw = raw_data
 
     return answer, list(state.chunks), search_results, raw
+
+
+def _prefer_longer_text(text: str | None, chunks: list[str]) -> str | None:
+    """Prefer the accumulated chunks when the stream's text field lags."""
+    joined_chunks = "".join(chunks)
+
+    if joined_chunks and (text is None or len(joined_chunks) > len(text)):
+        return joined_chunks
+
+    return text
 
 
 def _process_markdown_block(
@@ -156,17 +183,23 @@ def _process_markdown_block(
 ) -> None:
     """Merge an incremental markdown block into the stream state."""
     raw_chunks = markdown_block.get("chunks", [])
+
     if isinstance(raw_chunks, list):
         offset = markdown_block.get("chunk_starting_offset", 0)
+
         if not isinstance(offset, int) or offset < 0:
             offset = 0
+
         if offset == 0:
             state.markdown_chunks = []
+
         while len(state.markdown_chunks) < offset:
             state.markdown_chunks.append("")
+
         for index, chunk in enumerate(raw_chunks):
             value = format_citations(str(chunk), citation_mode, []) if chunk is not None else ""
             target = offset + index
+
             if target == len(state.markdown_chunks):
                 state.markdown_chunks.append(value or "")
             elif target < len(state.markdown_chunks):
@@ -175,10 +208,14 @@ def _process_markdown_block(
                 state.markdown_chunks.extend([""] * (target - len(state.markdown_chunks)))
                 state.markdown_chunks.append(value or "")
 
-    answer = markdown_block.get("answer")
-    if isinstance(answer, str) and answer:
-        state.answer = format_citations(answer, citation_mode, [])
     state.chunks = list(state.markdown_chunks) or state.chunks
+
+    answer = markdown_block.get("answer")
+    answer_text = answer if isinstance(answer, str) and answer else None
+    answer_text = _prefer_longer_text(answer_text, state.markdown_chunks)
+
+    if answer_text is not None:
+        state.answer = format_citations(answer_text, citation_mode, [])
 
 
 def _extract_web_results(web_result_block: dict[str, Any]) -> list[SearchResultItem] | None:
@@ -186,8 +223,10 @@ def _extract_web_results(web_result_block: dict[str, Any]) -> list[SearchResultI
     from perplexity_webui_scraper.core.response import SearchResultItem  # noqa: PLC0415
 
     raw_results = web_result_block.get("web_results")
+
     if not isinstance(raw_results, list):
         return None
+
     return [
         SearchResultItem(
             title=result.get("name"),
@@ -206,25 +245,36 @@ def _extract_workflow_text(
 ) -> tuple[str | None, list[str], list[SearchResultItem]] | None:
     """Extract answer text and chunks from a schematized workflow block."""
     steps = workflow_block.get("steps", [])
+
     for step in steps if isinstance(steps, list) else []:
         if not isinstance(step, dict):
             continue
+
         items = step.get("items", [])
+
         for item in items if isinstance(items, list) else []:
             if not isinstance(item, dict):
                 continue
+
             payload = item.get("payload", {})
             text_payload = payload.get("text_payload", {}) if isinstance(payload, dict) else {}
+
             if not isinstance(text_payload, dict):
                 continue
+
             raw_chunks = text_payload.get("chunks", [])
             chunks = [str(chunk) for chunk in raw_chunks if chunk is not None] if isinstance(raw_chunks, list) else []
             text = text_payload.get("text")
-            answer = format_citations(text if isinstance(text, str) and text else None, citation_mode, search_results)
+            answer_text = text if isinstance(text, str) and text else None
+            answer_text = _prefer_longer_text(answer_text, chunks)
+            answer = format_citations(answer_text, citation_mode, search_results)
+
             if chunks:
                 chunks = [format_citations(chunk, citation_mode, search_results) or "" for chunk in chunks]
+
             if answer is not None or chunks:
                 return answer, chunks, search_results
+
     return None
 
 
@@ -244,13 +294,17 @@ def parse_sse_line(line: str | bytes) -> dict[str, Any] | None:
     if isinstance(line, bytes):
         if line.startswith(b"data:"):
             payload = line[5:].lstrip()
+
             if payload == b"[DONE]":
                 return None
+
             return loads(payload)
     elif line.startswith("data:"):
         payload = line[5:].lstrip()
+
         if payload == "[DONE]":
             return None
+
         return loads(payload)
 
     return None
@@ -317,6 +371,7 @@ def process_sse_data(
             data.get("text_completed") or data.get("final_sse_message") or data.get("final")
         ):
             return schematized_state.answer, list(schematized_state.chunks), search_results, {}
+
         return None, [], search_results, {}
 
     try:
@@ -364,10 +419,12 @@ def extract_clarifying_questions(item: dict[str, Any]) -> list[str]:
     if isinstance(content, dict):
         if "questions" in content:
             raw = content["questions"]
+
             if isinstance(raw, list):
                 questions = [str(q) for q in raw if q]
         elif "clarifying_questions" in content:
             raw = content["clarifying_questions"]
+
             if isinstance(raw, list):
                 questions = [str(q) for q in raw if q]
         elif not questions:

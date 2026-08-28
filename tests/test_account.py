@@ -44,6 +44,7 @@ class _FakeHTTP:
         rate_limited: bool = True,
     ) -> _SessionResponse:
         self.get_calls.append((endpoint, rate_limited))
+
         if endpoint == ENDPOINT_USER_SETTINGS and self.settings_payload is not None:
             return _SessionResponse(self.settings_payload)
 

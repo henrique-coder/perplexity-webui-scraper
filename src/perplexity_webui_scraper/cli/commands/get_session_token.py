@@ -265,6 +265,7 @@ def run(
                         with console.status("[bold green]Validating...", spinner="dots"):
                             redirect_url = _resolve_redirect_url(session, email, otp_code)
                             challenge_token = _follow_callback(session, redirect_url)
+
                         break
                     except ValueError as e:
                         if "Verification failed" in str(e):

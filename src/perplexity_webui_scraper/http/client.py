@@ -256,6 +256,7 @@ class HTTPClient:
         def _do_get() -> CurlResponse:
             if rate_limited:
                 self._throttle()
+
             t0 = monotonic()
             response = self._session.get(url, params=params)
             log_response("GET", url, response.status_code, elapsed_ms=(monotonic() - t0) * 1000)

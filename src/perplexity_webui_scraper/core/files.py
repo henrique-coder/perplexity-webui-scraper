@@ -146,6 +146,7 @@ def validate_files(files: list[FileInput] | None) -> list[_FileInfo]:
 
                 if not path.exists():
                     raise FileValidationError(posix, "File not found")
+
                 if not path.is_file():
                     raise FileValidationError(posix, "Path is not a file")
 
@@ -161,6 +162,7 @@ def validate_files(files: list[FileInput] | None) -> list[_FileInfo]:
                         posix,
                         f"File exceeds 50 MB limit: {file_size / (1024 * 1024):.1f} MB",
                     )
+
                 if file_size == 0:
                     raise FileValidationError(posix, "File is empty")
 
@@ -225,6 +227,7 @@ def upload_file(file_info: _FileInfo, http: HTTPClient) -> str:
 
         if not s3_object_url:
             raise FileUploadError(display_name, "No upload URL returned")
+
         if not s3_bucket_url or not fields:
             raise FileUploadError(display_name, "Missing S3 upload credentials")
 
@@ -253,7 +256,6 @@ def upload_file(file_info: _FileInfo, http: HTTPClient) -> str:
                 display_name,
                 f"S3 upload failed with status {upload_response.status_code}: {upload_response.text}",
             )
-
     except FileUploadError:
         raise
     except Exception as error:
@@ -281,6 +283,7 @@ def _check_bytes_size(data: bytes, label: str) -> None:
 
     if size == 0:
         raise FileValidationError(label, "Bytes data is empty")
+
     if size > MAX_FILE_SIZE:
         raise FileValidationError(
             label,

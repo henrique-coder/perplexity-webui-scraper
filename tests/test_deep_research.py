@@ -29,6 +29,7 @@ class _HTTP:
 
     def stream_ask(self, payload: dict[str, Any]) -> list[str]:
         self.payloads.append(payload)
+
         return next(self.streams)
 
 

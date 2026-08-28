@@ -106,6 +106,7 @@ def build_payload(
     }
 
     # Space requests override incognito mode.
+
     if config.space_uuid:
         params["target_collection_uuid"] = config.space_uuid
         params["target_thread_access_level"] = 1
@@ -113,6 +114,7 @@ def build_payload(
         params["is_incognito"] = False
 
     # Follow-up / continuation support
+
     if backend_uuid is not None:
         params["last_backend_uuid"] = backend_uuid
         params["query_source"] = "followup"

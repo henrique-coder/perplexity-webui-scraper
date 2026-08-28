@@ -110,6 +110,7 @@ class ModelRegistry:
         """Resolve a model and enforce explicit acknowledgement of risky states."""
         if model_id.startswith(_CUSTOM_PREFIX):
             identifier = model_id.removeprefix(_CUSTOM_PREFIX)
+
             if not fullmatch(_CUSTOM_IDENTIFIER_PATTERN, identifier):
                 raise ValueError(
                     "Custom model identifiers must contain 1-128 letters, digits, dots, colons, underscores, or hyphens"

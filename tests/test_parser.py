@@ -101,6 +101,41 @@ def test_process_sse_data_handles_schematized_workflow_and_diffs() -> None:
     assert raw["workflow_block"]["status"] == "WORKFLOW_COMPLETED"
 
 
+def test_process_sse_data_prefers_longer_workflow_chunks_over_stale_text() -> None:
+    state = SchematizedStreamState()
+    answer, chunks, _, _ = process_sse_data(
+        {
+            "blocks": [
+                {
+                    "workflow_block": {
+                        "steps": [
+                            {
+                                "items": [
+                                    {
+                                        "payload": {
+                                            "text_payload": {
+                                                "text": "The Berlin Wall fell in 1",
+                                                "chunks": ["The Berlin Wall fell in 1989."],
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            ],
+            "final": True,
+        },
+        [],
+        "default",
+        state,
+    )
+
+    assert answer == "The Berlin Wall fell in 1989."
+    assert chunks == ["The Berlin Wall fell in 1989."]
+
+
 def test_process_sse_data_ignores_schematized_control_blocks_without_text() -> None:
     state = SchematizedStreamState()
     answer, chunks, results, raw = process_sse_data(
@@ -196,3 +231,50 @@ def test_process_sse_data_uses_markdown_chunks_when_final_answer_is_omitted() ->
     )
     assert answer == "PONG"
     assert chunks == ["PONG"]
+
+
+def test_process_sse_data_prefers_markdown_chunks_over_stale_answer() -> None:
+    state = SchematizedStreamState()
+    answer, chunks, _, _ = process_sse_data(
+        {
+            "blocks": [
+                {
+                    "markdown_block": {
+                        "progress": "IN_PROGRESS",
+                        "chunks": ["The Berlin Wall fell in 1"],
+                        "chunk_starting_offset": 0,
+                        "answer": "The Berlin Wall fell in 1",
+                    }
+                }
+            ],
+            "text_completed": False,
+        },
+        [],
+        "default",
+        state,
+    )
+
+    assert answer is None
+    assert chunks == ["The Berlin Wall fell in 1"]
+
+    answer, chunks, _, _ = process_sse_data(
+        {
+            "blocks": [
+                {
+                    "markdown_block": {
+                        "progress": "DONE",
+                        "chunks": ["989."],
+                        "chunk_starting_offset": 1,
+                    }
+                }
+            ],
+            "text_completed": True,
+            "final": True,
+        },
+        [],
+        "default",
+        state,
+    )
+
+    assert answer == "The Berlin Wall fell in 1989."
+    assert chunks == ["The Berlin Wall fell in 1", "989."]
