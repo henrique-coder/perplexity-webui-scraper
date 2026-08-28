@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.7] - 2026-08-28
+
+### Changed
+
+- **Model registry:** Updated official WebUI model descriptions and ordering from Perplexity's current v2 configuration, preserving the `Thinking` names represented by the model identifiers.
+
 ### Fixed
 
 - **Schematized SSE parsing:** Preserve the complete answer when incremental markdown or workflow chunks are ahead of the stream's final text field.
