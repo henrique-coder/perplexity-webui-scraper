@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Model registry:** Replaced GLM 5.2 Thinking with GLM 5.3 Thinking in the official WebUI order.
+- **Model registry:** Synchronized the official WebUI order, replaced GLM 5.2 Thinking with GLM 5.3 Thinking, and live-tested all 80 identifiers. Seventy-eight are available; the two historical Claude Haiku 4.5 identifiers remain unavailable after three failed probes each.
 
 ## [1.1.8] - 2026-08-28
 
