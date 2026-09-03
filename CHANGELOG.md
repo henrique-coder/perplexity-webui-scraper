@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Model registry:** Replaced GLM 5.2 Thinking with GLM 5.3 Thinking in the official WebUI order.
+
 ## [1.1.8] - 2026-08-28
 
 ### Changed

@@ -192,16 +192,16 @@
     "is_official": true
   },
   {
-    "id": "z-ai/glm-5.2",
-    "name": "GLM 5.2 Thinking",
+    "id": "z-ai/glm-5.3",
+    "name": "GLM 5.3 Thinking",
     "description": "Z.ai's advanced model",
-    "identifier": "glm_5_2",
-    "tool_name": "pplx_glm52",
+    "identifier": "glm_5_3_thinking",
+    "tool_name": "pplx_glm53",
     "min_tier": "pro",
     "mode": "copilot",
     "provider": "z-ai",
-    "status": "available",
-    "last_tested_at": "2026-08-05T23:32:05.681327Z",
+    "status": "unknown",
+    "last_tested_at": null,
     "is_official": true
   },
   {
@@ -242,6 +242,19 @@
     "status": "available",
     "last_tested_at": "2026-08-05T23:32:26.248167Z",
     "is_official": true
+  },
+  {
+    "id": "z-ai/glm-5.2",
+    "name": "GLM 5.2 Thinking",
+    "description": "Z.ai's advanced model",
+    "identifier": "glm_5_2",
+    "tool_name": "pplx_glm52",
+    "min_tier": "pro",
+    "mode": "copilot",
+    "provider": "z-ai",
+    "status": "available",
+    "last_tested_at": "2026-08-05T23:32:05.681327Z",
+    "is_official": false
   },
   {
     "id": "google/gemini-3.1-pro-thinking-high",
