@@ -36,19 +36,6 @@
     "is_official": true
   },
   {
-    "id": "perplexity/sonar-2",
-    "name": "Sonar 2",
-    "description": "Perplexity's latest in-house model.",
-    "identifier": "experimental",
-    "tool_name": "pplx_sonar",
-    "min_tier": "pro",
-    "mode": "copilot",
-    "provider": "perplexity",
-    "status": "available",
-    "last_tested_at": "2026-09-03T11:22:53.057021Z",
-    "is_official": true
-  },
-  {
     "id": "openai/gpt-5.6-terra",
     "name": "GPT-5.6 Terra",
     "description": "OpenAI's versatile model",
@@ -101,29 +88,29 @@
     "is_official": true
   },
   {
-    "id": "google/gemini-3.7-flash",
-    "name": "Gemini 3.7 Flash",
+    "id": "google/gemini-3.8-flash",
+    "name": "Gemini 3.8 Flash",
     "description": "Google's latest model",
-    "identifier": "gemini37flash",
-    "tool_name": "pplx_gemini37_flash",
+    "identifier": "gemini38flash",
+    "tool_name": "pplx_gemini38_flash",
     "min_tier": "pro",
     "mode": "copilot",
     "provider": "google",
     "status": "available",
-    "last_tested_at": "2026-09-03T11:23:27.912685Z",
+    "last_tested_at": "2026-09-13T19:29:35.396656Z",
     "is_official": true
   },
   {
-    "id": "google/gemini-3.7-flash-thinking",
-    "name": "Gemini 3.7 Flash Thinking",
+    "id": "google/gemini-3.8-flash-thinking",
+    "name": "Gemini 3.8 Flash Thinking",
     "description": "Google's latest model with thinking",
-    "identifier": "gemini37flashthinking",
-    "tool_name": "pplx_gemini37_flash_think",
+    "identifier": "gemini38flashthinking",
+    "tool_name": "pplx_gemini38_flash_think",
     "min_tier": "pro",
     "mode": "copilot",
     "provider": "google",
     "status": "available",
-    "last_tested_at": "2026-09-03T11:23:36.095351Z",
+    "last_tested_at": "2026-09-13T19:29:43.325840Z",
     "is_official": true
   },
   {
@@ -242,6 +229,45 @@
     "status": "available",
     "last_tested_at": "2026-09-03T11:24:27.794997Z",
     "is_official": true
+  },
+  {
+    "id": "google/gemini-3.7-flash",
+    "name": "Gemini 3.7 Flash",
+    "description": "Google's latest model",
+    "identifier": "gemini37flash",
+    "tool_name": "pplx_gemini37_flash",
+    "min_tier": "pro",
+    "mode": "copilot",
+    "provider": "google",
+    "status": "available",
+    "last_tested_at": "2026-09-03T11:23:27.912685Z",
+    "is_official": false
+  },
+  {
+    "id": "google/gemini-3.7-flash-thinking",
+    "name": "Gemini 3.7 Flash Thinking",
+    "description": "Google's latest model with thinking",
+    "identifier": "gemini37flashthinking",
+    "tool_name": "pplx_gemini37_flash_think",
+    "min_tier": "pro",
+    "mode": "copilot",
+    "provider": "google",
+    "status": "available",
+    "last_tested_at": "2026-09-03T11:23:36.095351Z",
+    "is_official": false
+  },
+  {
+    "id": "perplexity/sonar-2",
+    "name": "Sonar 2",
+    "description": "Perplexity's latest in-house model.",
+    "identifier": "experimental",
+    "tool_name": "pplx_sonar",
+    "min_tier": "pro",
+    "mode": "copilot",
+    "provider": "perplexity",
+    "status": "available",
+    "last_tested_at": "2026-09-03T11:22:53.057021Z",
+    "is_official": false
   },
   {
     "id": "z-ai/glm-5.2",

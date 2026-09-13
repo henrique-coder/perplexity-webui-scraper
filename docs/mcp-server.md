@@ -105,13 +105,12 @@ Tools marked `[AVAILABLE]` can be called normally. `[UNKNOWN]` and `[UNAVAILABLE
 | --- | --- | --- | --- | --- | --- | --- |
 | `pplx_best` | `perplexity/best` | Best | `true` | free | `available` | 2026-09-03T11:22:43.678013Z |
 | `pplx_deep_research` | `perplexity/deep-research` | Deep research | `true` | pro | `available` | 2026-09-03T11:22:48.144988Z |
-| `pplx_sonar` | `perplexity/sonar-2` | Sonar 2 | `true` | pro | `available` | 2026-09-03T11:22:53.057021Z |
 | `pplx_gpt56_terra` | `openai/gpt-5.6-terra` | GPT-5.6 Terra | `true` | pro | `available` | 2026-09-03T11:23:01.577429Z |
 | `pplx_gpt56_terra_thinking` | `openai/gpt-5.6-terra-thinking` | GPT-5.6 Terra Thinking | `true` | pro | `available` | 2026-09-03T11:23:06.785982Z |
 | `pplx_gpt56_sol` | `openai/gpt-5.6-sol` | GPT-5.6 Sol | `true` | max | `available` | 2026-09-03T11:23:12.792318Z |
 | `pplx_gpt56_sol_thinking` | `openai/gpt-5.6-sol-thinking` | GPT-5.6 Sol Thinking | `true` | max | `available` | 2026-09-03T11:23:22.916886Z |
-| `pplx_gemini37_flash` | `google/gemini-3.7-flash` | Gemini 3.7 Flash | `true` | pro | `available` | 2026-09-03T11:23:27.912685Z |
-| `pplx_gemini37_flash_think` | `google/gemini-3.7-flash-thinking` | Gemini 3.7 Flash Thinking | `true` | pro | `available` | 2026-09-03T11:23:36.095351Z |
+| `pplx_gemini38_flash` | `google/gemini-3.8-flash` | Gemini 3.8 Flash | `true` | pro | `available` | 2026-09-13T19:29:35.396656Z |
+| `pplx_gemini38_flash_think` | `google/gemini-3.8-flash-thinking` | Gemini 3.8 Flash Thinking | `true` | pro | `available` | 2026-09-13T19:29:43.325840Z |
 | `pplx_claude_s50` | `anthropic/claude-sonnet-5` | Claude Sonnet 5 | `true` | pro | `available` | 2026-09-03T11:23:43.226216Z |
 | `pplx_claude_s50_think` | `anthropic/claude-sonnet-5-thinking` | Claude Sonnet 5 Thinking | `true` | pro | `available` | 2026-09-03T11:23:48.300702Z |
 | `pplx_claude_o50` | `anthropic/claude-opus-5` | Claude Opus 5 | `true` | max | `available` | 2026-09-03T11:23:54.080456Z |
@@ -121,6 +120,9 @@ Tools marked `[AVAILABLE]` can be called normally. `[UNKNOWN]` and `[UNAVAILABLE
 | `pplx_grok46` | `x-ai/grok-4.6` | Grok 4.6 | `true` | pro | `available` | 2026-09-03T11:24:18.025718Z |
 | `pplx_grok46_think` | `x-ai/grok-4.6-thinking` | Grok 4.6 Thinking | `true` | pro | `available` | 2026-09-03T11:24:22.485161Z |
 | `pplx_nemotron3_ultra_think` | `nvidia/nemotron-3-ultra-thinking` | Nemotron 3 Ultra | `true` | pro | `available` | 2026-09-03T11:24:27.794997Z |
+| `pplx_gemini37_flash` | `google/gemini-3.7-flash` | Gemini 3.7 Flash | `false` | pro | `available` | 2026-09-03T11:23:27.912685Z |
+| `pplx_gemini37_flash_think` | `google/gemini-3.7-flash-thinking` | Gemini 3.7 Flash Thinking | `false` | pro | `available` | 2026-09-03T11:23:36.095351Z |
+| `pplx_sonar` | `perplexity/sonar-2` | Sonar 2 | `false` | pro | `available` | 2026-09-03T11:22:53.057021Z |
 | `pplx_glm52` | `z-ai/glm-5.2` | GLM 5.2 Thinking | `false` | pro | `available` | 2026-09-03T11:24:33.746485Z |
 | `pplx_gemini31_pro_think_high` | `google/gemini-3.1-pro-thinking-high` | Gemini 3.1 Pro Thinking | `false` | pro | `available` | 2026-09-03T11:24:38.686210Z |
 | `pplx_grok45` | `x-ai/grok-4.5` | Grok 4.5 | `false` | pro | `available` | 2026-09-03T11:24:46.743380Z |
