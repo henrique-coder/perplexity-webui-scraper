@@ -19,7 +19,7 @@
     },
     "provider": "perplexity",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:51:19.057910Z",
+    "last_tested_at": "2026-09-13T23:12:46.982064Z",
     "is_official": true
   },
   {
@@ -32,7 +32,7 @@
     "mode": "research",
     "provider": "perplexity",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:50:53.931937Z",
+    "last_tested_at": "2026-09-13T23:12:51.081351Z",
     "is_official": true
   },
   {
@@ -45,7 +45,7 @@
     "mode": "copilot",
     "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:37:29.434502Z",
+    "last_tested_at": "2026-09-13T23:12:54.800629Z",
     "is_official": true
   },
   {
@@ -58,7 +58,7 @@
     "mode": "copilot",
     "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:37:39.344800Z",
+    "last_tested_at": "2026-09-13T23:12:59.855822Z",
     "is_official": true
   },
   {
@@ -71,7 +71,7 @@
     "mode": "copilot",
     "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:37:49.191163Z",
+    "last_tested_at": "2026-09-13T23:13:03.654886Z",
     "is_official": true
   },
   {
@@ -84,7 +84,7 @@
     "mode": "copilot",
     "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:37:59.368027Z",
+    "last_tested_at": "2026-09-13T23:13:08.031580Z",
     "is_official": true
   },
   {
@@ -97,7 +97,7 @@
     "mode": "copilot",
     "provider": "google",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:38:09.870735Z",
+    "last_tested_at": "2026-09-13T23:13:11.992982Z",
     "is_official": true
   },
   {
@@ -110,7 +110,7 @@
     "mode": "copilot",
     "provider": "google",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:38:14.544356Z",
+    "last_tested_at": "2026-09-13T23:13:19.382663Z",
     "is_official": true
   },
   {
@@ -123,7 +123,7 @@
     "mode": "copilot",
     "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:38:24.302138Z",
+    "last_tested_at": "2026-09-13T23:13:23.003285Z",
     "is_official": true
   },
   {
@@ -136,7 +136,7 @@
     "mode": "copilot",
     "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:38:34.118565Z",
+    "last_tested_at": "2026-09-13T23:13:27.466606Z",
     "is_official": true
   },
   {
@@ -149,7 +149,7 @@
     "mode": "copilot",
     "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:38:43.900501Z",
+    "last_tested_at": "2026-09-13T23:13:31.135570Z",
     "is_official": true
   },
   {
@@ -162,7 +162,7 @@
     "mode": "copilot",
     "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:38:53.667825Z",
+    "last_tested_at": "2026-09-13T23:13:34.923562Z",
     "is_official": true
   },
   {
@@ -175,7 +175,7 @@
     "mode": "copilot",
     "provider": "moonshot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:39:03.507218Z",
+    "last_tested_at": "2026-09-13T23:13:39.295326Z",
     "is_official": true
   },
   {
@@ -188,7 +188,7 @@
     "mode": "copilot",
     "provider": "z-ai",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:39:13.397094Z",
+    "last_tested_at": "2026-09-13T23:13:43.154248Z",
     "is_official": true
   },
   {
@@ -201,7 +201,7 @@
     "min_tier": "pro",
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:39:23.139648Z",
+    "last_tested_at": "2026-09-13T23:13:47.724677Z",
     "is_official": true
   },
   {
@@ -214,7 +214,7 @@
     "min_tier": "pro",
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:39:32.894208Z",
+    "last_tested_at": "2026-09-13T23:13:51.201091Z",
     "is_official": true
   },
   {
@@ -227,7 +227,7 @@
     "mode": "copilot",
     "provider": "nvidia",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:39:42.666584Z",
+    "last_tested_at": "2026-09-13T23:13:55.789723Z",
     "is_official": true
   },
   {
@@ -240,7 +240,7 @@
     "mode": "copilot",
     "provider": "google",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:39:52.446292Z",
+    "last_tested_at": "2026-09-13T23:13:59.271156Z",
     "is_official": false
   },
   {
@@ -253,7 +253,7 @@
     "mode": "copilot",
     "provider": "google",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:40:02.285061Z",
+    "last_tested_at": "2026-09-13T23:14:03.414284Z",
     "is_official": false
   },
   {
@@ -266,7 +266,7 @@
     "mode": "copilot",
     "provider": "perplexity",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:40:12.067771Z",
+    "last_tested_at": "2026-09-13T23:14:07.384667Z",
     "is_official": false
   },
   {
@@ -279,7 +279,7 @@
     "mode": "copilot",
     "provider": "z-ai",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:40:21.918449Z",
+    "last_tested_at": "2026-09-13T23:14:11.455015Z",
     "is_official": false
   },
   {
@@ -292,7 +292,7 @@
     "mode": "copilot",
     "provider": "google",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:40:33.018069Z",
+    "last_tested_at": "2026-09-13T23:14:15.526678Z",
     "is_official": false
   },
   {
@@ -305,7 +305,7 @@
     "min_tier": "pro",
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:40:42.851821Z",
+    "last_tested_at": "2026-09-13T23:14:19.090362Z",
     "is_official": false
   },
   {
@@ -318,7 +318,7 @@
     "min_tier": "pro",
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:40:52.653495Z",
+    "last_tested_at": "2026-09-13T23:14:23.385082Z",
     "is_official": false
   },
   {
@@ -331,7 +331,7 @@
     "mode": "copilot",
     "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:41:02.443376Z",
+    "last_tested_at": "2026-09-13T23:14:27.434038Z",
     "is_official": false
   },
   {
@@ -344,7 +344,7 @@
     "mode": "copilot",
     "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:41:12.230861Z",
+    "last_tested_at": "2026-09-13T23:14:34.434827Z",
     "is_official": false
   },
   {
@@ -357,7 +357,7 @@
     "mode": "copilot",
     "provider": "google",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:41:21.996001Z",
+    "last_tested_at": "2026-09-13T23:14:37.828406Z",
     "is_official": false
   },
   {
@@ -370,7 +370,7 @@
     "mode": "copilot",
     "provider": "moonshot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:41:32.172857Z",
+    "last_tested_at": "2026-09-13T23:14:42.640538Z",
     "is_official": false
   },
   {
@@ -383,7 +383,7 @@
     "mode": "copilot",
     "provider": "moonshot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:41:41.981232Z",
+    "last_tested_at": "2026-09-13T23:14:47.259175Z",
     "is_official": false
   },
   {
@@ -396,7 +396,7 @@
     "mode": "copilot",
     "provider": "nvidia",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:41:51.762788Z",
+    "last_tested_at": "2026-09-13T23:14:51.249396Z",
     "is_official": false
   },
   {
@@ -409,7 +409,7 @@
     "mode": "copilot",
     "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:42:01.558299Z",
+    "last_tested_at": "2026-09-13T23:14:55.227656Z",
     "is_official": false
   },
   {
@@ -422,7 +422,7 @@
     "mode": "copilot",
     "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:42:11.509710Z",
+    "last_tested_at": "2026-09-13T23:14:59.198145Z",
     "is_official": false
   },
   {
@@ -435,7 +435,7 @@
     "mode": "copilot",
     "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:42:21.276041Z",
+    "last_tested_at": "2026-09-13T23:15:03.401542Z",
     "is_official": false
   },
   {
@@ -448,7 +448,7 @@
     "mode": "copilot",
     "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:42:31.150156Z",
+    "last_tested_at": "2026-09-13T23:15:06.850877Z",
     "is_official": false
   },
   {
@@ -461,7 +461,7 @@
     "mode": "copilot",
     "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:42:40.973299Z",
+    "last_tested_at": "2026-09-13T23:15:10.780893Z",
     "is_official": false
   },
   {
@@ -474,7 +474,7 @@
     "mode": "copilot",
     "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:42:50.705736Z",
+    "last_tested_at": "2026-09-13T23:15:14.845654Z",
     "is_official": false
   },
   {
@@ -487,7 +487,7 @@
     "mode": "copilot",
     "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:43:00.501355Z",
+    "last_tested_at": "2026-09-13T23:15:19.994628Z",
     "is_official": false
   },
   {
@@ -500,7 +500,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:43:10.313839Z",
+    "last_tested_at": "2026-09-13T23:15:24.125802Z",
     "is_official": false
   },
   {
@@ -513,7 +513,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:43:20.087766Z",
+    "last_tested_at": "2026-09-13T23:15:28.101680Z",
     "is_official": false
   },
   {
@@ -526,7 +526,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:43:29.980505Z",
+    "last_tested_at": "2026-09-13T23:15:32.360214Z",
     "is_official": false
   },
   {
@@ -539,7 +539,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:43:39.777875Z",
+    "last_tested_at": "2026-09-13T23:15:36.452512Z",
     "is_official": false
   },
   {
@@ -552,7 +552,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:43:49.654946Z",
+    "last_tested_at": "2026-09-13T23:15:40.309049Z",
     "is_official": false
   },
   {
@@ -565,7 +565,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:43:59.444670Z",
+    "last_tested_at": "2026-09-13T23:15:44.360139Z",
     "is_official": false
   },
   {
@@ -578,7 +578,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:44:09.236517Z",
+    "last_tested_at": "2026-09-13T23:15:48.287810Z",
     "is_official": false
   },
   {
@@ -591,7 +591,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:44:19.057906Z",
+    "last_tested_at": "2026-09-13T23:15:52.567525Z",
     "is_official": false
   },
   {
@@ -604,7 +604,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:44:28.963979Z",
+    "last_tested_at": "2026-09-13T23:15:56.799784Z",
     "is_official": false
   },
   {
@@ -617,7 +617,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:44:38.732226Z",
+    "last_tested_at": "2026-09-13T23:16:01.068556Z",
     "is_official": false
   },
   {
@@ -630,7 +630,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:44:48.500963Z",
+    "last_tested_at": "2026-09-13T23:16:04.887935Z",
     "is_official": false
   },
   {
@@ -643,7 +643,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:44:58.359725Z",
+    "last_tested_at": "2026-09-13T23:16:11.737370Z",
     "is_official": false
   },
   {
@@ -656,7 +656,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:45:08.073759Z",
+    "last_tested_at": "2026-09-13T23:16:16.305460Z",
     "is_official": false
   },
   {
@@ -669,7 +669,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:45:18.149763Z",
+    "last_tested_at": "2026-09-13T23:16:20.110289Z",
     "is_official": false
   },
   {
@@ -682,7 +682,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:45:28.333859Z",
+    "last_tested_at": "2026-09-13T23:16:23.835408Z",
     "is_official": false
   },
   {
@@ -695,7 +695,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:45:38.151693Z",
+    "last_tested_at": "2026-09-13T23:16:28.168102Z",
     "is_official": false
   },
   {
@@ -708,7 +708,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:45:47.891928Z",
+    "last_tested_at": "2026-09-13T23:16:32.348336Z",
     "is_official": false
   },
   {
@@ -721,7 +721,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:45:57.709752Z",
+    "last_tested_at": "2026-09-13T23:16:36.267089Z",
     "is_official": false
   },
   {
@@ -734,7 +734,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:46:07.544899Z",
+    "last_tested_at": "2026-09-13T23:16:40.189797Z",
     "is_official": false
   },
   {
@@ -747,7 +747,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:46:17.361196Z",
+    "last_tested_at": "2026-09-13T23:16:44.593098Z",
     "is_official": false
   },
   {
@@ -760,7 +760,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:46:27.339685Z",
+    "last_tested_at": "2026-09-13T23:16:48.598801Z",
     "is_official": false
   },
   {
@@ -773,7 +773,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:46:37.129083Z",
+    "last_tested_at": "2026-09-13T23:16:52.628156Z",
     "is_official": false
   },
   {
@@ -786,7 +786,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:46:47.141748Z",
+    "last_tested_at": "2026-09-13T23:16:56.700528Z",
     "is_official": false
   },
   {
@@ -799,7 +799,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:46:57.006982Z",
+    "last_tested_at": "2026-09-13T23:17:00.687539Z",
     "is_official": false
   },
   {
@@ -812,7 +812,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:47:06.905199Z",
+    "last_tested_at": "2026-09-13T23:17:04.535073Z",
     "is_official": false
   },
   {
@@ -825,7 +825,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:47:16.854493Z",
+    "last_tested_at": "2026-09-13T23:17:08.771164Z",
     "is_official": false
   },
   {
@@ -838,7 +838,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:47:26.721724Z",
+    "last_tested_at": "2026-09-13T23:17:12.509100Z",
     "is_official": false
   },
   {
@@ -851,7 +851,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:47:37.188095Z",
+    "last_tested_at": "2026-09-13T23:17:16.178303Z",
     "is_official": false
   },
   {
@@ -864,7 +864,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:47:47.004911Z",
+    "last_tested_at": "2026-09-13T23:17:20.159256Z",
     "is_official": false
   },
   {
@@ -877,7 +877,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:47:56.808023Z",
+    "last_tested_at": "2026-09-13T23:17:24.494875Z",
     "is_official": false
   },
   {
@@ -890,7 +890,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:48:06.573757Z",
+    "last_tested_at": "2026-09-13T23:17:28.400043Z",
     "is_official": false
   },
   {
@@ -903,7 +903,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:48:16.371324Z",
+    "last_tested_at": "2026-09-13T23:17:32.157453Z",
     "is_official": false
   },
   {
@@ -916,7 +916,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:48:26.148309Z",
+    "last_tested_at": "2026-09-13T23:17:36.648850Z",
     "is_official": false
   },
   {
@@ -929,7 +929,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:48:35.875010Z",
+    "last_tested_at": "2026-09-13T23:17:40.515816Z",
     "is_official": false
   },
   {
@@ -942,7 +942,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:48:45.706339Z",
+    "last_tested_at": "2026-09-13T23:17:44.569185Z",
     "is_official": false
   },
   {
@@ -955,7 +955,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "unavailable",
-    "last_tested_at": "2026-09-13T19:48:55.515118Z",
+    "last_tested_at": "2026-09-13T23:17:48.684196Z",
     "is_official": false
   },
   {
@@ -968,7 +968,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "unavailable",
-    "last_tested_at": "2026-09-13T19:48:58.037304Z",
+    "last_tested_at": "2026-09-13T23:17:51.371840Z",
     "is_official": false
   },
   {
@@ -981,7 +981,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:49:02.031019Z",
+    "last_tested_at": "2026-09-13T23:17:55.379339Z",
     "is_official": false
   },
   {
@@ -994,7 +994,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:49:13.362379Z",
+    "last_tested_at": "2026-09-13T23:18:01.032604Z",
     "is_official": false
   },
   {
@@ -1007,7 +1007,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:49:23.571782Z",
+    "last_tested_at": "2026-09-13T23:18:05.567750Z",
     "is_official": false
   },
   {
@@ -1020,7 +1020,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:49:33.430334Z",
+    "last_tested_at": "2026-09-13T23:18:09.535694Z",
     "is_official": false
   },
   {
@@ -1033,7 +1033,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:49:43.651497Z",
+    "last_tested_at": "2026-09-13T23:18:13.434016Z",
     "is_official": false
   },
   {
@@ -1046,7 +1046,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:49:53.457459Z",
+    "last_tested_at": "2026-09-13T23:18:17.917424Z",
     "is_official": false
   },
   {
@@ -1059,7 +1059,7 @@
     "min_tier": null,
     "mode": "research",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:50:09.734470Z",
+    "last_tested_at": "2026-09-13T23:18:21.843033Z",
     "is_official": false
   },
   {
@@ -1072,7 +1072,7 @@
     "min_tier": null,
     "mode": "copilot",
     "status": "available",
-    "last_tested_at": "2026-09-13T19:50:19.657101Z",
+    "last_tested_at": "2026-09-13T23:18:26.139147Z",
     "is_official": false
   }
 ]
