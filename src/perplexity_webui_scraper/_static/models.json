@@ -19,7 +19,7 @@
     },
     "provider": "perplexity",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:31:27.726694Z",
+    "last_tested_at": "2026-09-13T23:12:46.982064Z",
     "is_official": true
   },
   {
@@ -32,20 +32,7 @@
     "mode": "research",
     "provider": "perplexity",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:31:30.488422Z",
-    "is_official": true
-  },
-  {
-    "id": "perplexity/sonar-2",
-    "name": "Sonar 2",
-    "description": "Perplexity's latest in-house model.",
-    "identifier": "experimental",
-    "tool_name": "pplx_sonar",
-    "min_tier": "pro",
-    "mode": "copilot",
-    "provider": "perplexity",
-    "status": "available",
-    "last_tested_at": "2026-08-05T23:31:35.277279Z",
+    "last_tested_at": "2026-09-13T23:12:51.081351Z",
     "is_official": true
   },
   {
@@ -58,7 +45,7 @@
     "mode": "copilot",
     "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:31:39.397301Z",
+    "last_tested_at": "2026-09-13T23:12:54.800629Z",
     "is_official": true
   },
   {
@@ -71,7 +58,7 @@
     "mode": "copilot",
     "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:31:43.633312Z",
+    "last_tested_at": "2026-09-13T23:12:59.855822Z",
     "is_official": true
   },
   {
@@ -84,7 +71,7 @@
     "mode": "copilot",
     "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:31:48.536501Z",
+    "last_tested_at": "2026-09-13T23:13:03.654886Z",
     "is_official": true
   },
   {
@@ -97,33 +84,33 @@
     "mode": "copilot",
     "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:31:54.067766Z",
+    "last_tested_at": "2026-09-13T23:13:08.031580Z",
     "is_official": true
   },
   {
-    "id": "google/gemini-3.7-flash",
-    "name": "Gemini 3.7 Flash",
+    "id": "google/gemini-3.8-flash",
+    "name": "Gemini 3.8 Flash",
     "description": "Google's latest model",
-    "identifier": "gemini37flash",
-    "tool_name": "pplx_gemini37_flash",
+    "identifier": "gemini38flash",
+    "tool_name": "pplx_gemini38_flash",
     "min_tier": "pro",
     "mode": "copilot",
     "provider": "google",
     "status": "available",
-    "last_tested_at": "2026-08-18T06:24:44.000Z",
+    "last_tested_at": "2026-09-13T23:13:11.992982Z",
     "is_official": true
   },
   {
-    "id": "google/gemini-3.7-flash-thinking",
-    "name": "Gemini 3.7 Flash Thinking",
+    "id": "google/gemini-3.8-flash-thinking",
+    "name": "Gemini 3.8 Flash Thinking",
     "description": "Google's latest model with thinking",
-    "identifier": "gemini37flashthinking",
-    "tool_name": "pplx_gemini37_flash_think",
+    "identifier": "gemini38flashthinking",
+    "tool_name": "pplx_gemini38_flash_think",
     "min_tier": "pro",
     "mode": "copilot",
     "provider": "google",
     "status": "available",
-    "last_tested_at": "2026-08-18T06:24:50.000Z",
+    "last_tested_at": "2026-09-13T23:13:19.382663Z",
     "is_official": true
   },
   {
@@ -136,7 +123,7 @@
     "mode": "copilot",
     "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:31:57.917346Z",
+    "last_tested_at": "2026-09-13T23:13:23.003285Z",
     "is_official": true
   },
   {
@@ -149,7 +136,7 @@
     "mode": "copilot",
     "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:32:01.771184Z",
+    "last_tested_at": "2026-09-13T23:13:27.466606Z",
     "is_official": true
   },
   {
@@ -162,7 +149,7 @@
     "mode": "copilot",
     "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:32:30.076411Z",
+    "last_tested_at": "2026-09-13T23:13:31.135570Z",
     "is_official": true
   },
   {
@@ -175,7 +162,7 @@
     "mode": "copilot",
     "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:32:35.570998Z",
+    "last_tested_at": "2026-09-13T23:13:34.923562Z",
     "is_official": true
   },
   {
@@ -188,20 +175,20 @@
     "mode": "copilot",
     "provider": "moonshot",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:32:13.388185Z",
+    "last_tested_at": "2026-09-13T23:13:39.295326Z",
     "is_official": true
   },
   {
-    "id": "z-ai/glm-5.2",
-    "name": "GLM 5.2 Thinking",
+    "id": "z-ai/glm-5.3",
+    "name": "GLM 5.3 Thinking",
     "description": "Z.ai's advanced model",
-    "identifier": "glm_5_2",
-    "tool_name": "pplx_glm52",
+    "identifier": "glm_5_3_thinking",
+    "tool_name": "pplx_glm53",
     "min_tier": "pro",
     "mode": "copilot",
     "provider": "z-ai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:32:05.681327Z",
+    "last_tested_at": "2026-09-13T23:13:43.154248Z",
     "is_official": true
   },
   {
@@ -210,11 +197,11 @@
     "description": "xAI's most advanced model",
     "identifier": "grok46low",
     "tool_name": "pplx_grok46",
-    "provider": "x-ai",
     "min_tier": "pro",
     "mode": "copilot",
+    "provider": "x-ai",
     "status": "available",
-    "last_tested_at": "2026-08-18T06:24:56.000Z",
+    "last_tested_at": "2026-09-13T23:13:47.724677Z",
     "is_official": true
   },
   {
@@ -223,11 +210,11 @@
     "description": "xAI's most advanced model",
     "identifier": "grok46medium",
     "tool_name": "pplx_grok46_think",
-    "provider": "x-ai",
     "min_tier": "pro",
     "mode": "copilot",
+    "provider": "x-ai",
     "status": "available",
-    "last_tested_at": "2026-08-18T06:25:02.000Z",
+    "last_tested_at": "2026-09-13T23:13:51.201091Z",
     "is_official": true
   },
   {
@@ -240,8 +227,60 @@
     "mode": "copilot",
     "provider": "nvidia",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:32:26.248167Z",
+    "last_tested_at": "2026-09-13T23:13:55.789723Z",
     "is_official": true
+  },
+  {
+    "id": "google/gemini-3.7-flash",
+    "name": "Gemini 3.7 Flash",
+    "description": "Google's latest model",
+    "identifier": "gemini37flash",
+    "tool_name": "pplx_gemini37_flash",
+    "min_tier": "pro",
+    "mode": "copilot",
+    "provider": "google",
+    "status": "available",
+    "last_tested_at": "2026-09-13T23:13:59.271156Z",
+    "is_official": false
+  },
+  {
+    "id": "google/gemini-3.7-flash-thinking",
+    "name": "Gemini 3.7 Flash Thinking",
+    "description": "Google's latest model with thinking",
+    "identifier": "gemini37flashthinking",
+    "tool_name": "pplx_gemini37_flash_think",
+    "min_tier": "pro",
+    "mode": "copilot",
+    "provider": "google",
+    "status": "available",
+    "last_tested_at": "2026-09-13T23:14:03.414284Z",
+    "is_official": false
+  },
+  {
+    "id": "perplexity/sonar-2",
+    "name": "Sonar 2",
+    "description": "Perplexity's latest in-house model.",
+    "identifier": "experimental",
+    "tool_name": "pplx_sonar",
+    "min_tier": "pro",
+    "mode": "copilot",
+    "provider": "perplexity",
+    "status": "available",
+    "last_tested_at": "2026-09-13T23:14:07.384667Z",
+    "is_official": false
+  },
+  {
+    "id": "z-ai/glm-5.2",
+    "name": "GLM 5.2 Thinking",
+    "description": "Z.ai's advanced model",
+    "identifier": "glm_5_2",
+    "tool_name": "pplx_glm52",
+    "min_tier": "pro",
+    "mode": "copilot",
+    "provider": "z-ai",
+    "status": "available",
+    "last_tested_at": "2026-09-13T23:14:11.455015Z",
+    "is_official": false
   },
   {
     "id": "google/gemini-3.1-pro-thinking-high",
@@ -253,7 +292,7 @@
     "mode": "copilot",
     "provider": "google",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:32:09.529962Z",
+    "last_tested_at": "2026-09-13T23:14:15.526678Z",
     "is_official": false
   },
   {
@@ -262,11 +301,11 @@
     "description": "xAI's most advanced model",
     "identifier": "grok45low",
     "tool_name": "pplx_grok45",
-    "provider": "x-ai",
     "min_tier": "pro",
     "mode": "copilot",
+    "provider": "x-ai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:32:17.793450Z",
+    "last_tested_at": "2026-09-13T23:14:19.090362Z",
     "is_official": false
   },
   {
@@ -275,11 +314,11 @@
     "description": "xAI's most advanced model",
     "identifier": "grok45medium",
     "tool_name": "pplx_grok45_think",
-    "provider": "x-ai",
     "min_tier": "pro",
     "mode": "copilot",
+    "provider": "x-ai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:32:21.682832Z",
+    "last_tested_at": "2026-09-13T23:14:23.385082Z",
     "is_official": false
   },
   {
@@ -292,7 +331,7 @@
     "mode": "copilot",
     "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:32:40.127829Z",
+    "last_tested_at": "2026-09-13T23:14:27.434038Z",
     "is_official": false
   },
   {
@@ -305,7 +344,7 @@
     "mode": "copilot",
     "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:32:43.944074Z",
+    "last_tested_at": "2026-09-13T23:14:34.434827Z",
     "is_official": false
   },
   {
@@ -318,7 +357,7 @@
     "mode": "copilot",
     "provider": "google",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:32:46.838191Z",
+    "last_tested_at": "2026-09-13T23:14:37.828406Z",
     "is_official": false
   },
   {
@@ -331,7 +370,7 @@
     "mode": "copilot",
     "provider": "moonshot",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:32:49.769820Z",
+    "last_tested_at": "2026-09-13T23:14:42.640538Z",
     "is_official": false
   },
   {
@@ -344,7 +383,7 @@
     "mode": "copilot",
     "provider": "moonshot",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:32:52.594354Z",
+    "last_tested_at": "2026-09-13T23:14:47.259175Z",
     "is_official": false
   },
   {
@@ -357,7 +396,7 @@
     "mode": "copilot",
     "provider": "nvidia",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:32:55.399808Z",
+    "last_tested_at": "2026-09-13T23:14:51.249396Z",
     "is_official": false
   },
   {
@@ -370,7 +409,7 @@
     "mode": "copilot",
     "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:32:57.888766Z",
+    "last_tested_at": "2026-09-13T23:14:55.227656Z",
     "is_official": false
   },
   {
@@ -383,7 +422,7 @@
     "mode": "copilot",
     "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:33:08.325486Z",
+    "last_tested_at": "2026-09-13T23:14:59.198145Z",
     "is_official": false
   },
   {
@@ -396,7 +435,7 @@
     "mode": "copilot",
     "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:33:11.939198Z",
+    "last_tested_at": "2026-09-13T23:15:03.401542Z",
     "is_official": false
   },
   {
@@ -409,7 +448,7 @@
     "mode": "copilot",
     "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:33:17.004817Z",
+    "last_tested_at": "2026-09-13T23:15:06.850877Z",
     "is_official": false
   },
   {
@@ -422,7 +461,7 @@
     "mode": "copilot",
     "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:33:21.643555Z",
+    "last_tested_at": "2026-09-13T23:15:10.780893Z",
     "is_official": false
   },
   {
@@ -435,7 +474,7 @@
     "mode": "copilot",
     "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:33:24.724002Z",
+    "last_tested_at": "2026-09-13T23:15:14.845654Z",
     "is_official": false
   },
   {
@@ -448,7 +487,7 @@
     "mode": "copilot",
     "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:33:27.861669Z",
+    "last_tested_at": "2026-09-13T23:15:19.994628Z",
     "is_official": false
   },
   {
@@ -457,11 +496,11 @@
     "description": "OpenAI's versatile model",
     "identifier": "gpt4o",
     "tool_name": "pplx_gpt4o",
-    "provider": "openai",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:33:31.502542Z",
+    "last_tested_at": "2026-09-13T23:15:24.125802Z",
     "is_official": false
   },
   {
@@ -470,11 +509,11 @@
     "description": "OpenAI's advanced model",
     "identifier": "gpt41",
     "tool_name": "pplx_gpt41",
-    "provider": "openai",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:33:34.451036Z",
+    "last_tested_at": "2026-09-13T23:15:28.101680Z",
     "is_official": false
   },
   {
@@ -483,11 +522,11 @@
     "description": "OpenAI's latest model",
     "identifier": "gpt5",
     "tool_name": "pplx_gpt5",
-    "provider": "openai",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:33:37.081277Z",
+    "last_tested_at": "2026-09-13T23:15:32.360214Z",
     "is_official": false
   },
   {
@@ -496,11 +535,11 @@
     "description": "OpenAI's latest model with thinking",
     "identifier": "gpt5_thinking",
     "tool_name": "pplx_gpt5_thinking",
-    "provider": "openai",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:33:40.097475Z",
+    "last_tested_at": "2026-09-13T23:15:36.452512Z",
     "is_official": false
   },
   {
@@ -509,11 +548,11 @@
     "description": "OpenAI's latest model",
     "identifier": "gpt51",
     "tool_name": "pplx_gpt51",
-    "provider": "openai",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:33:43.180232Z",
+    "last_tested_at": "2026-09-13T23:15:40.309049Z",
     "is_official": false
   },
   {
@@ -522,11 +561,11 @@
     "description": "OpenAI's latest model with thinking",
     "identifier": "gpt51_thinking",
     "tool_name": "pplx_gpt51_thinking",
-    "provider": "openai",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:33:45.785394Z",
+    "last_tested_at": "2026-09-13T23:15:44.360139Z",
     "is_official": false
   },
   {
@@ -535,11 +574,11 @@
     "description": "OpenAI's latest model with low reasoning effort",
     "identifier": "gpt51_low_thinking",
     "tool_name": "pplx_gpt51_low_thinking",
-    "provider": "openai",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:33:48.638838Z",
+    "last_tested_at": "2026-09-13T23:15:48.287810Z",
     "is_official": false
   },
   {
@@ -548,11 +587,11 @@
     "description": "OpenAI's compact model",
     "identifier": "gpt5_mini",
     "tool_name": "pplx_gpt5_mini",
-    "provider": "openai",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:33:53.467647Z",
+    "last_tested_at": "2026-09-13T23:15:52.567525Z",
     "is_official": false
   },
   {
@@ -561,11 +600,11 @@
     "description": "OpenAI's smallest model",
     "identifier": "gpt5_nano",
     "tool_name": "pplx_gpt5_nano",
-    "provider": "openai",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:33:56.805390Z",
+    "last_tested_at": "2026-09-13T23:15:56.799784Z",
     "is_official": false
   },
   {
@@ -574,11 +613,11 @@
     "description": "OpenAI's latest, most powerful reasoning model",
     "identifier": "gpt5_pro",
     "tool_name": "pplx_gpt5_pro",
-    "provider": "openai",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:34:01.165691Z",
+    "last_tested_at": "2026-09-13T23:16:01.068556Z",
     "is_official": false
   },
   {
@@ -587,11 +626,11 @@
     "description": "OpenAI's latest model",
     "identifier": "gpt52",
     "tool_name": "pplx_gpt52",
-    "provider": "openai",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:34:04.095823Z",
+    "last_tested_at": "2026-09-13T23:16:04.887935Z",
     "is_official": false
   },
   {
@@ -600,11 +639,11 @@
     "description": "OpenAI's latest model with thinking",
     "identifier": "gpt52_thinking",
     "tool_name": "pplx_gpt52_thinking",
-    "provider": "openai",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:34:07.087989Z",
+    "last_tested_at": "2026-09-13T23:16:11.737370Z",
     "is_official": false
   },
   {
@@ -613,11 +652,11 @@
     "description": "OpenAI's most powerful reasoning model",
     "identifier": "gpt52_pro",
     "tool_name": "pplx_gpt52_pro",
-    "provider": "openai",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:34:11.454227Z",
+    "last_tested_at": "2026-09-13T23:16:16.305460Z",
     "is_official": false
   },
   {
@@ -626,11 +665,11 @@
     "description": "OpenAI's latest model",
     "identifier": "gpt55",
     "tool_name": "pplx_gpt55",
-    "provider": "openai",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:34:15.837430Z",
+    "last_tested_at": "2026-09-13T23:16:20.110289Z",
     "is_official": false
   },
   {
@@ -639,11 +678,11 @@
     "description": "Anthropic's advanced model",
     "identifier": "claude2",
     "tool_name": "pplx_claude2",
-    "provider": "anthropic",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:34:18.806306Z",
+    "last_tested_at": "2026-09-13T23:16:23.835408Z",
     "is_official": false
   },
   {
@@ -652,11 +691,11 @@
     "description": "Anthropic's reasoning model",
     "identifier": "claude37sonnetthinking",
     "tool_name": "pplx_claude37sonnetthinking",
-    "provider": "anthropic",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:34:22.075182Z",
+    "last_tested_at": "2026-09-13T23:16:28.168102Z",
     "is_official": false
   },
   {
@@ -665,11 +704,11 @@
     "description": "Anthropic's reasoning model",
     "identifier": "claude40sonnetthinking",
     "tool_name": "pplx_claude40sonnetthinking",
-    "provider": "anthropic",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:34:26.521079Z",
+    "last_tested_at": "2026-09-13T23:16:32.348336Z",
     "is_official": false
   },
   {
@@ -678,11 +717,11 @@
     "description": "Google's latest model",
     "identifier": "gemini25pro",
     "tool_name": "pplx_gemini25pro",
-    "provider": "google",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "google",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:38:44.044228Z",
+    "last_tested_at": "2026-09-13T23:16:36.267089Z",
     "is_official": false
   },
   {
@@ -691,11 +730,11 @@
     "description": "Google's most advanced model",
     "identifier": "gemini30pro",
     "tool_name": "pplx_gemini30pro",
-    "provider": "google",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "google",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:38:47.111485Z",
+    "last_tested_at": "2026-09-13T23:16:40.189797Z",
     "is_official": false
   },
   {
@@ -704,11 +743,11 @@
     "description": "Google's fast model",
     "identifier": "gemini30flash",
     "tool_name": "pplx_gemini30flash",
-    "provider": "google",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "google",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:38:50.036192Z",
+    "last_tested_at": "2026-09-13T23:16:44.593098Z",
     "is_official": false
   },
   {
@@ -717,11 +756,11 @@
     "description": "Google's fast model",
     "identifier": "gemini30flash_high",
     "tool_name": "pplx_gemini30flash_high",
-    "provider": "google",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "google",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:38:55.887205Z",
+    "last_tested_at": "2026-09-13T23:16:48.598801Z",
     "is_official": false
   },
   {
@@ -730,11 +769,11 @@
     "description": "Google's fast model",
     "identifier": "gemini35flash",
     "tool_name": "pplx_gemini35flash",
-    "provider": "google",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "google",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:38:59.146680Z",
+    "last_tested_at": "2026-09-13T23:16:52.628156Z",
     "is_official": false
   },
   {
@@ -743,11 +782,11 @@
     "description": "Google's fast model with medium thinking",
     "identifier": "gemini35flash_medium",
     "tool_name": "pplx_gemini35flash_medium",
-    "provider": "google",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "google",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:39:02.043511Z",
+    "last_tested_at": "2026-09-13T23:16:56.700528Z",
     "is_official": false
   },
   {
@@ -756,11 +795,11 @@
     "description": "Google's fast model with thinking",
     "identifier": "gemini35flash_high",
     "tool_name": "pplx_gemini35flash_high",
-    "provider": "google",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "google",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:39:05.934013Z",
+    "last_tested_at": "2026-09-13T23:17:00.687539Z",
     "is_official": false
   },
   {
@@ -769,11 +808,11 @@
     "description": "xAI's Grok 3 model",
     "identifier": "grok",
     "tool_name": "pplx_grok",
-    "provider": "x-ai",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "x-ai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:39:08.797817Z",
+    "last_tested_at": "2026-09-13T23:17:04.535073Z",
     "is_official": false
   },
   {
@@ -782,11 +821,11 @@
     "description": "Anthropic's Opus reasoning model",
     "identifier": "claude40opus",
     "tool_name": "pplx_claude40opus",
-    "provider": "anthropic",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:39:11.760884Z",
+    "last_tested_at": "2026-09-13T23:17:08.771164Z",
     "is_official": false
   },
   {
@@ -795,11 +834,11 @@
     "description": "Anthropic's Opus reasoning model with thinking",
     "identifier": "claude40opusthinking",
     "tool_name": "pplx_claude40opusthinking",
-    "provider": "anthropic",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:39:15.658726Z",
+    "last_tested_at": "2026-09-13T23:17:12.509100Z",
     "is_official": false
   },
   {
@@ -808,11 +847,11 @@
     "description": "Anthropic's Opus reasoning model",
     "identifier": "claude41opus",
     "tool_name": "pplx_claude41opus",
-    "provider": "anthropic",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:39:20.431045Z",
+    "last_tested_at": "2026-09-13T23:17:16.178303Z",
     "is_official": false
   },
   {
@@ -821,11 +860,11 @@
     "description": "Anthropic's Opus reasoning model with thinking",
     "identifier": "claude41opusthinking",
     "tool_name": "pplx_claude41opusthinking",
-    "provider": "anthropic",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:39:24.984906Z",
+    "last_tested_at": "2026-09-13T23:17:20.159256Z",
     "is_official": false
   },
   {
@@ -834,11 +873,11 @@
     "description": "Anthropic's most advanced model",
     "identifier": "claude45opus",
     "tool_name": "pplx_claude45opus",
-    "provider": "anthropic",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:39:29.543839Z",
+    "last_tested_at": "2026-09-13T23:17:24.494875Z",
     "is_official": false
   },
   {
@@ -847,11 +886,11 @@
     "description": "Anthropic's Opus reasoning model with thinking",
     "identifier": "claude45opusthinking",
     "tool_name": "pplx_claude45opusthinking",
-    "provider": "anthropic",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:39:33.615918Z",
+    "last_tested_at": "2026-09-13T23:17:28.400043Z",
     "is_official": false
   },
   {
@@ -860,11 +899,11 @@
     "description": "Anthropic's most advanced model",
     "identifier": "claude46opus",
     "tool_name": "pplx_claude46opus",
-    "provider": "anthropic",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:39:41.127287Z",
+    "last_tested_at": "2026-09-13T23:17:32.157453Z",
     "is_official": false
   },
   {
@@ -873,11 +912,11 @@
     "description": "Anthropic's Opus reasoning model with thinking",
     "identifier": "claude46opusthinking",
     "tool_name": "pplx_claude46opusthinking",
-    "provider": "anthropic",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:39:46.076227Z",
+    "last_tested_at": "2026-09-13T23:17:36.648850Z",
     "is_official": false
   },
   {
@@ -886,11 +925,11 @@
     "description": "Anthropic's fast model",
     "identifier": "claude45sonnet",
     "tool_name": "pplx_claude45sonnet",
-    "provider": "anthropic",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:39:49.423367Z",
+    "last_tested_at": "2026-09-13T23:17:40.515816Z",
     "is_official": false
   },
   {
@@ -899,11 +938,11 @@
     "description": "Anthropic's newest reasoning model",
     "identifier": "claude45sonnetthinking",
     "tool_name": "pplx_claude45sonnetthinking",
-    "provider": "anthropic",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "anthropic",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:39:52.219963Z",
+    "last_tested_at": "2026-09-13T23:17:44.569185Z",
     "is_official": false
   },
   {
@@ -912,11 +951,11 @@
     "description": "Anthropic's compact model",
     "identifier": "claude45haiku",
     "tool_name": "pplx_claude45haiku",
-    "provider": "anthropic",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "anthropic",
     "status": "unavailable",
-    "last_tested_at": "2026-08-05T23:39:58.315774Z",
+    "last_tested_at": "2026-09-13T23:17:48.684196Z",
     "is_official": false
   },
   {
@@ -925,11 +964,11 @@
     "description": "Anthropic's compact reasoning model",
     "identifier": "claude45haikuthinking",
     "tool_name": "pplx_claude45haikuthinking",
-    "provider": "anthropic",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "anthropic",
     "status": "unavailable",
-    "last_tested_at": "2026-08-05T23:40:05.034769Z",
+    "last_tested_at": "2026-09-13T23:17:51.371840Z",
     "is_official": false
   },
   {
@@ -938,11 +977,11 @@
     "description": "Moonshot AI's latest model",
     "identifier": "kimik2thinking",
     "tool_name": "pplx_kimik2thinking",
-    "provider": "moonshot",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "moonshot",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:40:08.660424Z",
+    "last_tested_at": "2026-09-13T23:17:55.379339Z",
     "is_official": false
   },
   {
@@ -951,11 +990,11 @@
     "description": "Moonshot AI's latest model",
     "identifier": "kimik25thinking",
     "tool_name": "pplx_kimik25thinking",
-    "provider": "moonshot",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "moonshot",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:40:11.576027Z",
+    "last_tested_at": "2026-09-13T23:18:01.032604Z",
     "is_official": false
   },
   {
@@ -964,11 +1003,11 @@
     "description": "xAI's reasoning model",
     "identifier": "grok4",
     "tool_name": "pplx_grok4",
-    "provider": "x-ai",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "x-ai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:40:14.422712Z",
+    "last_tested_at": "2026-09-13T23:18:05.567750Z",
     "is_official": false
   },
   {
@@ -977,11 +1016,11 @@
     "description": "xAI's advanced model",
     "identifier": "grok4nonthinking",
     "tool_name": "pplx_grok4nonthinking",
-    "provider": "x-ai",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "x-ai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:40:17.401221Z",
+    "last_tested_at": "2026-09-13T23:18:09.535694Z",
     "is_official": false
   },
   {
@@ -990,11 +1029,11 @@
     "description": "xAI's latest model",
     "identifier": "grok41reasoning",
     "tool_name": "pplx_grok41reasoning",
-    "provider": "x-ai",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "x-ai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:35:53.563433Z",
+    "last_tested_at": "2026-09-13T23:18:13.434016Z",
     "is_official": false
   },
   {
@@ -1003,11 +1042,11 @@
     "description": "xAI's latest model",
     "identifier": "grok41nonreasoning",
     "tool_name": "pplx_grok41nonreasoning",
-    "provider": "x-ai",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "x-ai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:35:56.433394Z",
+    "last_tested_at": "2026-09-13T23:18:17.917424Z",
     "is_official": false
   },
   {
@@ -1016,11 +1055,11 @@
     "description": "OpenAI's latest reasoning model",
     "identifier": "o4mini",
     "tool_name": "pplx_o4mini",
-    "provider": "openai",
     "min_tier": null,
     "mode": "research",
+    "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:35:59.335468Z",
+    "last_tested_at": "2026-09-13T23:18:21.843033Z",
     "is_official": false
   },
   {
@@ -1029,11 +1068,11 @@
     "description": "OpenAI's powerful reasoning model",
     "identifier": "o3pro",
     "tool_name": "pplx_o3pro",
-    "provider": "openai",
     "min_tier": null,
     "mode": "copilot",
+    "provider": "openai",
     "status": "available",
-    "last_tested_at": "2026-08-05T23:36:02.896320Z",
+    "last_tested_at": "2026-09-13T23:18:26.139147Z",
     "is_official": false
   }
 ]
