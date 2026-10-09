@@ -5,10 +5,10 @@ ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 WORKDIR /app
 
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-install-project --no-dev --extra api
+RUN uv sync --python 3.14 --frozen --no-install-project --no-dev --extra api
 
 COPY . /app/
-RUN uv sync --frozen --no-dev --no-editable --extra api
+RUN uv sync --python 3.14 --frozen --no-dev --no-editable --extra api
 
 EXPOSE 8000
 

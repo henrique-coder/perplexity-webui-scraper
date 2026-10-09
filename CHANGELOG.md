@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Python compatibility:** Add Python 3.15 to the supported version range and test matrix across Linux, macOS, and Windows. Keep Python 3.14 as the project default and container runtime. Validation used Python 3.15.0rc3; the current lock selects pre-release `beartype 0.23.0rc2` on Python 3.15 through FastMCP's dependency tree, so re-lock and revalidate when stable releases are available.
 - **Perplexity ask payload:** Add frontend UUIDs and `query_source` values for home requests and follow-ups. Follow-ups send `last_backend_uuid`, optional `read_write_token`, and `followup_source="link"`, and omit `frontend_context_uuid`, matching the supplied WebUI captures.
 - **Release documentation:** Clarify that Read the Docs builds and publishes documentation independently of the package and container release workflow.
 

@@ -78,7 +78,7 @@ A request flows through an adapter (CLI/API/MCP), typed configuration and model 
 
 ## Python quality and canonical commands
 
-The supported Python range is `>=3.11,<3.15`; use `uv` and respect the lockfile. Ruff conventions: double quotes, four-space indentation, LF, 120 columns, and Google-style docstrings. `ty` is required; type errors block the change.
+The supported Python range is `>=3.11, <3.16`; use `uv` and respect the lockfile. Ruff conventions: double quotes, four-space indentation, LF, 120 columns, and Google-style docstrings. `ty` is required; type errors block the change.
 
 - `just format` runs Ruff fixes/formatting, Prettier, and TOML formatting. Run it only when relevant and inspect for unrelated churn.
 - `just lint` runs Ruff, `ty`, Prettier, Taplo, `zizmor`, and the generated-catalog check.

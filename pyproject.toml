@@ -12,7 +12,7 @@ authors = [
     { name = "Henrique Moreira", email = "78804989+henrique-coder@users.noreply.github.com" },
 ]
 readme = "README.md"
-requires-python = ">=3.11, <3.15"
+requires-python = ">=3.11, <3.16"
 license = "MIT"
 license-files = ["LICENSE"]
 keywords = [
@@ -32,6 +32,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Topic :: Internet :: WWW/HTTP",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
