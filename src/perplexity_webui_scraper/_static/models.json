@@ -114,32 +114,6 @@
     "is_official": true
   },
   {
-    "id": "anthropic/claude-haiku-5.5",
-    "name": "Claude Haiku 5.5",
-    "description": "Anthropic's compact model",
-    "identifier": "claude55haiku",
-    "tool_name": "pplx_claude_haiku55",
-    "min_tier": "pro",
-    "mode": "copilot",
-    "provider": "anthropic",
-    "status": "unknown",
-    "last_tested_at": null,
-    "is_official": true
-  },
-  {
-    "id": "anthropic/claude-haiku-5.5-thinking",
-    "name": "Claude Haiku 5.5 Thinking",
-    "description": "Anthropic's compact reasoning model",
-    "identifier": "claude55haikuthinking",
-    "tool_name": "pplx_claude_haiku55_think",
-    "min_tier": "pro",
-    "mode": "copilot",
-    "provider": "anthropic",
-    "status": "unknown",
-    "last_tested_at": null,
-    "is_official": true
-  },
-  {
     "id": "anthropic/claude-sonnet-5.5",
     "name": "Claude Sonnet 5.5",
     "description": "Anthropic's fast model",
@@ -281,6 +255,32 @@
     "status": "available",
     "last_tested_at": "2026-10-05T20:17:33.054764Z",
     "is_official": true
+  },
+  {
+    "id": "anthropic/claude-haiku-5.5",
+    "name": "Claude Haiku 5.5",
+    "description": "Anthropic's compact model",
+    "identifier": "claude55haiku",
+    "tool_name": "pplx_claude_haiku55",
+    "min_tier": "pro",
+    "mode": "copilot",
+    "provider": "anthropic",
+    "status": "unknown",
+    "last_tested_at": null,
+    "is_official": false
+  },
+  {
+    "id": "anthropic/claude-haiku-5.5-thinking",
+    "name": "Claude Haiku 5.5 Thinking",
+    "description": "Anthropic's compact reasoning model",
+    "identifier": "claude55haikuthinking",
+    "tool_name": "pplx_claude_haiku55_think",
+    "min_tier": "pro",
+    "mode": "copilot",
+    "provider": "anthropic",
+    "status": "unknown",
+    "last_tested_at": null,
+    "is_official": false
   },
   {
     "id": "openai/gpt-5.6-terra",

@@ -111,8 +111,6 @@ Tools marked `[AVAILABLE]` can be called normally. `[UNKNOWN]` and `[UNAVAILABLE
 | `pplx_gpt6_astra_think` | `openai/gpt-6-astra-thinking` | GPT-6 Astra Thinking | `true` | max | `available` | 2026-10-05T20:16:35.921714Z |
 | `pplx_gemini38_flash` | `google/gemini-3.8-flash` | Gemini 3.8 Flash | `true` | pro | `available` | 2026-10-05T20:16:40.371258Z |
 | `pplx_gemini38_flash_think` | `google/gemini-3.8-flash-thinking` | Gemini 3.8 Flash Thinking | `true` | pro | `available` | 2026-10-05T20:16:44.417812Z |
-| `pplx_claude_haiku55` | `anthropic/claude-haiku-5.5` | Claude Haiku 5.5 | `true` | pro | `unknown` | — |
-| `pplx_claude_haiku55_think` | `anthropic/claude-haiku-5.5-thinking` | Claude Haiku 5.5 Thinking | `true` | pro | `unknown` | — |
 | `pplx_claude_sonnet55` | `anthropic/claude-sonnet-5.5` | Claude Sonnet 5.5 | `true` | pro | `available` | 2026-10-05T20:16:48.109965Z |
 | `pplx_claude_sonnet55_think` | `anthropic/claude-sonnet-5.5-thinking` | Claude Sonnet 5.5 Thinking | `true` | pro | `available` | 2026-10-05T20:16:52.166366Z |
 | `pplx_claude_opus55` | `anthropic/claude-opus-5.5` | Claude Opus 5.5 | `true` | max | `available` | 2026-10-05T20:16:55.692021Z |
@@ -124,6 +122,8 @@ Tools marked `[AVAILABLE]` can be called normally. `[UNKNOWN]` and `[UNAVAILABLE
 | `pplx_grok47` | `x-ai/grok-4.7` | Grok 4.7 | `true` | pro | `available` | 2026-10-05T20:17:21.160176Z |
 | `pplx_grok47_think` | `x-ai/grok-4.7-thinking` | Grok 4.7 Thinking | `true` | pro | `available` | 2026-10-05T20:17:27.797021Z |
 | `pplx_nemotron3_ultra_think` | `nvidia/nemotron-3-ultra-thinking` | Nemotron 3 Ultra | `true` | pro | `available` | 2026-10-05T20:17:33.054764Z |
+| `pplx_claude_haiku55` | `anthropic/claude-haiku-5.5` | Claude Haiku 5.5 | `false` | pro | `unknown` | — |
+| `pplx_claude_haiku55_think` | `anthropic/claude-haiku-5.5-thinking` | Claude Haiku 5.5 Thinking | `false` | pro | `unknown` | — |
 | `pplx_gpt56_terra` | `openai/gpt-5.6-terra` | GPT-5.6 Terra | `false` | pro | `available` | 2026-10-05T20:17:36.892876Z |
 | `pplx_gpt56_terra_thinking` | `openai/gpt-5.6-terra-thinking` | GPT-5.6 Terra Thinking | `false` | pro | `available` | 2026-10-05T20:17:41.372437Z |
 | `pplx_gpt56_sol` | `openai/gpt-5.6-sol` | GPT-5.6 Sol | `false` | max | `available` | 2026-10-05T20:17:44.686046Z |
