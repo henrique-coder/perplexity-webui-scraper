@@ -280,7 +280,7 @@ async def _stream_response_events(
 
     try:
         async for response in iterate_in_threadpool(iter(conversation)):
-            current = response.last_chunk or response.answer or ""
+            current = response.answer or response.last_chunk or ""
 
             if current:
                 response_chunks = getattr(response, "chunks", None)

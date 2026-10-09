@@ -251,6 +251,21 @@ def test_stream_response_preserves_new_chunks_with_overlapping_text() -> None:
     assert content_deltas == ["ha", "have"]
 
 
+def test_stream_response_uses_final_answer_when_chunk_snapshot_is_unchanged() -> None:
+    conversation = _make_mock_conversation()
+    first = MagicMock(last_chunk="The answer", chunks=["The answer"], answer=None)
+    final = MagicMock(last_chunk="The answer", chunks=["The answer"], answer="The answer is complete")
+    conversation.__iter__.return_value = iter([first, final])
+    events = list(run(_collect_stream_events(_stream_response(conversation, MODEL_ID, TOKEN))))
+
+    content_deltas = [
+        loads(event[6:])["choices"][0]["delta"]["content"]
+        for event in events
+        if event.startswith("data: {") and '"content"' in event
+    ]
+    assert content_deltas == ["The answer", " is complete"]
+
+
 def test_cached_thread_entry_stores_model_id() -> None:
     conversation = _make_mock_conversation()
     cache = ConversationCache()
