@@ -31,11 +31,28 @@ from perplexity_webui_scraper.models.registry import MODELS
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
+    from starlette.types import Receive, Scope, Send
+
     from perplexity_webui_scraper._internal.types import FileInput
     from perplexity_webui_scraper.core.conversation import Conversation
 
 
 router = APIRouter()
+
+
+class _LockReleasingStreamingResponse(StreamingResponse):
+    """Release a cached conversation lock even if response sending fails early."""
+
+    def __init__(self, *args: Any, operation_lock: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._operation_lock = operation_lock
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            if self._operation_lock is not None and self._operation_lock.locked():
+                self._operation_lock.release()
 
 
 # Shared clients used by the application routes.
@@ -170,13 +187,13 @@ async def chat_completions(
             raise
 
         try:
-            return StreamingResponse(
+            return _LockReleasingStreamingResponse(
                 _stream_response(
                     conversation,
                     request.model,
                     token,
-                    cached_entry,
                 ),
+                operation_lock=cached_entry.operation_lock if cached_entry is not None else None,
                 media_type="text/event-stream",
                 headers={
                     "Cache-Control": "no-cache",
@@ -219,7 +236,6 @@ async def _stream_response(
     conversation: Conversation,
     model_id: str,
     token: str,
-    cached_entry: Any | None = None,
 ) -> AsyncGenerator[str, None]:
     """Yield SSE lines for a streaming chat completion.
 
@@ -227,14 +243,9 @@ async def _stream_response(
         conversation: Active streaming ``Conversation`` to iterate.
         model_id: Model identifier for response envelope.
         token: Session token for cache keying.
-        cached_entry: Cached continuation entry holding the operation lock.
     """
-    try:
-        async for event in _stream_response_events(conversation, model_id, token):
-            yield event
-    finally:
-        if cached_entry is not None:
-            cached_entry.operation_lock.release()
+    async for event in _stream_response_events(conversation, model_id, token):
+        yield event
 
 
 async def _stream_response_events(

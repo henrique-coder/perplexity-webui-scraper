@@ -7,6 +7,7 @@ session token or network access.
 from __future__ import annotations
 
 from asyncio import run
+from contextlib import suppress
 from time import time
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
@@ -17,7 +18,12 @@ from pytest import fixture
 
 from perplexity_webui_scraper.api.app import app
 from perplexity_webui_scraper.api.conversation_cache import ConversationCache, _CachedConversation
-from perplexity_webui_scraper.api.routes.completions import _client_pool, _conversation_cache, _stream_response
+from perplexity_webui_scraper.api.routes.completions import (
+    _client_pool,
+    _conversation_cache,
+    _LockReleasingStreamingResponse,
+    _stream_response,
+)
 from perplexity_webui_scraper.core import Conversation
 
 
@@ -187,6 +193,26 @@ def test_followup_rejects_model_change(http_client: Session) -> None:
     assert response.status_code == 400
     assert "select a different model" in response.json()["error"]["message"]
     mock_conv.ask.assert_not_called()
+
+
+def test_unstarted_stream_releases_cached_thread_lock() -> None:
+    """Closing an unstarted SSE iterator must release the cached thread lock."""
+
+    async def check_lock_release() -> bool:
+        entry = _CachedConversation(conversation=_make_mock_conversation(), model_id=MODEL_ID)
+        await entry.operation_lock.acquire()
+        stream = _stream_response(entry.conversation, MODEL_ID, TOKEN)
+        response = _LockReleasingStreamingResponse(stream, operation_lock=entry.operation_lock)
+
+        async def send(_message: Any) -> None:
+            raise RuntimeError("disconnect before stream start")
+
+        with suppress(RuntimeError):
+            await response(scope={"type": "http", "asgi": {"spec_version": "2.4"}}, receive=MagicMock(), send=send)
+
+        return not entry.operation_lock.locked()
+
+    assert run(check_lock_release())
 
 
 def test_cached_thread_entry_stores_model_id() -> None:
