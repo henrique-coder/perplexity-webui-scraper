@@ -4,10 +4,12 @@ from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 from niquests import Session
+from niquests.models import Request as NiquestsRequest
 from pytest import fixture, warns
 
 from perplexity_webui_scraper._internal.exceptions import FileAccessError, ModelAccessError, ModelRiskWarning
 from perplexity_webui_scraper.api.app import app
+from perplexity_webui_scraper.api.auth import ClientPool
 from perplexity_webui_scraper.core import Conversation
 from perplexity_webui_scraper.models.registry import MODELS
 
@@ -93,6 +95,63 @@ def test_malformed_auth_header(client: Session) -> None:
     )
     assert response.status_code == 401
     assert "Missing or invalid Authorization header" in response.json()["error"]["message"]
+
+
+def test_validation_error_does_not_echo_request_values(client: Session) -> None:
+    response = client.post(
+        "/v1/chat/completions",
+        json={"model": MODEL_ID, "messages": [{"role": "user", "content": {"secret": "private-value"}}]},
+        headers={"Authorization": AUTH_HEADER},
+    )
+
+    assert response.status_code == 422
+    assert "private-value" not in str(response.text)
+
+
+def test_request_body_limit_rejects_large_body_before_parsing(client: Session) -> None:
+    request = NiquestsRequest(
+        "POST",
+        "/v1/chat/completions",
+        data=b" " * (10 * 1024 * 1024 + 1),
+        headers={"Authorization": AUTH_HEADER, "Content-Type": "application/json"},
+    )
+    response = client.send(client.prepare_request(request))
+
+    assert response.status_code == 413
+
+
+def test_client_pool_evicts_old_clients() -> None:
+    first = MagicMock()
+    second = MagicMock()
+
+    with patch("perplexity_webui_scraper.api.auth.Perplexity", side_effect=[first, second]):
+        pool = ClientPool(max_clients=1)
+        assert pool.get_or_create("token-a") is first
+        assert pool.get_or_create("token-b") is second
+
+    assert pool.get_or_create("token-b") is second
+
+
+def test_client_pool_reuses_clients_by_token() -> None:
+    client_instance = MagicMock()
+
+    with patch("perplexity_webui_scraper.api.auth.Perplexity", return_value=client_instance) as create_client:
+        pool = ClientPool(max_clients=2)
+        assert pool.get_or_create("same-token") is client_instance
+        assert pool.get_or_create("same-token") is client_instance
+
+    create_client.assert_called_once()
+
+
+def test_client_pool_expires_idle_clients() -> None:
+    client_instance = MagicMock()
+
+    with patch("perplexity_webui_scraper.api.auth.Perplexity", return_value=client_instance):
+        pool = ClientPool(max_clients=2, ttl_seconds=0.001)
+        assert pool.get_or_create("expired-token") is client_instance
+        pool._clients["expired-token"] = (client_instance, 0.0)
+        pool.get_or_create("new-token")
+        assert "expired-token" not in pool._clients
 
 
 def test_invalid_model(client: Session) -> None:

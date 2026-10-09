@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from typing import Any, cast
 
+from pydantic import ValidationError
+from pytest import raises
+
 from perplexity_webui_scraper.http.client import HTTPClient
+from perplexity_webui_scraper.http.resilience import RetryConfig
 
 
 class _HTTPStatusError(Exception):
@@ -25,14 +29,17 @@ class _FakeResponse:
 class _FakeSession:
     def __init__(self) -> None:
         self.calls = 0
+        self.urls: list[str] = []
 
     def get(self, url: str, params: dict[str, Any] | None = None) -> _FakeResponse:
         self.calls += 1
+        self.urls.append(url)
 
         return _FakeResponse(200)
 
     def post(self, url: str, json: dict[str, Any] | None = None, stream: bool = False) -> _FakeResponse:
         self.calls += 1
+        self.urls.append(url)
 
         return _FakeResponse(429 if self.calls == 1 else 200)
 
@@ -77,3 +84,26 @@ def test_http_get_can_skip_rate_limiter() -> None:
 
     assert response.status_code == 200
     assert fake_session.calls == 1
+
+
+def test_http_client_rejects_absolute_url_before_sending_session_cookie() -> None:
+    client = HTTPClient("token", max_retries=0, requests_per_second=0)
+    client.close()
+    fake_session = _FakeSession()
+    client._session = cast("Any", fake_session)
+
+    with raises(ValueError, match="relative paths"):
+        client.get("https://attacker.example/collect")
+
+    assert fake_session.calls == 0
+    assert fake_session.urls == []
+
+
+def test_retry_config_rejects_negative_retries() -> None:
+    with raises(ValidationError, match="max_retries cannot be negative"):
+        RetryConfig(max_retries=-1)
+
+
+def test_http_client_rejects_invalid_jitter() -> None:
+    with raises(ValueError, match="retry_jitter"):
+        HTTPClient("token", retry_jitter=1.1)

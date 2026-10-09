@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+from asyncio import CancelledError, create_task, shield, to_thread
+from functools import partial
 from os.path import commonprefix
 from time import time
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 from uuid import uuid4
 
 from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
+from loguru import logger
+from starlette.concurrency import iterate_in_threadpool
 
 from perplexity_webui_scraper.api.auth import ClientPool, extract_token
 from perplexity_webui_scraper.api.conversation_cache import ConversationCache
@@ -33,11 +37,25 @@ if TYPE_CHECKING:
 
 router = APIRouter()
 
+
 # Shared clients used by the application routes.
 # Using module-level singletons is acceptable here because the API server is
 # a single-process application; the cache is not shared across processes.
 _client_pool = ClientPool()
 _conversation_cache = ConversationCache()
+
+
+async def _run_sync_safely(function: Any) -> Any:
+    """Run blocking work in a thread and wait for it to finish on cancellation."""
+    task = create_task(to_thread(function))
+
+    try:
+        return await shield(task)
+    except CancelledError:
+        try:
+            await task
+        finally:
+            raise
 
 
 @router.post("/v1/chat/completions", response_model=None)
@@ -55,7 +73,7 @@ async def chat_completions(
         body = await raw_request.json()
         request = ChatCompletionRequest.model_validate(body)
     except Exception as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise HTTPException(status_code=422, detail="Invalid chat completion request body") from exc
 
     token = extract_token(authorization)
 
@@ -76,16 +94,16 @@ async def chat_completions(
             detail=f"Unknown model {request.model!r}. Available: {available}",
         ) from exc
 
-    client = _client_pool.get_or_create(token)
     thread_uuid = request.perplexity.thread_uuid if request.perplexity else None
 
     conversation: Conversation
+    cached_entry = None
 
     if thread_uuid:
         async with _conversation_cache.lock:
-            cached_conv = _conversation_cache.get(token, thread_uuid)
+            cached_entry = _conversation_cache.get_entry(token, thread_uuid)
 
-        if cached_conv is None:
+        if cached_entry is None:
             raise HTTPException(
                 status_code=404,
                 detail=(
@@ -94,7 +112,16 @@ async def chat_completions(
                 ),
             )
 
-        conversation = cached_conv
+        conversation = cached_entry.conversation
+
+        if request.model != cached_entry.model_id:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Thread uses model {cached_entry.model_id!r}; start a new thread to select a different model."
+                ),
+            )
+
         query = ""
         files: list[FileInput] = []
         found_user = False
@@ -118,34 +145,66 @@ async def chat_completions(
                 detail="Last user message must contain text or images.",
             )
     else:
+        client = _client_pool.get_or_create(token)
         query, files = build_query_and_files(request)
         config = build_conversation_config(request.model, request.perplexity)
         conversation = client.create_conversation(config)
 
     if request.stream:
-        conversation.ask(query, files=files or None, stream=True)
+        if cached_entry is not None:
+            await cached_entry.operation_lock.acquire()
 
-        return StreamingResponse(
-            _stream_response(
-                conversation,
-                request.model,
-                token,
-            ),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive",
-                "X-Accel-Buffering": "no",
-            },
-        )
+        lock_held = cached_entry is not None
 
-    conversation.ask(query, files=files or None)
+        try:
+            await _run_sync_safely(partial(conversation.ask, query, files=files or None, stream=True))
+        except CancelledError:
+            if cached_entry is not None and lock_held:
+                cached_entry.operation_lock.release()
+
+            raise
+        except Exception:
+            if cached_entry is not None and lock_held:
+                cached_entry.operation_lock.release()
+
+            raise
+
+        try:
+            return StreamingResponse(
+                _stream_response(
+                    conversation,
+                    request.model,
+                    token,
+                    cached_entry,
+                ),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no",
+                },
+            )
+        except Exception:
+            if cached_entry is not None and lock_held:
+                cached_entry.operation_lock.release()
+
+            raise
+
+    if cached_entry is not None:
+        await cached_entry.operation_lock.acquire()
+
+    try:
+        await _run_sync_safely(partial(conversation.ask, query, files=files or None))
+    finally:
+        if cached_entry is not None:
+            cached_entry.operation_lock.release()
+
     answer = conversation.answer or ""
     conv_uuid = conversation.uuid
 
     if conv_uuid:
         async with _conversation_cache.lock:
-            _conversation_cache.set(token, conv_uuid, conversation)
+            _conversation_cache.set(token, conv_uuid, conversation, request.model)
 
     return JSONResponse(
         content=ChatCompletionResponse.build(
@@ -160,6 +219,7 @@ async def _stream_response(
     conversation: Conversation,
     model_id: str,
     token: str,
+    cached_entry: Any | None = None,
 ) -> AsyncGenerator[str, None]:
     """Yield SSE lines for a streaming chat completion.
 
@@ -167,7 +227,22 @@ async def _stream_response(
         conversation: Active streaming ``Conversation`` to iterate.
         model_id: Model identifier for response envelope.
         token: Session token for cache keying.
+        cached_entry: Cached continuation entry holding the operation lock.
     """
+    try:
+        async for event in _stream_response_events(conversation, model_id, token):
+            yield event
+    finally:
+        if cached_entry is not None:
+            cached_entry.operation_lock.release()
+
+
+async def _stream_response_events(
+    conversation: Conversation,
+    model_id: str,
+    token: str,
+) -> AsyncGenerator[str, None]:
+    """Generate SSE events for one active conversation stream."""
     completion_id = f"chatcmpl-{uuid4().hex}"
     created = int(time())
     last_content = ""
@@ -180,7 +255,7 @@ async def _stream_response(
     ).to_sse_line()
 
     try:
-        for response in conversation:
+        async for response in iterate_in_threadpool(iter(conversation)):
             current = response.last_chunk or response.answer or ""
 
             if current and current != last_content:
@@ -197,12 +272,19 @@ async def _stream_response(
                     ).to_sse_line()
     except (ConnectionError, BrokenPipeError, OSError):
         return
-
+    except Exception:
+        logger.exception("Unexpected failure while streaming a completion")
+        yield (
+            'event: error\ndata: {"error":{"message":"Upstream completion failed",'
+            '"type":"server_error","code":"upstream_error"}}\n\n'
+        )
+        yield "data: [DONE]\n\n"
+        return
     conv_uuid = conversation.uuid
 
     if conv_uuid:
         async with _conversation_cache.lock:
-            _conversation_cache.set(token, conv_uuid, conversation)
+            _conversation_cache.set(token, conv_uuid, conversation, model_id)
 
     pplx_ext = PerplexityResponseExtensions(thread_uuid=conv_uuid) if conv_uuid else None
 

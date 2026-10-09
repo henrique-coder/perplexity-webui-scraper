@@ -88,13 +88,13 @@ class Perplexity:
         This reads Perplexity's ``/api/auth/session`` endpoint and normalizes
         the account tier into ``free``, ``pro``, ``max``, or ``unknown``.
         """
-        response = self._http.get(ENDPOINT_AUTH_SESSION, rate_limited=False)
+        response = self._http.get(ENDPOINT_AUTH_SESSION)
 
         return AccountSession.model_validate(response.json())
 
     def get_account_settings(self) -> AccountSettings:
         """Return typed user settings for the current token."""
-        response = self._http.get(ENDPOINT_USER_SETTINGS, rate_limited=False)
+        response = self._http.get(ENDPOINT_USER_SETTINGS)
 
         return AccountSettings.model_validate(response.json())
 

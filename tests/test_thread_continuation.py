@@ -6,8 +6,9 @@ session token or network access.
 
 from __future__ import annotations
 
+from asyncio import run
 from time import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
 from niquests import Session
@@ -15,8 +16,8 @@ from orjson import loads
 from pytest import fixture
 
 from perplexity_webui_scraper.api.app import app
-from perplexity_webui_scraper.api.conversation_cache import _CachedConversation
-from perplexity_webui_scraper.api.routes.completions import _client_pool, _conversation_cache
+from perplexity_webui_scraper.api.conversation_cache import ConversationCache, _CachedConversation
+from perplexity_webui_scraper.api.routes.completions import _client_pool, _conversation_cache, _stream_response
 from perplexity_webui_scraper.core import Conversation
 
 
@@ -136,22 +137,21 @@ def test_followup_with_thread_uuid(http_client: Session) -> None:
     mock_client = _make_mock_client(mock_conv)
 
     # Pre-populate the cache
-    _conversation_cache._store[(TOKEN, THREAD_UUID)] = _CachedConversation(conversation=mock_conv)
+    _conversation_cache._store[(TOKEN, THREAD_UUID)] = _CachedConversation(conversation=mock_conv, model_id=MODEL_ID)
 
-    with patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=mock_client):
-        resp = http_client.post(
-            "/v1/chat/completions",
-            json={
-                "model": MODEL_ID,
-                "messages": [
-                    {"role": "user", "content": "First message"},
-                    {"role": "assistant", "content": "First reply"},
-                    {"role": "user", "content": "Follow-up question"},
-                ],
-                "perplexity": {"thread_uuid": THREAD_UUID},
-            },
-            headers={"Authorization": AUTH_HEADER},
-        )
+    resp = http_client.post(
+        "/v1/chat/completions",
+        json={
+            "model": MODEL_ID,
+            "messages": [
+                {"role": "user", "content": "First message"},
+                {"role": "assistant", "content": "First reply"},
+                {"role": "user", "content": "Follow-up question"},
+            ],
+            "perplexity": {"thread_uuid": THREAD_UUID},
+        },
+        headers={"Authorization": AUTH_HEADER},
+    )
 
     assert resp.status_code == 200
 
@@ -168,6 +168,40 @@ def test_followup_with_thread_uuid(http_client: Session) -> None:
 
     # Should NOT have created a new conversation
     mock_client.create_conversation.assert_not_called()
+
+
+def test_followup_rejects_model_change(http_client: Session) -> None:
+    mock_conv = _make_mock_conversation()
+    _conversation_cache._store[(TOKEN, THREAD_UUID)] = _CachedConversation(conversation=mock_conv, model_id="old-model")
+
+    response = http_client.post(
+        "/v1/chat/completions",
+        json={
+            "model": MODEL_ID,
+            "messages": [{"role": "user", "content": "Continue"}],
+            "perplexity": {"thread_uuid": THREAD_UUID},
+        },
+        headers={"Authorization": AUTH_HEADER},
+    )
+
+    assert response.status_code == 400
+    assert "select a different model" in response.json()["error"]["message"]
+    mock_conv.ask.assert_not_called()
+
+
+def test_cached_thread_entry_stores_model_id() -> None:
+    conversation = _make_mock_conversation()
+    cache = ConversationCache()
+
+    async def store_and_read() -> _CachedConversation | None:
+        async with cache.lock:
+            cache.set(TOKEN, THREAD_UUID, conversation, MODEL_ID)
+            return cache.get_entry(TOKEN, THREAD_UUID)
+
+    entry = run(store_and_read())
+
+    assert entry is not None
+    assert entry.model_id == MODEL_ID
 
 
 def test_invalid_thread_uuid_returns_404(http_client: Session) -> None:
@@ -228,9 +262,23 @@ def test_streaming_new_conversation_includes_thread_uuid(http_client: Session) -
                 final_chunk = chunk
 
     # The final chunk should have perplexity.thread_uuid
-    assert final_chunk is not None, "No final chunk with finish_reason='stop' found"
+    assert final_chunk is not None, f"No final chunk with finish_reason='stop' found: {resp.text!r}"
     assert "perplexity" in final_chunk
     assert final_chunk["perplexity"]["thread_uuid"] == THREAD_UUID
+
+
+def test_stream_response_reports_unexpected_upstream_error() -> None:
+    conversation = _make_mock_conversation()
+    conversation.__iter__.side_effect = RuntimeError("private upstream detail")
+    events = list(run(_collect_stream_events(_stream_response(conversation, MODEL_ID, TOKEN))))
+
+    assert any(event.startswith('event: error\ndata: {"error":') and "upstream_error" in event for event in events)
+    assert "data: [DONE]\n\n" in events
+    assert all("private upstream detail" not in event for event in events)
+
+
+async def _collect_stream_events(stream: Any) -> list[str]:
+    return [event async for event in stream]
 
 
 def test_space_uuid_and_thread_uuid_together(http_client: Session) -> None:
@@ -239,21 +287,20 @@ def test_space_uuid_and_thread_uuid_together(http_client: Session) -> None:
     mock_client = _make_mock_client(mock_conv)
 
     # Pre-populate the cache
-    _conversation_cache._store[(TOKEN, THREAD_UUID)] = _CachedConversation(conversation=mock_conv)
+    _conversation_cache._store[(TOKEN, THREAD_UUID)] = _CachedConversation(conversation=mock_conv, model_id=MODEL_ID)
 
-    with patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=mock_client):
-        resp = http_client.post(
-            "/v1/chat/completions",
-            json={
-                "model": MODEL_ID,
-                "messages": [{"role": "user", "content": "Question in space"}],
-                "perplexity": {
-                    "thread_uuid": THREAD_UUID,
-                    "space_uuid": "some-space-uuid",
-                },
+    resp = http_client.post(
+        "/v1/chat/completions",
+        json={
+            "model": MODEL_ID,
+            "messages": [{"role": "user", "content": "Question in space"}],
+            "perplexity": {
+                "thread_uuid": THREAD_UUID,
+                "space_uuid": "some-space-uuid",
             },
-            headers={"Authorization": AUTH_HEADER},
-        )
+        },
+        headers={"Authorization": AUTH_HEADER},
+    )
 
     assert resp.status_code == 200
 
