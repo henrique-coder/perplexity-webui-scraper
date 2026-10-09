@@ -14,11 +14,12 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 
-CHECKS = ("python", "documentation", "frontend", "workflows", "metadata")
+CHECKS = ("python", "documentation", "frontend", "workflows", "containers", "metadata")
 PYTHON_PATHS = ("src/", "tests/", "pyproject.toml", "uv.lock", "Justfile", "scripts/")
 DOCUMENTATION_PATHS = ("docs/", "README.md", "mkdocs.yml", ".readthedocs.yaml")
 FRONTEND_PATHS = ("package.json", "pnpm-lock.yaml", ".prettier", ".taplo")
 WORKFLOW_PATHS = (".github/workflows/", ".github/actions/")
+CONTAINER_PATHS = ("Containerfile", "Containerfile.mcp", ".dockerignore")
 
 
 def _matches(path: str, prefixes: tuple[str, ...]) -> bool:
@@ -34,6 +35,7 @@ def classify_paths(paths: Iterable[str]) -> dict[str, bool]:
         "documentation": any(_matches(path, DOCUMENTATION_PATHS) for path in changed),
         "frontend": any(_matches(path, FRONTEND_PATHS) for path in changed),
         "workflows": any(_matches(path, WORKFLOW_PATHS) for path in changed),
+        "containers": any(_matches(path, CONTAINER_PATHS) for path in changed),
     }
     result["metadata"] = bool(changed) and not any(result.values())
 

@@ -3,6 +3,8 @@
 from pathlib import Path
 from subprocess import run
 
+from pytest import mark
+
 from scripts.ci_changed_paths import _changed_paths, classify_paths
 
 
@@ -13,6 +15,7 @@ def test_python_changes_run_python_checks_and_documentation() -> None:
         "documentation": False,
         "frontend": False,
         "workflows": False,
+        "containers": False,
         "metadata": False,
     }
 
@@ -47,6 +50,7 @@ def test_workflow_only_changes_skip_python_checks() -> None:
         "documentation": False,
         "frontend": False,
         "workflows": True,
+        "containers": False,
         "metadata": False,
     }
 
@@ -58,6 +62,7 @@ def test_readthedocs_configuration_runs_documentation_checks() -> None:
         "documentation": True,
         "frontend": False,
         "workflows": False,
+        "containers": False,
         "metadata": False,
     }
 
@@ -69,5 +74,30 @@ def test_unclassified_metadata_still_receives_a_lightweight_check() -> None:
         "documentation": False,
         "frontend": False,
         "workflows": False,
+        "containers": False,
         "metadata": True,
     }
+
+
+def test_container_changes_run_container_builds() -> None:
+    """Container build inputs trigger image validation."""
+    assert classify_paths(["Containerfile.mcp", ".dockerignore"]) == {
+        "python": False,
+        "documentation": False,
+        "frontend": False,
+        "workflows": False,
+        "containers": True,
+        "metadata": False,
+    }
+
+
+@mark.parametrize("path", ["Containerfile", "Containerfile.mcp", ".dockerignore"])
+def test_each_container_input_is_classified(path: str) -> None:
+    assert classify_paths([path])["containers"]
+
+
+def test_publish_workflow_rejects_existing_pypi_version_without_digest_verification() -> None:
+    workflow = Path(".github/workflows/publish.yml").read_text(encoding="utf-8")
+
+    assert 'echo "::error::PyPI already contains' in workflow
+    assert "continuing a previously interrupted release" not in workflow

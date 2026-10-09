@@ -175,8 +175,8 @@ jobs:
           UV_TRUSTED_PUBLISHING: always
         run: |
           if curl --fail --silent --show-error "https://pypi.org/pypi/$PACKAGE_NAME/$VERSION/json" >/dev/null; then
-            echo "PyPI already contains $PACKAGE_NAME $VERSION; continuing a previously interrupted release."
-            exit 0
+            echo "::error::PyPI already contains $PACKAGE_NAME $VERSION. Verify published artifact digests before resuming this release."
+            exit 1
           fi
           uv publish dist/*.whl dist/*.tar.gz
 

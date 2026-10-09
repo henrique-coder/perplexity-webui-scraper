@@ -61,7 +61,7 @@ The `just lint` check runs at `git push`, not at `git add` or `git commit`. CI r
 1. Keep the target section in `CHANGELOG.md` as `## [X.Y.Z] - Unreleased` while developing.
 2. In the final `dev` to `prod` promotion PR, replace `Unreleased` with the UTC release date (`YYYY-MM-DD`).
 3. On `prod`, run **Publish Release** once in `validate` mode, review its build output, then rerun it with `publish` selected.
-4. The workflow publishes the Python package, API and MCP images, and documentation before creating the immutable tag and GitHub Release. It can safely resume after an interrupted PyPI publication.
+4. The workflow publishes the Python package and API/MCP images before creating the immutable tag and GitHub Release. Read the Docs builds and publishes documentation through its configured Git integration; it is not published by the release workflow. The release workflow can resume after an interrupted PyPI publication.
 
 - Keep changes focused on one concern.
 - Add or update tests for behavior changes.

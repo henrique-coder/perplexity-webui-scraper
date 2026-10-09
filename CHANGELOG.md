@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0).
 
+## [Unreleased]
+
+### Fixed
+
+- **API request safety:** Enforce a 10 MiB request-body limit before JSON parsing and return sanitized validation errors without echoing submitted values.
+- **Client-cache growth:** Bound the per-token API client cache and expire inactive entries.
+- **Conversation concurrency:** Serialize operations on cached threads and move blocking upstream work off the FastAPI event loop.
+- **Streaming responses:** Preserve incremental SSE delivery and emit a sanitized error event when an upstream stream fails.
+- **HTTP session safety:** Reject absolute URLs in authenticated requests, serialize access to the shared curl-cffi session, and validate retry, timeout, and rate-limit settings.
+- **Account-check throttling:** Apply the configured request limiter to session and settings lookups.
+- **Model consistency in continued threads:** Reject a requested model change instead of returning a response produced by the thread's original model under a different model label.
+- **Search-source selection:** Expand `source_focus="all"` to the observed Web and Academic identifiers (`web` and `scholar`). Map writing mode to `search_focus="internet"` with `skip_search_enabled=true`.
+- **Container CI coverage:** Classify container build inputs, build API and MCP images in CI, and smoke-test both CLI entry points.
+- **PyPI release recovery:** Fail closed if a release version already exists on PyPI. Verify published artifact digests before manually recovering an interrupted publication.
+
+### Changed
+
+- **Perplexity ask payload:** Add frontend UUIDs and `query_source` values for home requests and follow-ups. Follow-ups send `last_backend_uuid`, optional `read_write_token`, and `followup_source="link"`, and omit `frontend_context_uuid`, matching the supplied WebUI captures.
+- **Release documentation:** Clarify that Read the Docs builds and publishes documentation independently of the package and container release workflow.
+
 ## [1.1.10] - 2026-10-05
 
 ### Changed
