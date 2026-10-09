@@ -20,6 +20,7 @@ from perplexity_webui_scraper.api.app import app
 from perplexity_webui_scraper.api.conversation_cache import ConversationCache, _CachedConversation
 from perplexity_webui_scraper.api.routes.completions import (
     _client_pool,
+    _common_prefix_length,
     _conversation_cache,
     _LockReleasingStreamingResponse,
     _stream_response,
@@ -213,6 +214,41 @@ def test_unstarted_stream_releases_cached_thread_lock() -> None:
         return not entry.operation_lock.locked()
 
     assert run(check_lock_release())
+
+
+def test_common_prefix_length_handles_incremental_stream_chunks() -> None:
+    assert _common_prefix_length("incremental answer", "incremental answers") == len("incremental answer")
+    assert _common_prefix_length("first answer", "different answer") == 0
+
+
+def test_stream_response_emits_only_appended_text() -> None:
+    conversation = _make_mock_conversation()
+    first = MagicMock(last_chunk="The answer", chunks=["The answer"], answer=None)
+    second = MagicMock(last_chunk="is 42", chunks=["The answer", "is 42"], answer=None)
+    conversation.__iter__.return_value = iter([first, second])
+    events = list(run(_collect_stream_events(_stream_response(conversation, MODEL_ID, TOKEN))))
+
+    content_deltas = [
+        loads(event[6:])["choices"][0]["delta"]["content"]
+        for event in events
+        if event.startswith("data: {") and '"content"' in event
+    ]
+    assert content_deltas == ["The answer", "is 42"]
+
+
+def test_stream_response_preserves_new_chunks_with_overlapping_text() -> None:
+    conversation = _make_mock_conversation()
+    first = MagicMock(last_chunk="ha", chunks=["ha"], answer=None)
+    second = MagicMock(last_chunk="have", chunks=["ha", "have"], answer=None)
+    conversation.__iter__.return_value = iter([first, second])
+    events = list(run(_collect_stream_events(_stream_response(conversation, MODEL_ID, TOKEN))))
+
+    content_deltas = [
+        loads(event[6:])["choices"][0]["delta"]["content"]
+        for event in events
+        if event.startswith("data: {") and '"content"' in event
+    ]
+    assert content_deltas == ["ha", "have"]
 
 
 def test_cached_thread_entry_stores_model_id() -> None:

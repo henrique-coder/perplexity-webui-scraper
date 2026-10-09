@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from asyncio import CancelledError, create_task, shield, to_thread
 from functools import partial
-from os.path import commonprefix
 from time import time
 from typing import TYPE_CHECKING, Annotated, Any
 from uuid import uuid4
@@ -38,6 +37,19 @@ if TYPE_CHECKING:
 
 
 router = APIRouter()
+
+
+def _common_prefix_length(left: str, right: str) -> int:
+    """Return the length of the exact shared prefix of two streamed texts."""
+    prefix_length = 0
+
+    for left_char, right_char in zip(left, right, strict=False):
+        if left_char != right_char:
+            break
+
+        prefix_length += 1
+
+    return prefix_length
 
 
 class _LockReleasingStreamingResponse(StreamingResponse):
@@ -257,6 +269,7 @@ async def _stream_response_events(
     completion_id = f"chatcmpl-{uuid4().hex}"
     created = int(time())
     last_content = ""
+    last_chunks: list[str] = []
 
     yield ChatCompletionChunk(
         id=completion_id,
@@ -269,12 +282,27 @@ async def _stream_response_events(
         async for response in iterate_in_threadpool(iter(conversation)):
             current = response.last_chunk or response.answer or ""
 
-            if current and current != last_content:
-                common_len = len(commonprefix([last_content, current]))
-                delta = current[common_len:]
+            if current:
+                response_chunks = getattr(response, "chunks", None)
+
+                if isinstance(response_chunks, list) and len(response_chunks) > len(last_chunks):
+                    new_chunks = response_chunks[len(last_chunks) :]
+                    last_chunks = response_chunks.copy()
+                    delta = "".join(new_chunks)
+                    last_content += delta
+                else:
+                    common_len = _common_prefix_length(last_content, current)
+
+                    if common_len == len(last_content):
+                        delta = current[common_len:]
+                        last_content += delta
+                    elif common_len == len(current):
+                        delta = ""
+                    else:
+                        delta = current
+                        last_content += delta
 
                 if delta:
-                    last_content = current
                     yield ChatCompletionChunk(
                         id=completion_id,
                         created=created,
