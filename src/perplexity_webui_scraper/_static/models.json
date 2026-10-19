@@ -88,6 +88,32 @@
     "is_official": true
   },
   {
+    "id": "google/gemini-4-argon",
+    "name": "Gemini 4 Argon",
+    "description": "Google's most powerful model",
+    "identifier": "gemini4argon",
+    "tool_name": "pplx_gemini4_argon",
+    "min_tier": "max",
+    "mode": "copilot",
+    "provider": "google",
+    "status": "unknown",
+    "last_tested_at": null,
+    "is_official": true
+  },
+  {
+    "id": "google/gemini-4-argon-thinking",
+    "name": "Gemini 4 Argon Thinking",
+    "description": "Google's most powerful model with thinking",
+    "identifier": "gemini4argonthinking",
+    "tool_name": "pplx_gemini4_argon_think",
+    "min_tier": "max",
+    "mode": "copilot",
+    "provider": "google",
+    "status": "unknown",
+    "last_tested_at": null,
+    "is_official": true
+  },
+  {
     "id": "google/gemini-3.8-flash",
     "name": "Gemini 3.8 Flash",
     "description": "Google's latest model",
@@ -244,6 +270,19 @@
     "is_official": true
   },
   {
+    "id": "nvidia/nemotron-3.5-super-vl-thinking",
+    "name": "Nemotron 3.5 Super VL Thinking",
+    "description": "NVIDIA's Nemotron 3.5 Super VL model",
+    "identifier": "nv_nemotron_3_5_super",
+    "tool_name": "pplx_nemotron35_super_vl_think",
+    "min_tier": "pro",
+    "mode": "copilot",
+    "provider": "nvidia",
+    "status": "unknown",
+    "last_tested_at": null,
+    "is_official": true
+  },
+  {
     "id": "nvidia/nemotron-3-ultra-thinking",
     "name": "Nemotron 3 Ultra",
     "description": "NVIDIA's Nemotron 3 Ultra 550B model",
@@ -254,7 +293,7 @@
     "provider": "nvidia",
     "status": "available",
     "last_tested_at": "2026-10-05T20:17:33.054764Z",
-    "is_official": true
+    "is_official": false
   },
   {
     "id": "anthropic/claude-haiku-5.5",

@@ -1,4 +1,4 @@
-# API Reference
+# API reference
 
 ## `Perplexity(session_token, config?)`
 
@@ -37,7 +37,7 @@ The client supports a context manager and closes its HTTP session on exit.
 
 ---
 
-## Account Profile
+## Account profile
 
 `client.get_account_session()` reads Perplexity's `/api/auth/session` endpoint and returns a typed Pydantic object. `client.get_account_settings()` reads `/rest/user/settings`. `client.get_account_profile()` combines both, using settings only when the session response does not expose enough subscription data.
 
@@ -82,10 +82,10 @@ Before every prompt request, the library performs a fast `/api/auth/session` che
 
 `perplexity/best` adapts to the authenticated account: free accounts use Perplexity's internal `turbo` preference, while Pro/Max accounts use `pplx_pro_upgraded`; both use `copilot` mode.
 
-### Conversation Properties
+### Conversation properties
 
-| Property         | Type                     | Description                      |
-| ---------------- | ------------------------ | -------------------------------- |
+| Property         | Type                    | Description                      |
+| ---------------- | ----------------------- | -------------------------------- |
 | `answer`         | `str \| None`            | Full response text               |
 | `search_results` | `list[SearchResultItem]` | Source URLs used in the response |
 | `uuid`           | `str \| None`            | Conversation backend UUID        |
@@ -120,7 +120,7 @@ custom = ConversationConfig(
 The OpenAI-compatible API exposes the same controls inside the `perplexity` request object: `allow_risky_model` and `custom_model_mode`.
 
 <!-- BEGIN GENERATED MODEL CATALOG -->
-### Status reference
+### Model status reference
 
 | Status | Meaning | Runtime behavior |
 | --- | --- | --- |
@@ -138,6 +138,8 @@ The OpenAI-compatible API exposes the same controls inside the `perplexity` requ
 | `openai/gpt-6.1-sol-thinking` | `gpt6_1_sol_thinking` | openai | `true` | pro | `available` | 2026-10-05T20:16:28.012592Z |
 | `openai/gpt-6-astra` | `gpt6_astra` | openai | `true` | max | `available` | 2026-10-05T20:16:31.992994Z |
 | `openai/gpt-6-astra-thinking` | `gpt6_astra_thinking` | openai | `true` | max | `available` | 2026-10-05T20:16:35.921714Z |
+| `google/gemini-4-argon` | `gemini4argon` | google | `true` | max | `unknown` | — |
+| `google/gemini-4-argon-thinking` | `gemini4argonthinking` | google | `true` | max | `unknown` | — |
 | `google/gemini-3.8-flash` | `gemini38flash` | google | `true` | pro | `available` | 2026-10-05T20:16:40.371258Z |
 | `google/gemini-3.8-flash-thinking` | `gemini38flashthinking` | google | `true` | pro | `available` | 2026-10-05T20:16:44.417812Z |
 | `anthropic/claude-sonnet-5.5` | `claude55sonnet` | anthropic | `true` | pro | `available` | 2026-10-05T20:16:48.109965Z |
@@ -150,7 +152,8 @@ The OpenAI-compatible API exposes the same controls inside the `perplexity` requ
 | `z-ai/glm-5.3` | `glm_5_3_thinking` | z-ai | `true` | pro | `available` | 2026-10-05T20:17:16.544851Z |
 | `x-ai/grok-4.7` | `grok47` | x-ai | `true` | pro | `available` | 2026-10-05T20:17:21.160176Z |
 | `x-ai/grok-4.7-thinking` | `grok47thinking` | x-ai | `true` | pro | `available` | 2026-10-05T20:17:27.797021Z |
-| `nvidia/nemotron-3-ultra-thinking` | `nv_nemotron_3_ultra` | nvidia | `true` | pro | `available` | 2026-10-05T20:17:33.054764Z |
+| `nvidia/nemotron-3.5-super-vl-thinking` | `nv_nemotron_3_5_super` | nvidia | `true` | pro | `unknown` | — |
+| `nvidia/nemotron-3-ultra-thinking` | `nv_nemotron_3_ultra` | nvidia | `false` | pro | `available` | 2026-10-05T20:17:33.054764Z |
 | `anthropic/claude-haiku-5.5` | `claude55haiku` | anthropic | `false` | pro | `unknown` | — |
 | `anthropic/claude-haiku-5.5-thinking` | `claude55haikuthinking` | anthropic | `false` | pro | `unknown` | — |
 | `openai/gpt-5.6-terra` | `gpt56_terra` | openai | `false` | pro | `available` | 2026-10-05T20:17:36.892876Z |
@@ -246,11 +249,11 @@ for model in MODELS.list_all():
 
 Controls how `[1]`-style citation markers are formatted in response text.
 
-| Mode         | Output format  | Description               |
-| ------------ | -------------- | ------------------------- |
-| `"default"`  | `text[1]`      | Keep original markers     |
-| `"markdown"` | `text[1](url)` | Convert to markdown links |
-| `"clean"`    | `text`         | Remove all citations      |
+| Mode        | Output format  | Description               |
+| ----------- | -------------- | ------------------------- |
+| `"default"` | `text[1]`      | Keep original markers     |
+| `"markdown"`| `text[1](url)` | Convert to Markdown links |
+| `"clean"`   | `text`         | Remove all citations      |
 
 ```python
 from perplexity_webui_scraper import ConversationConfig
@@ -280,7 +283,7 @@ config = ConversationConfig(citation_mode="markdown")
 | `custom_model_mode` | `Literal["copilot", "search", "research"]` | `"copilot"` | Mode for `custom:<identifier>` |
 | `research_interaction` | `Literal["auto", "manual"]` | `"auto"` | Deep Research clarification handling |
 
-The Space URL slug, such as `questions-abcdef123456`, is not its UUID. Submit a query inside the Space, inspect the `perplexity_ask` request in the browser Network panel, and copy `target_collection_uuid` from its JSON payload.
+The Space URL slug is not its UUID. To find the UUID, submit a query in the Space, inspect the `perplexity_ask` request in the browser Network panel, and read `target_collection_uuid` from the JSON payload.
 
 ### `ClientConfig`
 
@@ -293,14 +296,14 @@ The Space URL slug, such as `questions-abcdef123456`, is not its UUID. Submit a 
 | `retry_max_delay`       | `float`                   | `60.0`       | Maximum backoff delay in seconds            |
 | `retry_jitter`          | `float`                   | `0.5`        | Jitter factor for retry delay randomization |
 | `requests_per_second`   | `float`                   | `0.5`        | Rate limit (requests per second)            |
-| `rotate_fingerprint`    | `bool`                    | `True`       | Rotate browser fingerprint on each retry    |
+| `rotate_fingerprint`    | `bool`                    | `True`       | Recreate the HTTP session after a retry while retaining its browser fingerprint |
 | `max_init_query_length` | `int`                     | `2000`       | Truncate init query to avoid HTTP 414       |
 | `logging_level`         | `str`                     | `"disabled"` | Log verbosity (`disabled`, `debug`, etc.)   |
 | `log_file`              | `str \| PathLike \| None` | `None`       | Write logs to file instead of stderr        |
 
 ---
 
-## Parameter Values
+## Parameter values
 
 ### `source_focus`
 
@@ -375,34 +378,42 @@ except PerplexityError as e:
 
 ---
 
-## OpenAI-Compatible API
+## OpenAI-compatible API
 
 Install with the `api` extra:
 
 ```bash
-uv add "perplexity-webui-scraper[api]"
+uv add 'perplexity-webui-scraper[api]'
 ```
 
 ### `perplexity-webui-scraper api`
 
-Starts the server without a configured token. Each request supplies a Perplexity session token through `Authorization: Bearer`.
+Starts the server without a configured token. Each request supplies a Perplexity session token through `Authorization: Bearer $PERPLEXITY_SESSION_TOKEN`.
 
-| Option        | Short | Default     | Description                                                         |
-| ------------- | ----- | ----------- | ------------------------------------------------------------------- |
-| `--host`      | `-H`  | `127.0.0.1` | Bind address                                                        |
-| `--port`      | `-p`  | `8000`      | Port to listen on                                                   |
-| `--reload`    |       | `False`     | Enable auto-reload (dev mode)                                       |
-| `--log-level` |       | `info`      | Uvicorn log level (`debug`, `info`, `warning`, `error`, `critical`) |
+| Option               | Short | Default     | Description                                                               |
+| -------------------- | ----- | ----------- | ------------------------------------------------------------------------- |
+| `--host`             | `-H`  | `127.0.0.1` | Bind address                                                              |
+| `--port`             | `-p`  | `8000`      | Port to listen on                                                         |
+| `--reload`           |       | `False`     | Enable auto-reload                                                        |
+| `--log-level`        |       | `info`      | Uvicorn log level (`debug`, `info`, `warning`, `error`, `critical`)       |
+| `--session-token`    |       | unset       | Server-default Perplexity token; requires `--api-key`                    |
+| `--api-key`          |       | unset       | Gateway key required when a server token is configured                    |
 
 ```bash
-# Bind to localhost:8000
+# Bind to localhost on port 8000
 perplexity-webui-scraper api
 
-# Expose on the network
+# Bind to all interfaces; protect the server with an explicit network policy
 perplexity-webui-scraper api --host 0.0.0.0 --port 8080
 ```
 
-### Running via Container (Podman)
+For a server-default upstream token, configure a separate gateway key:
+
+```bash
+PERPLEXITY_SESSION_TOKEN="$PPLX_TOKEN" PERPLEXITY_API_KEY="$GATEWAY_KEY" perplexity-webui-scraper api
+```
+
+### Container deployment with Podman
 
 The REST API is published as a multi-arch image on GHCR for `linux/amd64` and `linux/arm64`.
 
@@ -428,12 +439,12 @@ podman run --rm -e PERPLEXITY_SESSION_TOKEN=your_token perplexity-mcp
 
 ### Authentication
 
-Pass your Perplexity session token as the Bearer token in every request. The server caches clients by token and reuses their sessions:
+By default, pass your Perplexity session token as a Bearer token. For a server-default upstream token, configure `PERPLEXITY_SESSION_TOKEN` and a distinct `PERPLEXITY_API_KEY`; each client request must include `X-API-Key` and may omit `Authorization`. A caller Bearer token can override the server token after gateway authentication. Do not log credentials or include them in client-visible errors.
 
 ```bash
 curl http://localhost:8000/v1/chat/completions \
-  -H "Authorization: Bearer $PERPLEXITY_SESSION_TOKEN" \
-  -H "Content-Type: application/json" \
+  -H 'Authorization: Bearer $PERPLEXITY_SESSION_TOKEN' \
+  -H 'Content-Type: application/json' \
   -d '{"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello!"}]}'
 ```
 
@@ -441,12 +452,13 @@ Returns `HTTP 401` if the header is missing or malformed.
 
 ### Endpoints
 
-| Method | Path                   | Description                                 |
-| ------ | ---------------------- | ------------------------------------------- |
-| `GET`  | `/v1/models`           | List registered models                      |
-| `POST` | `/v1/chat/completions` | Chat completion (streaming + non-streaming) |
-| `GET`  | `/docs`                | Interactive Swagger UI                      |
-| `GET`  | `/redoc`               | ReDoc API documentation                     |
+| Method | Path                   | Description                                                            |
+| ------ | ---------------------- | ---------------------------------------------------------------------- |
+| `GET`  | `/v1/models`           | List registered models                                                 |
+| `POST` | `/v1/responses`        | Responses text and base64 image input (streaming and non-streaming)    |
+| `POST` | `/v1/chat/completions` | Legacy Chat Completions (streaming and non-streaming)                  |
+| `GET`  | `/docs`                | Interactive Swagger UI                                                 |
+| `GET`  | `/redoc`               | ReDoc API documentation                                                |
 
 ### `POST /v1/chat/completions`
 
@@ -458,13 +470,56 @@ Returns `HTTP 401` if the header is missing or malformed.
 | `messages` | `list` | yes      | List of `{role, content}` messages (`system`, `user`, `assistant`) |
 | `stream`   | `bool` | no       | Enable SSE streaming (default: `false`)                            |
 
-> Any extra OpenAI fields (`temperature`, `top_p`, `n`, `max_tokens`, etc.) are accepted for client compatibility but silently ignored.
+> Chat Completions accepts some unsupported OpenAI fields and ignores them. Responses rejects unknown fields.
 
-**Non-streaming response:**
+### `POST /v1/responses`
+
+The Responses adapter accepts `model`, `input`, `instructions`, `stream`, `previous_response_id`, and the `perplexity` extension object. It rejects unknown request fields and input item types it does not implement. Inputs may be a string or message items with `system`, `developer`, `user`, or `assistant` roles; content supports strings, `input_text`, and base64 data-URL `input_image` parts. Remote image URLs, tool execution, durable response retrieval, and token-usage accounting are not implemented. Continuation IDs map to an in-memory conversation thread and expire after 30 minutes of inactivity or process restart.
 
 ```json
 {
-  "id": "chatcmpl-...",
+  "model": "perplexity/best",
+  "input": "Describe the image.",
+  "stream": false
+}
+```
+
+For a server-default Perplexity token, send `X-API-Key` on every request; `Authorization` is optional. A client may provide `Authorization: Bearer $PERPLEXITY_SESSION_TOKEN` to override the server token, but must still provide the gateway key.
+
+**Responses non-streaming response:**
+
+```json
+{
+  "id": "resp_<generated-id>",
+  "object": "response",
+  "created_at": 1234567890,
+  "status": "completed",
+  "model": "perplexity/best",
+  "output": [
+    {
+      "id": "msg_<generated-id>",
+      "type": "message",
+      "status": "completed",
+      "role": "assistant",
+      "content": [{ "type": "output_text", "text": "...", "annotations": [] }]
+    }
+  ],
+  "output_text": "...",
+  "usage": { "input_tokens": 0, "output_tokens": 0, "total_tokens": 0 }
+}
+```
+
+Responses token counts are unavailable and reported as zero. `previous_response_id` is included when continuing a cached thread.
+
+**Responses streaming** (`stream: true`) emits typed events including `response.created`, `response.in_progress`, text deltas, and `response.completed`, followed by `data: [DONE]`. Upstream errors or an incomplete stream produce `response.failed` and do not emit `response.completed` or `[DONE]`.
+
+### `POST /v1/chat/completions` response
+
+This legacy endpoint returns a Chat Completions object; it does not return the Responses object shown above.
+
+```json
+{
+  "id": "chatcmpl-<generated-id>",
   "object": "chat.completion",
   "created": 1234567890,
   "model": "perplexity/best",
@@ -479,7 +534,7 @@ Returns `HTTP 401` if the header is missing or malformed.
 }
 ```
 
-**Streaming** (`stream: true`) uses Server-Sent Events, one `data: {...}` JSON chunk per event, ending with `data: [DONE]`.
+The OpenAI Python SDK example below also uses Chat Completions:
 
 ```python
 from openai import OpenAI
@@ -496,7 +551,9 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-### Passing Optional Arguments
+Chat Completions streaming emits `chat.completion.chunk` objects as SSE data frames and ends with `data: [DONE]` on success. On an upstream failure it emits an `event: error` frame followed by `[DONE]`, without a successful finish chunk.
+
+### Perplexity request options
 
 Pass Perplexity-specific settings such as `search_focus`, `citation_mode`, or `coordinates` through the OpenAI SDK's `extra_body` dictionary. The API reads them from the `"perplexity"` block.
 
@@ -525,8 +582,8 @@ With `curl`, add `"perplexity"` to the JSON payload:
 
 ```bash
 curl http://localhost:8000/v1/chat/completions \
-  -H "Authorization: Bearer $PERPLEXITY_SESSION_TOKEN" \
-  -H "Content-Type: application/json" \
+  -H 'Authorization: Bearer $PERPLEXITY_SESSION_TOKEN' \
+  -H 'Content-Type: application/json' \
   -d '{
     "model": "perplexity/best",
     "messages": [{"role": "user", "content": "Technology news"}],
@@ -551,23 +608,23 @@ response = client.chat.completions.create(
 )
 ```
 
-### Multimodal uploads
+### Image inputs
 
-The REST API accepts OpenAI-style message content containing `text` parts and base64 Data URLs in `image_url` parts. It does not implement remote image URLs or every OpenAI Vision input form.
+The Chat Completions route accepts message content with `text` parts and base64 image Data URLs in `image_url` parts. The Responses route accepts `input_text` and `input_image` parts with base64 data URLs. Neither route fetches remote image URLs or implements every OpenAI vision input form.
 
 The server decodes each Data URL and uploads the resulting file to Perplexity before sending the prompt.
 
-**Example with OpenAI Python SDK:**
+**OpenAI Python SDK:**
 
 ```python
-import base64
+from base64 import b64encode
 from openai import OpenAI
 
 client = OpenAI(base_url="http://localhost:8000/v1", api_key="YOUR_SESSION_TOKEN")
 
-# Read an image and encode it to base64
-with open("document.pdf", "rb") as file:
-    pdf_b64 = base64.b64encode(file.read()).decode("utf-8")
+# Encode a local image as a data URL
+with open("photo.jpg", "rb") as file:
+    image_b64 = b64encode(file.read()).decode("utf-8")
 
 response = client.chat.completions.create(
     model="perplexity/best",
@@ -575,8 +632,8 @@ response = client.chat.completions.create(
         {
             "role": "user",
             "content": [
-                {"type": "text", "text": "What is in this document?"},
-                {"type": "image_url", "image_url": {"url": f"data:application/pdf;base64,{pdf_b64}"}},
+                {"type": "text", "text": "Describe this image."},
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}},
             ],
         }
     ],
@@ -585,12 +642,12 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-**Example with cURL:**
+**cURL:**
 
 ```bash
 curl http://localhost:8000/v1/chat/completions \
-  -H "Authorization: Bearer $PERPLEXITY_SESSION_TOKEN" \
-  -H "Content-Type: application/json" \
+  -H 'Authorization: Bearer $PERPLEXITY_SESSION_TOKEN' \
+  -H 'Content-Type: application/json' \
   -d '{
     "model": "perplexity/best",
     "messages": [
