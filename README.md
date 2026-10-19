@@ -20,6 +20,8 @@ This unofficial library uses undocumented Perplexity WebUI endpoints with a brow
 
 A Perplexity account and its browser session token are required. Free accounts support text prompts; paid tiers are required for Pro/Max models and file uploads.
 
+Python 3.11 through 3.15 are supported. Python 3.15 is the primary runtime for direct end-user installations, API/MCP containers, and the local `.python-version` pin. CI quality, documentation, and package build jobs use Python 3.14. The unit-test matrix covers Python 3.11 through 3.15 across Linux, macOS, and Windows.
+
 ## Community
 
 - [Contributing guide](https://github.com/henrique-coder/perplexity-webui-scraper/blob/prod/CONTRIBUTING.md)

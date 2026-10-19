@@ -38,6 +38,14 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "latest"
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
       - name: Classify Changed Files
         id: classify
         env:
@@ -50,12 +58,12 @@ jobs:
           HEAD_SHA: ${{ github.sha }}
         run: |
           if [ "$EVENT_NAME" = "workflow_dispatch" ] || [ "$BASE_REF" = "prod" ]; then
-            python scripts/ci_changed_paths.py --all
+            uv run --python 3.14 --no-project python scripts/ci_changed_paths.py --all
             exit 0
           fi
 
           if [ "$EVENT_NAME" = "pull_request" ]; then
-            python scripts/ci_changed_paths.py "$PR_BASE_SHA" "$PR_HEAD_SHA"
+            uv run --python 3.14 --no-project python scripts/ci_changed_paths.py "$PR_BASE_SHA" "$PR_HEAD_SHA"
             exit 0
           fi
 
@@ -64,7 +72,7 @@ jobs:
           else
             BASE_SHA="$EVENT_BEFORE"
           fi
-          python scripts/ci_changed_paths.py "$BASE_SHA" "$HEAD_SHA"
+          uv run --python 3.14 --no-project python scripts/ci_changed_paths.py "$BASE_SHA" "$HEAD_SHA"
 
   python_quality:
     name: Python Quality
@@ -83,18 +91,18 @@ jobs:
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
-          python-version: "3.15"
+          python-version: "3.14"
           enable-cache: true
           cache-dependency-glob: "uv.lock"
 
       - name: Install Dependencies
-        run: uv sync --frozen --no-dev --group lint --group test
+        run: uv sync --frozen --python 3.14 --no-dev --group lint --group test
 
       - name: Check Code Quality
         run: |
-          uv run --no-sync ruff check
-          uv run --no-sync ty check
-          uv run --no-sync scripts/render_model_docs.py --check
+          uv run --python 3.14 --no-sync ruff check
+          uv run --python 3.14 --no-sync ty check
+          uv run --python 3.14 --no-sync scripts/render_model_docs.py --check
 
   documentation:
     name: Documentation
@@ -113,15 +121,15 @@ jobs:
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
-          python-version: "3.15"
+          python-version: "3.14"
           enable-cache: true
           cache-dependency-glob: "uv.lock"
 
       - name: Install Dependencies
-        run: uv sync --frozen --no-dev --group docs
+        run: uv sync --frozen --python 3.14 --no-dev --group docs
 
       - name: Build Documentation
-        run: uv run --no-sync mkdocs build --strict
+        run: uv run --python 3.14 --no-sync mkdocs build --strict
 
   formatting:
     name: Formatting & Configuration
@@ -146,6 +154,8 @@ jobs:
         with:
           version: 11.17.0
           run_install: false
+          cache: true
+          cache_dependency_path: pnpm-lock.yaml
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
@@ -172,12 +182,15 @@ jobs:
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
 
       - name: Install Workflow Linter
-        run: uv sync --frozen --only-group workflow --no-install-project
+        run: uv sync --frozen --python 3.14 --only-group workflow --no-install-project
 
       - name: Scan Workflows
-        run: uv run --no-sync zizmor .github/workflows
+        run: uv run --python 3.14 --no-sync zizmor .github/workflows
 
   containers:
     name: Container Build
@@ -260,10 +273,10 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install Dependencies
-        run: uv sync --frozen --no-dev --group test
+        run: uv sync --frozen --python "${{ matrix.python }}" --no-dev --group test
 
       - name: Run Test Suite
-        run: uv run --no-sync pytest
+        run: uv run --python "${{ matrix.python }}" --no-sync pytest
 
   build:
     name: Build Distribution
@@ -282,15 +295,15 @@ jobs:
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
-          python-version: "3.15"
+          python-version: "3.14"
           enable-cache: true
           cache-dependency-glob: "uv.lock"
 
       - name: Build Package
-        run: uv build
+        run: uv build --python 3.14
 
       - name: Validate Package Metadata
-        run: uvx twine check dist/*
+        run: uvx --python 3.14 twine check dist/*
 
   release_policy:
     name: Release Policy

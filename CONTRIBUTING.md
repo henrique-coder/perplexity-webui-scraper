@@ -15,7 +15,7 @@ This project wraps private Perplexity WebUI endpoints. Changes should be conserv
 
 Requirements:
 
-- Python 3.11, 3.12, 3.13, 3.14, or 3.15. The default interpreter is Python 3.15.
+- Python 3.11, 3.12, 3.13, 3.14, or 3.15. `.python-version` selects Python 3.15 for local development and primary end-user use. CI, Read the Docs, and package build jobs use Python 3.14 by default; CI tests every supported version, including 3.15. API/MCP containers use Python 3.15.
 - `uv`
 - `pnpm`
 - `just`
@@ -27,15 +27,17 @@ uv sync --all-extras --all-groups
 pnpm install
 ```
 
+CI quality, documentation, and package-build jobs use Python 3.14. The unit-test matrix runs Python 3.11 through 3.15 across three operating systems; API/MCP container images use Python 3.15.
+
 Useful commands:
 
-| Command                                              | Purpose                                                                                                                              |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `just format`                                        | Format Python, Markdown, YAML, TOML, and related project files.                                                                      |
-| `just lint`                                          | Run Ruff, ty, Prettier, and Taplo checks.                                                                                            |
-| `just test`                                          | Run the pytest suite.                                                                                                                |
-| `uv run --no-dev --group docs mkdocs build --strict` | Build the documentation site with MkDocs using only the project and `docs` dependencies. `--strict` fails on documentation warnings. |
-| `uv build`                                           | Build the Python source distribution and wheel.                                                                                      |
+| Command                                              | Purpose                                                                       |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `just format`                                        | Format Python, Markdown, YAML, TOML, and related project files.               |
+| `just lint`                                          | Run Ruff, ty, Prettier, and Taplo checks using the `.python-version` runtime. |
+| `just test`                                          | Run the pytest suite using the `.python-version` runtime.                     |
+| `uv run --no-dev --group docs mkdocs build --strict` | Build docs with pinned local Python; `--strict` fails on warnings.            |
+| `uv build`                                           | Build the source distribution and wheel using the pinned local Python.        |
 
 Install the Git hook once per checkout:
 

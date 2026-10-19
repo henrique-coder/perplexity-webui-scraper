@@ -43,6 +43,14 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "latest"
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
       - name: Validate Immutable Release Inputs
         id: version
         env:
@@ -59,7 +67,7 @@ jobs:
             exit 1
           fi
 
-          PROJECT_VERSION=$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
+          PROJECT_VERSION=$(uv run --python 3.14 --no-project python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
           LOCK_VERSION=$(awk '/name = "perplexity-webui-scraper"/{found=1; next} found && /^version = /{gsub(/[" ]/, "", $3); print $3; exit}' uv.lock)
           CHANGELOG_HEADING=$(grep -F "## [$REQUESTED_VERSION] - " CHANGELOG.md | head -n 1)
 
@@ -89,7 +97,7 @@ jobs:
             echo "Resuming the interrupted release for $TAG."
           fi
 
-          PACKAGE_NAME=$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["name"])')
+          PACKAGE_NAME=$(uv run --python 3.14 --no-project python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["name"])')
           echo "version=$PROJECT_VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$PROJECT_VERSION" >> "$GITHUB_OUTPUT"
           echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
@@ -117,6 +125,7 @@ jobs:
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
+          python-version: "3.14"
           enable-cache: true
           cache-dependency-glob: "uv.lock"
 
@@ -131,9 +140,9 @@ jobs:
             rm -f "$README_BACKUP"
           }
           trap cleanup EXIT
-          uv run --no-dev scripts/render_pypi_readme.py --reference "$RELEASE_REF"
-          uv build
-          uvx twine check dist/*
+          uv run --python 3.14 --no-sync --no-dev scripts/render_pypi_readme.py --reference "$RELEASE_REF"
+          uv build --python 3.14
+          uvx --python 3.14 twine check dist/*
           sha256sum dist/* > dist/SHA256SUMS
 
       - name: Upload Package Artifacts
@@ -161,12 +170,18 @@ jobs:
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
 
       - name: Download Package Artifacts
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: python-dist
           path: dist
+
+      - name: Validate Package Metadata
+        run: uvx --python 3.14 twine check dist/*
 
       - name: Publish Idempotently to PyPI
         env:
