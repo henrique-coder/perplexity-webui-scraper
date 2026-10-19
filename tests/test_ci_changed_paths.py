@@ -25,6 +25,14 @@ def test_removed_source_files_still_run_python_checks() -> None:
     assert classify_paths(["src/perplexity_webui_scraper/legacy.py"])["python"]
 
 
+def test_python_version_pin_runs_python_checks() -> None:
+    """Changing the default interpreter pin must run Python validation."""
+    result = classify_paths([".python-version"])
+
+    assert result["python"]
+    assert not result["metadata"]
+
+
 def test_git_diff_includes_removed_files(tmp_path: Path) -> None:
     """Deleted files are included in the diff sent to the classifier."""
     run(["git", "init", "--quiet"], cwd=tmp_path, check=True)

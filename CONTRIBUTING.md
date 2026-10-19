@@ -15,7 +15,7 @@ This project wraps private Perplexity WebUI endpoints. Changes should be conserv
 
 Requirements:
 
-- Python 3.11, 3.12, 3.13, or 3.14
+- Python 3.11, 3.12, 3.13, 3.14, or 3.15. The default interpreter is Python 3.15.
 - `uv`
 - `pnpm`
 - `just`
