@@ -10,10 +10,8 @@ from perplexity_webui_scraper.core.response import Coordinates
 
 if TYPE_CHECKING:
     from perplexity_webui_scraper._internal.types import FileInput
-    from perplexity_webui_scraper.api.schemas.request import (
-        ChatCompletionRequest,
-        PerplexityExtensions,
-    )
+    from perplexity_webui_scraper.api.schemas.request import ChatCompletionRequest, PerplexityExtensions
+
 
 _JSON_SYSTEM_PROMPT = (
     "Respond ONLY with valid JSON. Do not include any prose, explanation, or markdown fences outside the JSON object."

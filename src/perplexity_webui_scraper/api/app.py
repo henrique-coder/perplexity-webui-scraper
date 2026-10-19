@@ -33,7 +33,7 @@ class _RequestBodyLimitMiddleware:
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Enforce a bounded body size for chat completion requests."""
-        if scope["type"] != "http" or scope["path"] != "/v1/chat/completions":
+        if scope["type"] != "http" or scope["path"] not in {"/v1/chat/completions", "/v1/responses"}:
             await self.app(scope, receive, send)
 
             return
@@ -95,16 +95,16 @@ def create_app() -> FastAPI:
 
     The application includes:
 
-    - ``GET /v1/models`` and ``POST /v1/chat/completions`` routes.
+    - ``GET /v1/models``, ``POST /v1/responses``, and legacy Chat Completions routes.
     - OpenAI-compatible error objects for HTTP exceptions.
 
     Returns:
         Configured :class:`fastapi.FastAPI` instance.
     """
     application = FastAPI(
-        title="Perplexity WebUI Scraper - OpenAI-compatible API",
+        title="Perplexity WebUI Scraper: OpenAI-compatible API",
         description=(
-            "OpenAI-compatible chat completions backed by Perplexity's WebUI. "
+            "OpenAI Responses and legacy Chat Completions backed by Perplexity's WebUI. "
             "Pass the Perplexity session token as **Authorization: Bearer <token>**."
         ),
         version=__version__,

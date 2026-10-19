@@ -8,6 +8,7 @@ to avoid recreating HTTP sessions on every request.
 from __future__ import annotations
 
 from collections import OrderedDict
+from hmac import compare_digest
 from threading import Lock
 from time import monotonic
 
@@ -46,6 +47,39 @@ def extract_token(authorization: str | None) -> str:
         raise HTTPException(status_code=401, detail="Bearer token is empty.")
 
     return token
+
+
+def resolve_session_token(
+    authorization: str | None,
+    api_key: str | None,
+    default_session_token: str | None,
+    configured_api_key: str | None,
+) -> str:
+    """Authenticate a gateway request and resolve its upstream Perplexity token.
+
+    When the server has a configured upstream token, a separate gateway key is
+    mandatory on every request. A caller may optionally supply its own Perplexity
+    token in Authorization to override the configured upstream token.
+    """
+    if default_session_token and not configured_api_key:
+        raise HTTPException(status_code=503, detail="Server default credentials are misconfigured.")
+
+    if configured_api_key and not compare_digest(api_key or "", configured_api_key):
+        raise HTTPException(status_code=401, detail="Missing or invalid gateway API key.")
+
+    if authorization:
+        return extract_token(authorization)
+
+    if default_session_token:
+        return default_session_token
+
+    raise HTTPException(
+        status_code=401,
+        detail=(
+            "Missing or invalid Authorization header. Pass your Perplexity session token as: "
+            "Authorization: Bearer <token>"
+        ),
+    )
 
 
 class ClientPool:

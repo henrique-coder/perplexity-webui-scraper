@@ -1,9 +1,10 @@
-"""Streaming and non-streaming ``POST /v1/chat/completions`` route."""
+"""Shared Perplexity execution behind Responses and Chat Completions routes."""
 
 from __future__ import annotations
 
 from asyncio import CancelledError, create_task, shield, to_thread
 from functools import partial
+from os import environ
 from time import time
 from typing import TYPE_CHECKING, Annotated, Any
 from uuid import uuid4
@@ -13,10 +14,13 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from loguru import logger
 from starlette.concurrency import iterate_in_threadpool
 
-from perplexity_webui_scraper.api.auth import ClientPool, extract_token
+from perplexity_webui_scraper.api.auth import ClientPool, resolve_session_token
 from perplexity_webui_scraper.api.conversation_cache import ConversationCache
 from perplexity_webui_scraper.api.helpers import build_conversation_config, build_query_and_files
-from perplexity_webui_scraper.api.schemas.request import ChatCompletionRequest
+from perplexity_webui_scraper.api.response_cache import ResponseThreadCache
+from perplexity_webui_scraper.api.responses_helpers import to_chat_completion_request
+from perplexity_webui_scraper.api.responses_stream import chat_stream_to_responses
+from perplexity_webui_scraper.api.schemas.request import ChatCompletionRequest, PerplexityExtensions
 from perplexity_webui_scraper.api.schemas.response import (
     ChatCompletionChunk,
     ChatCompletionChunkChoice,
@@ -24,6 +28,7 @@ from perplexity_webui_scraper.api.schemas.response import (
     ChatCompletionResponse,
     PerplexityResponseExtensions,
 )
+from perplexity_webui_scraper.api.schemas.responses import ResponsesAPIResponse, ResponsesRequest
 from perplexity_webui_scraper.models.registry import MODELS
 
 
@@ -72,6 +77,7 @@ class _LockReleasingStreamingResponse(StreamingResponse):
 # a single-process application; the cache is not shared across processes.
 _client_pool = ClientPool()
 _conversation_cache = ConversationCache()
+_response_thread_cache = ResponseThreadCache()
 
 
 async def _run_sync_safely(function: Any) -> Any:
@@ -91,6 +97,7 @@ async def _run_sync_safely(function: Any) -> Any:
 async def chat_completions(
     raw_request: Request,
     authorization: Annotated[str | None, Header(alias="Authorization")] = None,
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
 ) -> JSONResponse | StreamingResponse:
     """Handle a chat completion request (streaming and non-streaming).
 
@@ -104,8 +111,85 @@ async def chat_completions(
     except Exception as exc:
         raise HTTPException(status_code=422, detail="Invalid chat completion request body") from exc
 
-    token = extract_token(authorization)
+    token = _resolve_upstream_token(authorization, x_api_key)
 
+    return await _execute_chat_completion(request, token)
+
+
+@router.post("/v1/responses", response_model=None)
+async def responses(
+    raw_request: Request,
+    authorization: str | None = Header(default=None, alias="Authorization"),
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+) -> JSONResponse | StreamingResponse:
+    """Handle supported text and image input in the OpenAI Responses API."""
+    try:
+        body = await raw_request.json()
+        responses_request = ResponsesRequest.model_validate(body)
+        request = to_chat_completion_request(responses_request)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail="Invalid or unsupported Responses API request body") from exc
+
+    token = _resolve_upstream_token(authorization, x_api_key)
+    thread_uuid = (
+        _response_thread_cache.get(token, responses_request.previous_response_id)
+        if responses_request.previous_response_id
+        else None
+    )
+    if responses_request.previous_response_id and thread_uuid is None:
+        raise HTTPException(status_code=404, detail="Previous response not found or expired")
+    if thread_uuid:
+        extensions = request.perplexity or PerplexityExtensions()
+        extensions.thread_uuid = thread_uuid
+        request.perplexity = extensions
+
+    chat_result = await _execute_chat_completion(request, token)
+    if responses_request.stream:
+        if not isinstance(chat_result, StreamingResponse):
+            raise HTTPException(status_code=500, detail="Streaming response was not initialized")
+        return _LockReleasingStreamingResponse(
+            chat_stream_to_responses(
+                chat_result.body_iterator,
+                request.model,
+                responses_request.previous_response_id,
+                on_thread=lambda response_id, uuid: _response_thread_cache.set(token, response_id, uuid),
+            ),
+            operation_lock=getattr(chat_result, "_operation_lock", None),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+        )
+
+    if not isinstance(chat_result, JSONResponse):
+        raise HTTPException(status_code=500, detail="Non-streaming response was not returned")
+    completion = ChatCompletionResponse.model_validate_json(bytes(chat_result.body))
+    response_id = f"resp_{uuid4().hex}"
+    thread_uuid = completion.perplexity.thread_uuid if completion.perplexity else None
+    if thread_uuid:
+        _response_thread_cache.set(token, response_id, thread_uuid)
+    response = ResponsesAPIResponse.build(
+        request.model,
+        completion.choices[0].message.content or "",
+        response_id,
+        responses_request.previous_response_id,
+    )
+    return JSONResponse(content=response.model_dump(exclude_none=True))
+
+
+def _resolve_upstream_token(authorization: str | None, x_api_key: str | None) -> str:
+    """Require gateway auth when configured, then resolve caller/default upstream token."""
+    return resolve_session_token(
+        authorization,
+        x_api_key,
+        environ.get("PERPLEXITY_SESSION_TOKEN"),
+        environ.get("PERPLEXITY_API_KEY"),
+    )
+
+
+async def _execute_chat_completion(
+    request: ChatCompletionRequest,
+    token: str,
+) -> JSONResponse | StreamingResponse:
+    """Run one normalized API request through the shared conversation implementation."""
     try:
         ext = request.perplexity
         MODELS.resolve_for_use(
@@ -199,7 +283,7 @@ async def chat_completions(
             raise
 
         try:
-            return _LockReleasingStreamingResponse(
+            streaming_response = _LockReleasingStreamingResponse(
                 _stream_response(
                     conversation,
                     request.model,
@@ -213,11 +297,14 @@ async def chat_completions(
                     "X-Accel-Buffering": "no",
                 },
             )
+            streaming_response._operation_lock = cached_entry.operation_lock if cached_entry is not None else None
         except Exception:
             if cached_entry is not None and lock_held:
                 cached_entry.operation_lock.release()
 
             raise
+        else:
+            return streaming_response
 
     if cached_entry is not None:
         await cached_entry.operation_lock.acquire()
@@ -269,7 +356,6 @@ async def _stream_response_events(
     completion_id = f"chatcmpl-{uuid4().hex}"
     created = int(time())
     last_content = ""
-    last_chunks: list[str] = []
 
     yield ChatCompletionChunk(
         id=completion_id,
@@ -280,27 +366,26 @@ async def _stream_response_events(
 
     try:
         async for response in iterate_in_threadpool(iter(conversation)):
-            current = response.answer or response.last_chunk or ""
+            response_chunks = getattr(response, "chunks", None)
+            current = response.answer or ""
+
+            if not current and isinstance(response_chunks, list):
+                current = "".join(response_chunks)
+
+            if not current:
+                current = response.last_chunk or ""
 
             if current:
-                response_chunks = getattr(response, "chunks", None)
+                common_len = _common_prefix_length(last_content, current)
 
-                if isinstance(response_chunks, list) and len(response_chunks) > len(last_chunks):
-                    new_chunks = response_chunks[len(last_chunks) :]
-                    last_chunks = response_chunks.copy()
-                    delta = "".join(new_chunks)
+                if common_len == len(last_content):
+                    delta = current[common_len:]
                     last_content += delta
+                elif common_len == len(current):
+                    delta = ""
                 else:
-                    common_len = _common_prefix_length(last_content, current)
-
-                    if common_len == len(last_content):
-                        delta = current[common_len:]
-                        last_content += delta
-                    elif common_len == len(current):
-                        delta = ""
-                    else:
-                        delta = current
-                        last_content += delta
+                    delta = current
+                    last_content += delta
 
                 if delta:
                     yield ChatCompletionChunk(
@@ -310,6 +395,12 @@ async def _stream_response_events(
                         choices=[ChatCompletionChunkChoice(delta=ChatCompletionChunkDelta(content=delta))],
                     ).to_sse_line()
     except (ConnectionError, BrokenPipeError, OSError):
+        logger.warning("Upstream completion stream ended before completion")
+        yield (
+            'event: error\ndata: {"error":{"message":"Upstream stream ended before completion",'
+            '"type":"server_error","code":"upstream_incomplete"}}\n\n'
+        )
+        yield "data: [DONE]\n\n"
         return
     except Exception:
         logger.exception("Unexpected failure while streaming a completion")

@@ -86,6 +86,93 @@ def test_api_does_not_allow_cross_origin_requests(client: Session) -> None:
     assert "access-control-allow-origin" not in response.headers
 
 
+def test_server_default_token_requires_gateway_api_key(client: Session) -> None:
+    with (
+        patch.dict("os.environ", {"PERPLEXITY_SESSION_TOKEN": "upstream-secret", "PERPLEXITY_API_KEY": "gateway-key"}),
+        patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create") as get_client,
+    ):
+        response = client.post(
+            "/v1/chat/completions",
+            json={"model": MODEL_ID, "messages": [{"role": "user", "content": "Hello"}]},
+        )
+
+    assert response.status_code == 401
+    get_client.assert_not_called()
+    assert "upstream-secret" not in str(response.text)
+
+
+def test_server_default_token_is_used_with_gateway_key(client: Session) -> None:
+    mock_client = MagicMock()
+    mock_client.create_conversation.return_value = _make_mock_conversation()
+    with (
+        patch.dict("os.environ", {"PERPLEXITY_SESSION_TOKEN": "upstream-secret", "PERPLEXITY_API_KEY": "gateway-key"}),
+        patch(
+            "perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=mock_client
+        ) as get_client,
+    ):
+        response = client.post(
+            "/v1/chat/completions",
+            json={"model": MODEL_ID, "messages": [{"role": "user", "content": "Hello"}]},
+            headers={"X-API-Key": "gateway-key"},
+        )
+
+    assert response.status_code == 200
+    get_client.assert_called_once_with("upstream-secret")
+    assert "upstream-secret" not in str(response.text)
+
+
+def test_server_default_token_without_gateway_key_is_misconfigured(client: Session) -> None:
+    with (
+        patch.dict("os.environ", {"PERPLEXITY_SESSION_TOKEN": "upstream-secret"}, clear=True),
+        patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create") as get_client,
+    ):
+        response = client.post(
+            "/v1/chat/completions",
+            json={"model": MODEL_ID, "messages": [{"role": "user", "content": "Hello"}]},
+        )
+
+    assert response.status_code == 503
+    get_client.assert_not_called()
+    assert "upstream-secret" not in str(response.text)
+
+
+def test_chat_completions_rejects_invalid_gateway_key(client: Session) -> None:
+    with (
+        patch.dict(
+            "os.environ",
+            {"PERPLEXITY_SESSION_TOKEN": "upstream-secret", "PERPLEXITY_API_KEY": "correct"},
+            clear=True,
+        ),
+        patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create") as get_client,
+    ):
+        response = client.post(
+            "/v1/chat/completions",
+            json={"model": MODEL_ID, "messages": [{"role": "user", "content": "Hello"}]},
+            headers={"X-API-Key": "wrong"},
+        )
+    assert response.status_code == 401
+    get_client.assert_not_called()
+
+
+def test_caller_token_overrides_server_default(client: Session) -> None:
+    mock_client = MagicMock()
+    mock_client.create_conversation.return_value = _make_mock_conversation()
+    with (
+        patch.dict("os.environ", {"PERPLEXITY_SESSION_TOKEN": "upstream-secret", "PERPLEXITY_API_KEY": "gateway-key"}),
+        patch(
+            "perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=mock_client
+        ) as get_client,
+    ):
+        response = client.post(
+            "/v1/chat/completions",
+            json={"model": MODEL_ID, "messages": [{"role": "user", "content": "Hello"}]},
+            headers={"X-API-Key": "gateway-key", "Authorization": "Bearer caller-token"},
+        )
+
+    assert response.status_code == 200
+    get_client.assert_called_once_with("caller-token")
+
+
 def test_malformed_auth_header(client: Session) -> None:
     """Request with malformed Authorization header (not Bearer) should return 401."""
     response = client.post(

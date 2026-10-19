@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from perplexity_webui_scraper.core.conversation import Conversation
 
+
 _CONVERSATION_TTL_SECONDS: float = 30 * 60
 
 
