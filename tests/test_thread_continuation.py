@@ -236,6 +236,41 @@ def test_stream_response_emits_only_appended_text() -> None:
     assert content_deltas == ["The answer", "is 42"]
 
 
+def test_stream_response_accepts_incremental_chunks_without_space_join() -> None:
+    conversation = _make_mock_conversation()
+    snapshots = [
+        MagicMock(answer=None, chunks=["The "], last_chunk="The "),
+        MagicMock(answer=None, chunks=["The ", "answer"], last_chunk="answer"),
+        MagicMock(answer=None, chunks=["The ", "answer is"], last_chunk="answer is"),
+    ]
+    conversation.__iter__.return_value = iter(snapshots)
+    events = list(run(_collect_stream_events(_stream_response(conversation, MODEL_ID, TOKEN))))
+
+    content_deltas = [
+        loads(event[6:])["choices"][0]["delta"]["content"]
+        for event in events
+        if event.startswith("data: {") and '"content"' in event
+    ]
+    assert "".join(content_deltas) == "The answer is"
+
+
+def test_stream_response_handles_updated_existing_chunk() -> None:
+    conversation = _make_mock_conversation()
+    snapshots = [
+        MagicMock(answer=None, chunks=["The "], last_chunk="The "),
+        MagicMock(answer=None, chunks=["The ", "answer"], last_chunk="answer"),
+        MagicMock(answer=None, chunks=["The ", "answer is"], last_chunk="answer is"),
+    ]
+    conversation.__iter__.return_value = iter(snapshots)
+    events = list(run(_collect_stream_events(_stream_response(conversation, MODEL_ID, TOKEN))))
+    content_deltas = [
+        loads(event[6:])["choices"][0]["delta"]["content"]
+        for event in events
+        if event.startswith("data: {") and '"content"' in event
+    ]
+    assert "".join(content_deltas) == "The answer is"
+
+
 def test_stream_response_preserves_new_chunks_with_overlapping_text() -> None:
     conversation = _make_mock_conversation()
     first = MagicMock(last_chunk="ha", chunks=["ha"], answer=None)

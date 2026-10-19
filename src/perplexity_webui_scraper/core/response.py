@@ -42,8 +42,10 @@ class Response(BaseModel):
     Attributes:
         answer: Full, final response text.  ``None`` until the stream completes.
         chunks: All partial response chunks received so far during streaming.
-        last_chunk: The most recently received chunk (shortcut to
-            ``chunks[-1]``).  ``None`` if no chunks have arrived yet.
+        last_chunk: Newly received text fragment for this snapshot. In legacy
+            streams this is the newest fragment; schematized workflow snapshots
+            may instead expose the latest indexed workflow chunk. ``None`` if
+            no chunk has arrived.
         search_results: Web sources cited in the response.
         conversation_uuid: Backend UUID identifying this conversation thread.
             Use this value to continue the conversation via

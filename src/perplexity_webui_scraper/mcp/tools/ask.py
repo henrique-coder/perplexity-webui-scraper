@@ -14,12 +14,7 @@ from perplexity_webui_scraper.core.response import Coordinates
 
 
 if TYPE_CHECKING:
-    from perplexity_webui_scraper._internal.types import (
-        ResearchInteraction,
-        SearchFocus,
-        SourceFocus,
-        TimeRange,
-    )
+    from perplexity_webui_scraper._internal.types import ResearchInteraction, SearchFocus, SourceFocus, TimeRange
     from perplexity_webui_scraper.core.client import Perplexity
     from perplexity_webui_scraper.models.types import Model
 

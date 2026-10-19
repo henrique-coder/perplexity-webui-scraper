@@ -14,8 +14,8 @@ from threading import RLock
 from time import monotonic
 from typing import TYPE_CHECKING, Any
 
+from curl_cffi.requests import BrowserTypeLiteral, Session
 from curl_cffi.requests import Response as CurlResponse
-from curl_cffi.requests import Session
 
 from perplexity_webui_scraper._internal.constants import (
     API_BASE_URL,
@@ -37,27 +37,24 @@ from perplexity_webui_scraper._internal.logging import (
     log_response,
     log_retry,
 )
-from perplexity_webui_scraper.http.fingerprint import get_random_browser_profile
 from perplexity_webui_scraper.http.resilience import RateLimiter, RetryConfig, retry_with_backoff
 
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from curl_cffi.requests import BrowserTypeLiteral
-
 
 logger = get_logger(__name__)
 
 
 class HTTPClient:
-    """HTTP client with retry, rate limiting, fingerprint rotation, and error handling.
+    """HTTP client with retry, rate limiting, session renewal, and error handling.
 
     Attributes:
         _session_token: The Perplexity session token used for authentication.
         _timeout: Request timeout in seconds.
         _impersonate: Current browser fingerprint profile.
-        _rotate_fingerprint: Whether to rotate the profile on retry.
+        _rotate_fingerprint: Whether to renew the session on retry.
         _max_init_query_length: Max characters for the search-init query.
         _retry_config: Retry behaviour configuration.
         _rate_limiter: Optional rate limiter instance.
@@ -100,7 +97,7 @@ class HTTPClient:
             retry_max_delay: Maximum backoff delay cap in seconds.
             retry_jitter: Jitter factor (0-1).
             requests_per_second: Rate limit; ``0`` disables it.
-            rotate_fingerprint: Rotate fingerprint on each retry.
+            rotate_fingerprint: Recreate the HTTP session after a retry while retaining its fingerprint.
             max_init_query_length: Truncate init query to this length;
                 ``0`` disables truncation.
         """
@@ -165,19 +162,17 @@ class HTTPClient:
         )
 
     def _rotate_session(self) -> None:
-        """Replace the current session with a new random browser fingerprint."""
+        """Replace the current session while retaining its browser fingerprint."""
         if not self._rotate_fingerprint:
             return
 
-        new_profile = get_random_browser_profile()
-        logger.debug("Rotating fingerprint | old={} new={}", self._impersonate, new_profile)
+        logger.debug("Recreating HTTP session | impersonate={}", self._impersonate)
 
         with self._session_lock:
             with suppress(Exception):
                 self._session.close()
 
-            self._impersonate = new_profile
-            self._session = self._create_session(new_profile)
+            self._session = self._create_session(self._impersonate)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -198,8 +193,7 @@ class HTTPClient:
         """
         log_retry(attempt, self._retry_config.max_retries, exception, wait)
 
-        if self._rotate_fingerprint:
-            self._rotate_session()
+        self._rotate_session()
 
     def _handle_error(self, error: Exception, context: str = "") -> None:
         """Translate a raw exception into a typed Perplexity exception.

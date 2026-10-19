@@ -99,6 +99,16 @@ def test_http_client_rejects_absolute_url_before_sending_session_cookie() -> Non
     assert fake_session.urls == []
 
 
+def test_retry_renews_session_without_changing_browser_profile() -> None:
+    client = HTTPClient("token", requests_per_second=0, impersonate="chrome")
+    previous_session = client._session
+    client._rotate_session()
+
+    assert client._session is not previous_session
+    assert client._impersonate == "chrome"
+    client.close()
+
+
 def test_retry_config_rejects_negative_retries() -> None:
     with raises(ValidationError, match="max_retries cannot be negative"):
         RetryConfig(max_retries=-1)

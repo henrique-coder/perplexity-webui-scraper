@@ -25,13 +25,13 @@ from perplexity_webui_scraper._internal.exceptions import (
     ResearchClarifyingQuestionsError,
     ResponseParsingError,
 )
+from perplexity_webui_scraper.core.response import SearchResultItem
 
 
 if TYPE_CHECKING:
     from re import Match
 
     from perplexity_webui_scraper._internal.types import CitationMode
-    from perplexity_webui_scraper.core.response import SearchResultItem
 
 
 @dataclass
@@ -220,8 +220,6 @@ def _process_markdown_block(
 
 def _extract_web_results(web_result_block: dict[str, Any]) -> list[SearchResultItem] | None:
     """Convert schematized web results to the public search-result model."""
-    from perplexity_webui_scraper.core.response import SearchResultItem  # noqa: PLC0415
-
     raw_results = web_result_block.get("web_results")
 
     if not isinstance(raw_results, list):
@@ -518,9 +516,7 @@ def _process_block_list(
             answer_data: dict[str, Any]
 
             if isinstance(answer_content, str) and JSON_OBJECT_PATTERN.match(answer_content):
-                from orjson import loads as _loads  # noqa: PLC0415
-
-                answer_data = _loads(answer_content)
+                answer_data = loads(answer_content)
             else:
                 answer_data = raw_content
 
@@ -546,8 +542,6 @@ def _extract_state(
     Returns:
         4-tuple of ``(search_results, answer, chunks, raw_data)``.
     """
-    from perplexity_webui_scraper.core.response import SearchResultItem  # noqa: PLC0415
-
     web_results = answer_data.get("web_results", [])
     updated_results = current_results
 
