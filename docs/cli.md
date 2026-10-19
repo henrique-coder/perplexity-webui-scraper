@@ -1,153 +1,75 @@
-# CLI Reference
+# Command-line interface
 
-The package exposes one command:
-
-```bash
-perplexity-webui-scraper
-```
-
-Install the `cli` extra for terminal chat and token generation:
+The base package installs the `perplexity-webui-scraper` command and root help. Install the matching extra to use a feature command.
 
 ```bash
-uv add "perplexity-webui-scraper[cli]"
+perplexity-webui-scraper --help
 ```
 
-Install every optional tool at once:
+| Invocation                                        | Extra   | Purpose                                                         |
+| ------------------------------------------------- | ------- | --------------------------------------------------------------- |
+| `perplexity-webui-scraper token -e/--email EMAIL` | `token` | Generate a session token through Perplexity email verification. |
+| `perplexity-webui-scraper api`                    | `api`   | Start the OpenAI-compatible REST API server.                    |
+| `perplexity-webui-scraper mcp`                    | `mcp`   | Start the MCP server.                                           |
+
+The CLI provides token-generation, API, and MCP commands. Use the Python client to create conversations.
+
+Use either `-h` or `--help` with the root command and each subcommand. The token command accepts `-e` or `--email` for the account address.
+
+Install the feature extras required by the commands you use:
 
 ```bash
-uv add "perplexity-webui-scraper[all]"
+# Install from PyPI
+uv add 'perplexity-webui-scraper[token]'
+uv add 'perplexity-webui-scraper[api]'
+uv add 'perplexity-webui-scraper[mcp]'
+uv add 'perplexity-webui-scraper[all]'
 ```
 
-## Commands
+For local development, run the command through `uv --directory /path/to/perplexity-webui-scraper run`.
 
-| Command                               | Purpose                                                               |
-| ------------------------------------- | --------------------------------------------------------------------- |
-| `perplexity-webui-scraper token`      | Generate a session token through Perplexity email OTP/magic-link auth |
-| `perplexity-webui-scraper chat`       | Chat with Perplexity from the terminal                                |
-| `perplexity-webui-scraper chat setup` | Save an encrypted token and default model for chat                    |
-| `perplexity-webui-scraper api`        | Start the OpenAI-compatible REST API server                           |
-| `perplexity-webui-scraper mcp`        | Start the MCP stdio server                                            |
-
-## Token
+## Token generator
 
 ```bash
 perplexity-webui-scraper token
-perplexity-webui-scraper token you@example.com
+perplexity-webui-scraper token -e user@example.com
+perplexity-webui-scraper token --email user@example.com
 ```
 
-The token command signs in with Perplexity's email flow, supports TOTP challenges, and prints the `__Secure-next-auth.session-token` cookie. The CLI never pushes this token anywhere; you decide where to store it.
+The token command signs in through Perplexity email verification, supports TOTP challenges, displays the session cookie, and offers clipboard copy. Treat the token as a password.
 
-## Chat Setup
+## API server
 
-```bash
-perplexity-webui-scraper chat setup
-```
-
-The setup wizard stores:
-
-- the session token, encrypted with Fernet in the platform config directory
-- the default model used by `chat`
-
-## Chat
-
-Interactive mode:
-
-```bash
-perplexity-webui-scraper chat
-```
-
-Single prompt:
-
-```bash
-perplexity-webui-scraper chat "Explique computação quântica em termos simples"
-```
-
-Override token without saving it:
-
-```bash
-perplexity-webui-scraper chat "Hello" --token "$PERPLEXITY_SESSION_TOKEN"
-```
-
-Plain output for scripts:
-
-```bash
-perplexity-webui-scraper chat "Resumo rápido" --raw
-```
-
-Attach files:
-
-```bash
-perplexity-webui-scraper chat "Descreva esta imagem" --file .debug/img1.jpg
-```
-
-File attachments require a paid Perplexity account. Free accounts can still use text prompts with `perplexity/best`.
-
-`perplexity/best` adapts to the authenticated account: free accounts use Perplexity's internal `turbo` preference, while Pro/Max accounts use `pplx_pro_upgraded`; both use `copilot` mode.
-
-Deep Research clarification prompts are answered automatically with reasonable
-assumptions. Use `--research-interaction manual` to expose them instead.
-
-Useful options:
-
-| Option                       | Values                                        | Description                                        |
-| ---------------------------- | --------------------------------------------- | -------------------------------------------------- |
-| positional `model`           | any model ID                                  | Override the saved/default model                   |
-| `--search-focus`, `-sf`      | `web`, `writing`                              | Use web search or pure generation                  |
-| `--source-focus`, `-SF`      | `web`, `academic`, `social`, `finance`, `all` | Restrict source category                           |
-| `--time-range`, `-tr`        | `all`, `day`, `week`, `month`, `year`         | Restrict result recency                            |
-| `--citation-mode`, `-cm`     | `default`, `markdown`, `clean`                | Control citation formatting                        |
-| `--language`, `-l`           | BCP-47 tag                                    | Response language, for example `pt-BR`             |
-| `--timezone`, `-tz`          | IANA timezone                                 | Localization timezone                              |
-| `--latitude` / `--longitude` | floats                                        | Location-aware results; both are required together |
-| `--space`, `-s`              | UUID                                          | Save the conversation into a Perplexity Space      |
-| `--save` / `--no-save`       | boolean                                       | Save or avoid saving in the Perplexity library     |
-| `--copy`, `-cp`              | flag                                          | Copy the final answer to clipboard                 |
-| `--raw`, `-r`                | flag                                          | Disable Rich UI and print only the answer          |
-| `--allow-risky-model`        | flag                                          | Acknowledge any non-available model status         |
-| `--custom-model-mode`        | `copilot`, `search`, `research`               | Backend mode for a `custom:<identifier>` model     |
-
-Custom identifiers are explicit and blocked by default:
-
-```bash
-perplexity-webui-scraper chat "Hello" custom:gpt57 \
-  --allow-risky-model \
-  --custom-model-mode copilot
-```
-
-When `perplexity/best` fails in web-search mode with Perplexity's generic processing error, the CLI retries once using `writing` mode. You can choose that mode directly:
-
-```bash
-perplexity-webui-scraper chat "oi" --search-focus writing
-```
-
-## API Server
+Without a server-default token, clients provide their Perplexity session token with `Authorization: Bearer $PERPLEXITY_SESSION_TOKEN`.
 
 ```bash
 perplexity-webui-scraper api
 perplexity-webui-scraper api --host 0.0.0.0 --port 8080
 ```
 
-The API server does not need a token at startup. Pass the session token per request:
+To configure a server-side upstream token, set both it and a separate gateway API key:
 
 ```bash
-curl http://127.0.0.1:8000/v1/chat/completions \
-  -H "Authorization: Bearer $PERPLEXITY_SESSION_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"model":"perplexity/best","messages":[{"role":"user","content":"Hello"}]}'
+PERPLEXITY_SESSION_TOKEN="$PPLX_TOKEN" PERPLEXITY_API_KEY="$GATEWAY_KEY" perplexity-webui-scraper api
 ```
 
-## MCP Server
+Requests may omit `Authorization` and use the server-default token, but must include `X-API-Key`. A client Bearer token overrides the server default; it must still provide the gateway key.
+
+The recommended endpoint is `/v1/responses`; `/v1/chat/completions` remains supported for legacy clients. Responses accepts text and base64 data-URL image inputs, streams text events, and supports in-memory `previous_response_id` continuation. Tool calls and unknown request fields are rejected. Response history is process-local and expires. Remote image URLs are not fetched.
+
+```bash
+curl http://127.0.0.1:8000/v1/responses \
+  -H 'Authorization: Bearer $PERPLEXITY_SESSION_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"perplexity/best","input":"Hello"}'
+```
+
+## MCP server
+
+Set `PERPLEXITY_SESSION_TOKEN` before launching the server:
 
 ```bash
 PERPLEXITY_SESSION_TOKEN="$PERPLEXITY_SESSION_TOKEN" perplexity-webui-scraper mcp
 ```
 
-The MCP server reads the token from `PERPLEXITY_SESSION_TOKEN` and registers one tool per model in the JSON registry.
-
-## Troubleshooting
-
-`ResponseParsingError: Query processing failed` means Perplexity accepted the request but its backend returned a failed SSE status. Try `--search-focus writing`, a shorter prompt, or a different model.
-
-`ModelAccessError` means the selected model requires a higher Perplexity account tier. Use `perplexity/best` for the adaptive default model that works on free and paid accounts, or choose a model available to your account.
-
-`FileAccessError` means the current session is a free account and the request included file attachments. Upgrade the account or send a text-only prompt.
+The MCP server registers one tool per model in the JSON registry.

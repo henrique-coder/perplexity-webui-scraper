@@ -1,4 +1,4 @@
-# Usage Guide
+# Usage guide
 
 Create a client with your stored `session_token` to start a conversation.
 
@@ -18,17 +18,25 @@ conversation.ask("Explain it simpler")
 print(conversation.answer)
 ```
 
-## Streaming Responses
+## Streaming responses
 
-Set `stream=True` and read `last_chunk` as each parsed chunk arrives:
+With `stream=True`, each yielded `Response` is a snapshot. Track the accumulated text if the consumer needs incremental output:
 
 ```python
-for chunk in conversation.ask("Explain AI", stream=True):
-    if chunk.last_chunk:
-        print(chunk.last_chunk, end="", flush=True)
+printed = ""
+for response in conversation.ask("Explain AI", stream=True):
+    current = response.answer or "".join(response.chunks)
+    if current.startswith(printed):
+        delta = current[len(printed) :]
+        print(delta, end="", flush=True)
+        printed = current
+    elif current:
+        # The upstream may revise earlier text; redraw the accumulated answer.
+        printed = current
+        print(f"\r{printed}", end="", flush=True)
 ```
 
-## With Configuration Options
+## Configuration
 
 Pass a `ConversationConfig` when creating a conversation:
 
@@ -51,7 +59,7 @@ conversation.ask("Latest AI research", files=["paper.pdf"])
 print(conversation.answer)
 ```
 
-## File Attachments (`FileInput`)
+## File attachments (`FileInput`)
 
 File attachments require a paid Perplexity account. Free accounts can use text prompts, but file uploads are blocked before any upload request is attempted.
 

@@ -1,6 +1,6 @@
-# Response Models
+# Response models
 
-Data models returned by the library when querying Perplexity.
+Response and source data models exposed by the Python client.
 
 ## Response
 

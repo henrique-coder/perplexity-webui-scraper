@@ -1,41 +1,28 @@
-# Getting Started
+# Getting started
 
 ## Installation
 
-Install the package using the extra that matches your use case.
+The package is published to PyPI. API and MCP container images are published to GHCR. GitHub Releases include the wheel and source distribution, not standalone executables.
 
-The project is distributed as a Python package through PyPI and as optional container images through GHCR. Release assets do not include native standalone executables; use `uv`, `uvx`, or containers instead.
+### Python library
 
-### As a Library
-
-Install only the core python library for integration into your own Python code.
+Install the core Python library for use as a dependency.
 
 ```bash
-# From PyPI (stable)
+# Install from PyPI
 uv add perplexity-webui-scraper
-
-# From the GitHub production branch
-uv add git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod
 ```
 
-### All optional features
+### Optional features
 
-Install the `cli`, `api`, and `mcp` extras together.
-
-```bash
-uv add "perplexity-webui-scraper[all]"
-```
-
-### Command-line tools
-
-Install with the `cli` extra to use the `token` generator and the interactive `chat` command directly from your terminal.
+Install only the optional features you need, or install all extras together.
 
 ```bash
-# From PyPI (stable)
-uv add "perplexity-webui-scraper[cli]"
-
-# From GitHub prod branch
-uv add "perplexity-webui-scraper[cli] @ git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod"
+# PyPI: choose one extra or install all
+uv add 'perplexity-webui-scraper[token]'
+uv add 'perplexity-webui-scraper[api]'
+uv add 'perplexity-webui-scraper[mcp]'
+uv add 'perplexity-webui-scraper[all]'
 ```
 
 ### MCP server
@@ -43,17 +30,14 @@ uv add "perplexity-webui-scraper[cli] @ git+https://github.com/henrique-coder/pe
 Run the MCP server in an isolated environment with `uvx`:
 
 ```bash
-# From PyPI (stable)
-uvx --from perplexity-webui-scraper[mcp]@latest perplexity-webui-scraper mcp
-
-# From the GitHub production branch
-uvx --from "perplexity-webui-scraper[mcp]@git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod" perplexity-webui-scraper mcp
+# Install and run the MCP server from PyPI
+uvx --from 'perplexity-webui-scraper[mcp]' perplexity-webui-scraper mcp
 
 # From local directory (for development)
 uv --directory /path/to/perplexity-webui-scraper run perplexity-webui-scraper mcp
 ```
 
-Optional Podman image for containerized stdio setups:
+The MCP container image is for stdio-based client setups:
 
 ```bash
 # Pull published MCP image
@@ -66,38 +50,41 @@ podman run --rm -it -e PERPLEXITY_SESSION_TOKEN=your_token ghcr.io/henrique-code
 ### OpenAI-compatible API server
 
 ```bash
-# Install with api extra
-uv add "perplexity-webui-scraper[api]"
+# Install the API extra from PyPI
+uv add 'perplexity-webui-scraper[api]'
 
-# Start the server; no token is needed at startup
+# Start the server; clients provide a token with each request
 perplexity-webui-scraper api
 
 # Custom host and port
 perplexity-webui-scraper api --host 0.0.0.0 --port 8080
 ```
 
-Each request supplies the Perplexity session token through `Authorization: Bearer <session_token>`.
+Without a server-default token, each request supplies the Perplexity session token with `Authorization: Bearer $PERPLEXITY_SESSION_TOKEN`. To configure a server-default token, also set a gateway key:
+
+```bash
+PERPLEXITY_SESSION_TOKEN="$PPLX_TOKEN" PERPLEXITY_API_KEY="$GATEWAY_KEY" perplexity-webui-scraper api
+```
 
 ## Requirements
 
 - **Perplexity account**: free accounts can use `perplexity/best`; Pro/Max-only models require the matching paid tier.
 - **Session token** (`__Secure-next-auth.session-token` cookie)
 
-## Getting Your Session Token
+## Getting a session token
 
-### Option 1: CLI
+### CLI
 
-The library includes an interactive tool to fetch your token via email magic link or verification code.
+The token generator signs in through Perplexity email verification using a code or magic link. Install it with the `[token]` extra.
 
 ```bash
-# Using the library if you installed with [cli]
+# Install the token extra before invoking the command.
+uv add 'perplexity-webui-scraper[token]'
 uv run perplexity-webui-scraper token
+uv run perplexity-webui-scraper token --email user@example.com
 
-# Run without adding the package to your project (via uvx)
-uvx --from perplexity-webui-scraper[cli] perplexity-webui-scraper token
-
-# Run directly from GitHub prod branch
-uvx --from "perplexity-webui-scraper[cli]@git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod" perplexity-webui-scraper token
+# Run without adding the package to your project
+uvx --from 'perplexity-webui-scraper[token]' perplexity-webui-scraper token --email user@example.com
 ```
 
 The command:
@@ -113,4 +100,4 @@ The command:
 1. Log in at [perplexity.ai](https://www.perplexity.ai)
 2. Open DevTools (`F12`), then Application/Storage, then Cookies
 3. Copy the value of `__Secure-next-auth.session-token`
-4. Store it securely. If your application loads a `.env` file, use `PERPLEXITY_SESSION_TOKEN="your_token"`.
+4. Store it securely. If your application loads a `.env` file, use `PERPLEXITY_SESSION_TOKEN='your_token'`.

@@ -1,6 +1,6 @@
-# Model Registry
+# Model registry
 
-The `ModelRegistry` provides programmatic access to the bundled model catalog, including availability metadata.
+`ModelRegistry` loads the bundled model catalog and resolves model IDs, operational status, and account-tier metadata.
 
 ## Model
 

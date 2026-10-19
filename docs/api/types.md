@@ -1,6 +1,6 @@
-# Types & Aliases
+# Types and aliases
 
-Public type aliases used across the library. All are re-exported from the top-level `perplexity_webui_scraper` namespace.
+Public type aliases for conversation configuration, file input, and logging. The package re-exports them from `perplexity_webui_scraper`.
 
 ## CitationMode
 
