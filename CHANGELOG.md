@@ -7,24 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-19
+
 ### Fixed
 
-- **API request safety:** Enforce a 10 MiB request-body limit before JSON parsing and return sanitized validation errors without echoing submitted values.
-- **Client-cache growth:** Bound the per-token API client cache and expire inactive entries.
-- **Conversation concurrency:** Serialize operations on cached threads and move blocking upstream work off the FastAPI event loop.
-- **Streaming responses:** Preserve incremental SSE delivery and emit a sanitized error event when an upstream stream fails.
-- **HTTP session safety:** Reject absolute URLs in authenticated requests, serialize access to the shared curl-cffi session, and validate retry, timeout, and rate-limit settings.
-- **Account-check throttling:** Apply the configured request limiter to session and settings lookups.
-- **Model consistency in continued threads:** Reject a requested model change instead of returning a response produced by the thread's original model under a different model label.
-- **Search-source selection:** Expand `source_focus="all"` to the observed Web and Academic identifiers (`web` and `scholar`). Map writing mode to `search_focus="internet"` with `skip_search_enabled=true`.
-- **Container CI coverage:** Classify container build inputs, build API and MCP images in CI, and smoke-test both CLI entry points.
-- **PyPI release recovery:** Fail closed if a release version already exists on PyPI. Verify published artifact digests before manually recovering an interrupted publication.
+- **API streaming:** Stream incremental response deltas and emit protocol-formatted errors when the upstream stream fails.
+- **API request validation:** Reject request bodies over 10 MiB and return validation errors without echoing submitted values.
+- **API client cache:** Cap cached clients per token and expire inactive clients.
+- **Conversation concurrency:** Serialize operations on cached threads and move blocking requests off the FastAPI event loop.
+- **HTTP sessions:** Reject absolute URLs in authenticated requests; serialize access to the shared curl-cffi session; validate retry, timeout, and rate-limit settings.
+- **Account checks:** Apply the request limiter to session and settings lookups.
+- **Thread continuation:** Reject attempts to change models on an existing thread.
+- **Search settings:** Map `source_focus="all"` to `web` and `scholar`; map writing mode to `search_focus="internet"` with search disabled.
+- **Container CI:** Classify container build inputs, build API and MCP images, and smoke-test both CLI entry points.
+- **PyPI recovery:** Fail if the requested version already exists. Verify artifact digests before resuming an interrupted publish.
 
 ### Changed
 
-- **Python compatibility:** Add Python 3.15 to the supported version range and test matrix across Linux, macOS, and Windows. Keep Python 3.14 as the project default and container runtime. Validation used Python 3.15.0rc3; the current lock selects pre-release `beartype 0.23.0rc2` on Python 3.15 through FastMCP's dependency tree, so re-lock and revalidate when stable releases are available.
-- **Perplexity ask payload:** Add frontend UUIDs and `query_source` values for home requests and follow-ups. Follow-ups send `last_backend_uuid`, optional `read_write_token`, and `followup_source="link"`, and omit `frontend_context_uuid`, matching the supplied WebUI captures.
-- **Release documentation:** Clarify that Read the Docs builds and publishes documentation independently of the package and container release workflow.
+- **Model catalog:** Added current WebUI models and updated availability metadata.
+- **Optional dependencies:** Renamed `[cli]` to `[token]`. `[all]` installs `[token]`, `[api]`, and `[mcp]`.
+- **API:** Added `/v1/responses` and retained `/v1/chat/completions`. Server-configured upstream tokens require a separate gateway key on each request.
+- **CLI:** Removed terminal chat and saved-token storage. Token generation, API, and MCP remain separate optional commands.
+- **CLI options:** Added `-h` and `--help` to all commands, plus `-e` for the token command's `--email` option.
+- **Python support:** Made Python 3.15 the default, added it to the supported range, and included it in the CI matrix.
+- **Request payloads:** Added WebUI fields for new conversations and follow-up prompts.
+- **Documentation hosting:** Clarified that Read the Docs publishes separately from package and container releases.
 
 ## [1.1.10] - 2026-10-05
 

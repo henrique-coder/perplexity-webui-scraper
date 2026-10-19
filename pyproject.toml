@@ -1,12 +1,12 @@
 [build-system]
 requires = [
-    "uv_build>=0.12.0, <0.13.0",
+    "uv_build>=0.13.0, <0.14.0",
 ]
 build-backend = "uv_build"
 
 [project]
 name = "perplexity-webui-scraper"
-version = "1.1.10"
+version = "1.2.0"
 description = "Python client, CLI, MCP server, and OpenAI-compatible REST API for Perplexity's WebUI."
 authors = [
     { name = "Henrique Moreira", email = "78804989+henrique-coder@users.noreply.github.com" },
@@ -60,18 +60,16 @@ Security = "https://github.com/henrique-coder/perplexity-webui-scraper/security/
 
 [project.optional-dependencies]
 all = [
-    "perplexity-webui-scraper[api,cli,mcp]",
+    "perplexity-webui-scraper[token,api,mcp]",
+]
+token = [
+    "pyperclip>=1.9.0",
+    "rich>=13.0.0",
 ]
 api = [
     "fastapi>=0.120.0",
     "rich>=13.0.0",
     "uvicorn[standard]>=0.30.0",
-]
-cli = [
-    "cryptography>=50.0.0, <51.0.0",
-    "platformdirs>=4.0.0",
-    "pyperclip>=1.9.0",
-    "rich>=13.0.0",
 ]
 mcp = [
     "fastmcp>=3.0.0",
@@ -99,14 +97,13 @@ lint = [
     "ty>=0.0.60",
 ]
 test = [
-    "cryptography>=50.0.0, <51.0.0",
     "fastapi>=0.120.0",
     "fastmcp>=3.0.0",
     "niquests>=3.20.0",
-    "platformdirs>=4.0.0",
     "pyperclip>=1.9.0",
     "pytest>=8.0.0",
     "rich>=13.0.0",
+    "typer>=0.20.0",
 ]
 workflow = [
     "zizmor>=1.28.0",
