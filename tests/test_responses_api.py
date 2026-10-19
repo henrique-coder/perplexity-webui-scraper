@@ -6,9 +6,9 @@ from asyncio import run
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
-from niquests import Session
 from orjson import loads
 from pytest import fixture
+from starlette.testclient import TestClient
 
 from perplexity_webui_scraper.api.app import app
 from perplexity_webui_scraper.api.conversation_cache import _CachedConversation
@@ -19,6 +19,7 @@ from perplexity_webui_scraper.core import Conversation
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+
 
 MODEL = "perplexity/best"
 TOKEN = "test-upstream-token"
@@ -36,9 +37,9 @@ def _clean_state():
 
 
 @fixture
-def client() -> Generator[Session, None, None]:
-    with Session(app=app) as session:
-        yield session
+def client() -> Generator[TestClient, None, None]:
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 def _conversation() -> MagicMock:
@@ -49,7 +50,7 @@ def _conversation() -> MagicMock:
     return conversation
 
 
-def test_responses_non_stream_uses_shared_conversation_core(client: Session) -> None:
+def test_responses_non_stream_uses_shared_conversation_core(client: TestClient) -> None:
     conversation = _conversation()
     upstream = MagicMock()
     upstream.create_conversation.return_value = conversation
@@ -70,7 +71,7 @@ def test_responses_non_stream_uses_shared_conversation_core(client: Session) -> 
     assert "test-upstream-token" not in str(response.text)
 
 
-def test_responses_previous_response_id_continues_thread(client: Session) -> None:
+def test_responses_previous_response_id_continues_thread(client: TestClient) -> None:
     conversation = _conversation()
     _conversation_cache._store[(TOKEN, "thread-id")] = _CachedConversation(conversation=conversation, model_id=MODEL)
     _response_thread_cache.set(TOKEN, "resp_previous", "thread-id")
@@ -84,7 +85,7 @@ def test_responses_previous_response_id_continues_thread(client: Session) -> Non
     conversation.ask.assert_called_once_with("Follow up", files=None)
 
 
-def test_responses_rejects_unsupported_input_item(client: Session) -> None:
+def test_responses_rejects_unsupported_input_item(client: TestClient) -> None:
     response = client.post(
         "/v1/responses",
         json={"model": MODEL, "input": [{"type": "function_call", "name": "tool"}]},
@@ -93,7 +94,7 @@ def test_responses_rejects_unsupported_input_item(client: Session) -> None:
     assert response.status_code == 422
 
 
-def test_responses_rejects_unimplemented_tools(client: Session) -> None:
+def test_responses_rejects_unimplemented_tools(client: TestClient) -> None:
     upstream = MagicMock()
     upstream.create_conversation.return_value = _conversation()
     with patch(
@@ -109,12 +110,12 @@ def test_responses_rejects_unimplemented_tools(client: Session) -> None:
     get_client.assert_not_called()
 
 
-def test_responses_requires_auth_when_no_server_default(client: Session) -> None:
+def test_responses_requires_auth_when_no_server_default(client: TestClient) -> None:
     response = client.post("/v1/responses", json={"model": MODEL, "input": "Hello"})
     assert response.status_code == 401
 
 
-def test_responses_stream_emits_responses_protocol_events(client: Session) -> None:
+def test_responses_stream_emits_responses_protocol_events(client: TestClient) -> None:
     conversation = _conversation()
     upstream = MagicMock()
     upstream.create_conversation.return_value = conversation
@@ -144,7 +145,7 @@ def test_responses_stream_emits_responses_protocol_events(client: Session) -> No
     assert "".join(text_deltas) == "The answer"
 
 
-def test_responses_stream_does_not_delay_until_final_snapshot(client: Session) -> None:
+def test_responses_stream_does_not_delay_until_final_snapshot(client: TestClient) -> None:
     conversation = _conversation()
     upstream = MagicMock()
     upstream.create_conversation.return_value = conversation
@@ -184,7 +185,18 @@ def test_responses_stream_reports_failure_after_silent_upstream_disconnect() -> 
     assert all("response.completed" not in event for event in events)
 
 
-def test_chat_completion_stream_reports_upstream_disconnect_as_error(client: Session) -> None:
+def test_responses_stream_ignores_malformed_event_payloads() -> None:
+    async def frames():
+        yield "data: not-json\n\n"
+        yield 'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\n'
+
+    events = run(_collect(chat_stream_to_responses(frames(), MODEL)))
+
+    assert any('"delta":"ok"' in event for event in events)
+    assert any("response.completed" in event for event in events)
+
+
+def test_chat_completion_stream_reports_upstream_disconnect_as_error(client: TestClient) -> None:
     conversation = _conversation()
     conversation.__iter__.side_effect = ConnectionError("upstream disconnected")
     upstream = MagicMock()
@@ -201,7 +213,7 @@ def test_chat_completion_stream_reports_upstream_disconnect_as_error(client: Ses
     assert 'finish_reason":"stop' not in str(response.text)
 
 
-def test_responses_stream_reports_upstream_disconnect_as_failure(client: Session) -> None:
+def test_responses_stream_reports_upstream_disconnect_as_failure(client: TestClient) -> None:
     conversation = _conversation()
     conversation.__iter__.side_effect = ConnectionError("upstream disconnected")
     upstream = MagicMock()
@@ -234,7 +246,7 @@ def test_responses_stream_reports_failure_if_chat_stream_ends_without_finish_chu
     assert all("response.completed" not in event for event in events)
 
 
-def test_responses_rejects_remote_image_url_without_fetching(client: Session) -> None:
+def test_responses_rejects_remote_image_url_without_fetching(client: TestClient) -> None:
     response = client.post(
         "/v1/responses",
         json={
@@ -251,7 +263,7 @@ def test_responses_rejects_remote_image_url_without_fetching(client: Session) ->
     assert response.status_code == 422
 
 
-def test_responses_server_default_uses_gateway_key_without_leaking_upstream(client: Session) -> None:
+def test_responses_server_default_uses_gateway_key_without_leaking_upstream(client: TestClient) -> None:
     conversation = _conversation()
     upstream = MagicMock()
     upstream.create_conversation.return_value = conversation
@@ -275,7 +287,7 @@ def test_responses_server_default_uses_gateway_key_without_leaking_upstream(clie
     assert "upstream-secret" not in str(response.text)
 
 
-def test_responses_rejects_incorrect_gateway_key(client: Session) -> None:
+def test_responses_rejects_incorrect_gateway_key(client: TestClient) -> None:
     with patch.dict(
         "os.environ",
         {"PERPLEXITY_SESSION_TOKEN": "upstream-secret", "PERPLEXITY_API_KEY": "gateway-secret"},

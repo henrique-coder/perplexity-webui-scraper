@@ -64,7 +64,7 @@ async def chat_stream_to_responses(
             error_data = next((line[6:] for line in frame.splitlines() if line.startswith("data: ")), "{}")
             try:
                 error = loads(error_data)
-            except Exception:
+            except ValueError:
                 error = {"message": "Upstream response failed"}
             yield sse_data_event(
                 "response.failed",
@@ -94,7 +94,7 @@ async def chat_stream_to_responses(
             continue
         try:
             chunk = loads(data)
-        except Exception:
+        except ValueError:
             continue
         thread_uuid = chunk.get("perplexity", {}).get("thread_uuid")
         if thread_uuid and on_thread is not None:

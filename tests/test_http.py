@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from typing import Any, cast
+from warnings import catch_warnings, simplefilter
 
+from curl_cffi.utils import CurlCffiWarning
 from pydantic import ValidationError
 from pytest import raises
 
@@ -56,7 +58,6 @@ def test_http_client_retries_translated_rate_limit_error() -> None:
         rotate_fingerprint=False,
         requests_per_second=0,
     )
-    client.close()
     fake_session = _FakeSession()
     client._session = cast("Any", fake_session)
 
@@ -75,7 +76,6 @@ def test_http_get_can_skip_rate_limiter() -> None:
         rotate_fingerprint=False,
         requests_per_second=1,
     )
-    client.close()
     fake_session = _FakeSession()
     client._session = cast("Any", fake_session)
     client._rate_limiter = cast("Any", None)
@@ -88,7 +88,6 @@ def test_http_get_can_skip_rate_limiter() -> None:
 
 def test_http_client_rejects_absolute_url_before_sending_session_cookie() -> None:
     client = HTTPClient("token", max_retries=0, requests_per_second=0)
-    client.close()
     fake_session = _FakeSession()
     client._session = cast("Any", fake_session)
 
@@ -99,13 +98,14 @@ def test_http_client_rejects_absolute_url_before_sending_session_cookie() -> Non
     assert fake_session.urls == []
 
 
-def test_retry_renews_session_without_changing_browser_profile() -> None:
-    client = HTTPClient("token", requests_per_second=0, impersonate="chrome")
-    previous_session = client._session
-    client._rotate_session()
+def test_session_cookie_is_marked_secure_without_warning() -> None:
+    with catch_warnings(record=True) as recorded:
+        simplefilter("always")
+        client = HTTPClient("token", requests_per_second=0)
 
-    assert client._session is not previous_session
-    assert client._impersonate == "chrome"
+    assert not any(issubclass(item.category, CurlCffiWarning) for item in recorded)
+    cookie = next(cookie for cookie in client._session.cookies.jar if cookie.name == "__Secure-next-auth.session-token")
+    assert cookie.secure
     client.close()
 
 

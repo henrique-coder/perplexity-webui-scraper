@@ -190,22 +190,7 @@ async def _execute_chat_completion(
     token: str,
 ) -> JSONResponse | StreamingResponse:
     """Run one normalized API request through the shared conversation implementation."""
-    try:
-        ext = request.perplexity
-        MODELS.resolve_for_use(
-            request.model,
-            allow_risky_model=ext.allow_risky_model if ext else False,
-            custom_model_mode=ext.custom_model_mode if ext else "copilot",
-        )
-    except ValueError as exc:
-        if request.model.startswith("custom:"):
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-        available = ", ".join(f'"{m.id}"' for m in MODELS.list_all())
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unknown model {request.model!r}. Available: {available}",
-        ) from exc
+    _validate_model(request)
 
     thread_uuid = request.perplexity.thread_uuid if request.perplexity else None
 
@@ -329,6 +314,26 @@ async def _execute_chat_completion(
             thread_uuid=conv_uuid,
         ).model_dump(exclude_none=True)
     )
+
+
+def _validate_model(request: ChatCompletionRequest) -> None:
+    """Validate the selected model and translate registry errors to HTTP errors."""
+    try:
+        ext = request.perplexity
+        MODELS.resolve_for_use(
+            request.model,
+            allow_risky_model=ext.allow_risky_model if ext else False,
+            custom_model_mode=ext.custom_model_mode if ext else "copilot",
+        )
+    except ValueError as exc:
+        if request.model.startswith("custom:"):
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        available = ", ".join(f'"{m.id}"' for m in MODELS.list_all())
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown model {request.model!r}. Available: {available}",
+        ) from exc
 
 
 async def _stream_response(

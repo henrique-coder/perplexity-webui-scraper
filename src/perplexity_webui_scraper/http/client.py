@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 
 from curl_cffi.requests import BrowserTypeLiteral, Session
 from curl_cffi.requests import Response as CurlResponse
+from curl_cffi.requests.cookies import Cookies
 
 from perplexity_webui_scraper._internal.constants import (
     API_BASE_URL,
@@ -154,9 +155,12 @@ class HTTPClient:
         Returns:
             Configured :class:`curl_cffi.requests.Session`.
         """
+        cookies = Cookies()
+        cookies.set(SESSION_COOKIE_NAME, self._session_token, secure=True)
+
         return Session(
             headers=dict(DEFAULT_HEADERS),
-            cookies={SESSION_COOKIE_NAME: self._session_token},
+            cookies=cookies,
             timeout=self._timeout,
             impersonate=impersonate,  # type: ignore[arg-type]
         )

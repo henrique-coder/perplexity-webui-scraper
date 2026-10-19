@@ -147,10 +147,10 @@ def test_token_command_accepts_short_email_option() -> None:
 def test_api_dispatch_passes_cli_options_to_launcher() -> None:
     api_launcher = Mock()
     with patch("perplexity_webui_scraper.cli.__main__._load_command", return_value=(api_launcher, "api")):
-        api("0.0.0.0", 8080, True, "debug", "token", "gateway")
+        api("127.0.0.1", 8080, True, "debug", "token", "gateway")
 
     api_launcher.assert_called_once_with(
-        host="0.0.0.0",
+        host="127.0.0.1",
         port=8080,
         reload=True,
         log_level="debug",
