@@ -2,8 +2,8 @@
 
 from os import environ
 from pathlib import Path
-from shlex import quote
 from subprocess import run
+from sys import executable
 from textwrap import dedent
 
 from pytest import mark
@@ -136,9 +136,8 @@ def test_publish_release_notes_include_all_changelog_entries_until_previous_rele
     script = dedent(step.split("        run: |\n", maxsplit=1)[1])
 
     python_step = script.split("python3 - <<'PY'\n", maxsplit=1)[1].split("\nPY\n", maxsplit=1)[0]
-    python_command = "python3 -c " + quote(python_step) + "\n" + script.split("\nPY\n", maxsplit=1)[1]
     result = run(
-        ["bash", "-c", python_command],
+        [executable, "-c", python_step],
         cwd=tmp_path,
         check=False,
         capture_output=True,
