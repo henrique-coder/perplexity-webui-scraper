@@ -104,8 +104,10 @@ def test_each_container_input_is_classified(path: str) -> None:
     assert classify_paths([path])["containers"]
 
 
-def test_publish_workflow_rejects_existing_pypi_version_without_digest_verification() -> None:
+def test_publish_workflow_disables_uv_cache_without_checkout_or_dependencies() -> None:
     workflow = Path(".github/workflows/publish.yml").read_text(encoding="utf-8")
 
-    assert 'echo "::error::PyPI already contains' in workflow
-    assert "continuing a previously interrupted release" not in workflow
+    publish_job = workflow.split("  publish_pypi:", maxsplit=1)[1].split("  publish_container:", maxsplit=1)[0]
+
+    assert "enable-cache: false" in publish_job
+    assert "uv publish dist/*.whl dist/*.tar.gz" in publish_job
