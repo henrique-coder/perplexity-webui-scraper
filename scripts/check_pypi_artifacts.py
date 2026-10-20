@@ -6,8 +6,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
-from urllib.error import HTTPError
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 
 def missing_artifact_paths(artifacts: list[Path], published_files: dict[str, str]) -> list[Path]:
@@ -26,13 +25,9 @@ def missing_artifact_paths(artifacts: list[Path], published_files: dict[str, str
 def fetch_published_files(package_name: str, version: str) -> dict[str, str]:
     """Fetch filenames and SHA-256 hashes from the PyPI release JSON API."""
     url = f"https://pypi.org/pypi/{package_name}/{version}/json"
-    try:
-        with urlopen(url, timeout=20) as response:
-            return {item["filename"]: item["digests"]["sha256"] for item in json.load(response)["urls"]}
-    except HTTPError as error:
-        if error.code == 404:
-            return {}
-        raise
+    request = Request(url, method="GET")
+    with urlopen(request, timeout=20) as response:
+        return {item["filename"]: item["digests"]["sha256"] for item in json.load(response)["urls"]}
 
 
 def main() -> None:
