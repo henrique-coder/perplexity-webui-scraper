@@ -11,9 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Release workflow:** Validate wheel/sdist versions before upload, skip identical published files, and resume downstream image/GitHub Release jobs after interrupted PyPI uploads.
-- **Release workflow:** Check out the exact release source, disable the unused uv cache, and pass PyPI's Simple API to uv for duplicate detection.
-- **Release policy:** Run the production-promotion check only for pull requests from `dev` to `prod`.
+- **Release workflow:** Validate wheel/sdist versions before upload and prevent rebuilt files from replacing files already published under a yanked version.
+- **Release workflow:** Skip identical PyPI files, check out the release source for helper scripts, and gate container/GitHub Release jobs on verified PyPI state.
+- **Release policy:** Restrict production-promotion checks to `dev` → `prod` pull requests.
 
 ## [1.1.10] - 2026-10-05
 
