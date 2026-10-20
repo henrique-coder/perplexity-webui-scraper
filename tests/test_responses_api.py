@@ -196,6 +196,31 @@ def test_responses_stream_ignores_malformed_event_payloads() -> None:
     assert any("response.completed" in event for event in events)
 
 
+def test_responses_stream_returns_after_first_finish_chunk() -> None:
+    consumed: list[str] = []
+
+    async def frames():
+        yield 'data: {"choices":[{"delta":{"content":"answer"},"finish_reason":"stop"}]}\n\n'
+        consumed.append("trailing frame")
+        yield 'data: {"choices":[{"delta":{"content":"discarded"}}]}\n\n'
+
+    events = run(_collect(chat_stream_to_responses(frames(), MODEL)))
+
+    assert any("response.completed" in event for event in events)
+    assert consumed == []
+
+
+def test_responses_stream_treats_done_marker_before_finish_as_incomplete() -> None:
+    async def frames():
+        yield "data: [DONE]\n\n"
+        yield 'data: {"choices":[{"delta":{"content":"too late"},"finish_reason":"stop"}]}\n\n'
+
+    events = run(_collect(chat_stream_to_responses(frames(), MODEL)))
+
+    assert any("response.failed" in event for event in events)
+    assert all("response.completed" not in event for event in events)
+
+
 def test_chat_completion_stream_reports_upstream_disconnect_as_error(client: TestClient) -> None:
     conversation = _conversation()
     conversation.__iter__.side_effect = ConnectionError("upstream disconnected")
