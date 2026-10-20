@@ -7,35 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- **Python runtimes:** Use Python 3.14 for CI quality, documentation, and package build/release jobs. Keep Python 3.15 as the primary direct-install runtime, `.python-version` pin, and API/MCP container runtime; the unit-test matrix covers Python 3.11 through 3.15.
-
-## [1.2.0] - 2026-10-19
+## [1.2.1] - 2026-10-20
 
 ### Fixed
 
-- **API streaming:** Stream incremental response deltas and emit protocol-formatted errors when the upstream stream fails.
-- **API request validation:** Reject request bodies over 10 MiB and return validation errors without echoing submitted values.
-- **API client cache:** Cap cached clients per token and expire inactive clients.
-- **Conversation concurrency:** Serialize operations on cached threads and move blocking requests off the FastAPI event loop.
-- **HTTP sessions:** Reject absolute URLs in authenticated requests; serialize access to the shared curl-cffi session; validate retry, timeout, and rate-limit settings.
-- **Account checks:** Apply the request limiter to session and settings lookups.
-- **Thread continuation:** Reject attempts to change models on an existing thread.
-- **Search settings:** Map `source_focus="all"` to `web` and `scholar`; map writing mode to `search_focus="internet"` with search disabled.
-- **Container CI:** Classify container build inputs, build API and MCP images, and smoke-test both CLI entry points.
-- **PyPI recovery:** Fail if the requested version already exists. Verify artifact digests before resuming an interrupted publish.
-
-### Changed
-
-- **Model catalog:** Added current WebUI models and updated availability metadata.
-- **Optional dependencies:** Renamed `[cli]` to `[token]`. `[all]` installs `[token]`, `[api]`, and `[mcp]`.
-- **API:** Added `/v1/responses` and retained `/v1/chat/completions`. Server-configured upstream tokens require a separate gateway key on each request.
-- **CLI:** Removed terminal chat and saved-token storage. Token generation, API, and MCP remain separate optional commands.
-- **CLI options:** Added `-h` and `--help` to all commands, plus `-e` for the token command's `--email` option.
-- **Python support:** Set `.python-version` to Python 3.15, added it to the supported range, and included it in the CI test matrix.
-- **Request payloads:** Added WebUI fields for new conversations and follow-up prompts.
-- **Documentation hosting:** Clarified that Read the Docs publishes separately from package and container releases.
+- **Release workflow:** Validate wheel/sdist versions before upload and prevent rebuilt files from replacing files already published under a yanked version.
+- **Release workflow:** Skip identical PyPI files, check out the release source for helper scripts, and gate container/GitHub Release jobs on verified PyPI state.
+- **Release policy:** Restrict production-promotion checks to `dev` → `prod` pull requests.
 
 ## [1.1.10] - 2026-10-05
 

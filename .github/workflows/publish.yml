@@ -56,6 +56,7 @@ jobs:
         env:
           REQUESTED_VERSION: ${{ inputs.version }}
           RELEASE_MODE: ${{ inputs.mode }}
+          GITHUB_SHA: ${{ github.sha }}
         run: |
           if [ "$GITHUB_REF" != "refs/heads/prod" ]; then
             echo "::error::Publish Release must be dispatched from the prod branch."
@@ -131,7 +132,7 @@ jobs:
 
       - name: Build and Validate Package
         env:
-          RELEASE_REF: ${{ github.sha }}
+          PROJECT_VERSION: ${{ needs.validate.outputs.version }}
         run: |
           README_BACKUP=$(mktemp)
           cp README.md "$README_BACKUP"
@@ -140,9 +141,10 @@ jobs:
             rm -f "$README_BACKUP"
           }
           trap cleanup EXIT
-          uv run --python 3.14 --no-sync --no-dev scripts/render_pypi_readme.py --reference "$RELEASE_REF"
+          uv run --python 3.14 --no-sync --no-dev scripts/render_pypi_readme.py --reference "$GITHUB_SHA"
           uv build --python 3.14
-          uvx --python 3.14 twine check dist/*
+          uvx --python 3.14 twine check dist/*.whl dist/*.tar.gz
+          uv run --python 3.14 --no-project python scripts/validate_release_artifacts.py --version "$PROJECT_VERSION"
           sha256sum dist/* > dist/SHA256SUMS
 
       - name: Upload Package Artifacts
@@ -185,18 +187,24 @@ jobs:
           name: python-dist
           path: dist
 
-      - name: Check Existing PyPI Artifacts
-        id: pypi_artifacts
+      - name: Verify PyPI Artifact State
+        id: pypi_state
         env:
           PACKAGE_NAME: ${{ needs.validate.outputs.package_name }}
           VERSION: ${{ needs.validate.outputs.version }}
         run: python3 scripts/check_pypi_artifacts.py
 
-      - name: Publish Missing Distributions to PyPI
-        if: steps.pypi_artifacts.outputs.publish == 'true'
+      - name: Publish Distributions to PyPI
+        if: steps.pypi_state.outputs.publish == 'true'
         env:
           UV_TRUSTED_PUBLISHING: always
-        run: uv publish dist/*.whl dist/*.tar.gz
+        run: uv publish --check-url https://pypi.org/simple/ --trusted-publishing always dist/*.whl dist/*.tar.gz
+
+      - name: Confirm PyPI Publication State
+        env:
+          PACKAGE_NAME: ${{ needs.validate.outputs.package_name }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: python3 scripts/check_pypi_artifacts.py --verify-only
 
   publish_container:
     name: Publish Container Images
