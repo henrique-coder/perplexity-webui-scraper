@@ -312,11 +312,30 @@ jobs:
           VERSION: ${{ needs.validate.outputs.version }}
           REPOSITORY: ${{ github.repository }}
         run: |
-          awk -v heading="## [$VERSION] - " '
-            index($0, heading) == 1 { found=1; next }
-            found && /^## \[/ { exit }
-            found { print }
-          ' CHANGELOG.md > release_notes.md
+          python3 - <<'PY'
+          from os import environ
+          from pathlib import Path
+          from re import finditer
+
+          changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
+          sections = list(finditer(r"(?m)^## \[(\d+\.\d+\.\d+)\][^\n]*\n", changelog))
+          version = environ["VERSION"]
+          selected = next((index for index, match in enumerate(sections) if match.group(1) == version), None)
+          if selected is None:
+              raise SystemExit(f"No changelog section found for {version}.")
+
+          previous_version = tuple(int(part) for part in version.split("."))
+          release_sections = []
+          for index in range(selected, len(sections)):
+              candidate = tuple(int(part) for part in sections[index].group(1).split("."))
+              if index > selected and candidate[:2] != previous_version[:2]:
+                  break
+              start = sections[index].end()
+              end = sections[index + 1].start() if index + 1 < len(sections) else len(changelog)
+              release_sections.append(changelog[start:end].strip())
+
+          Path("release_notes.md").write_text("\n\n".join(release_sections) + "\n", encoding="utf-8")
+          PY
           sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' release_notes.md
 
           if [ ! -s release_notes.md ]; then

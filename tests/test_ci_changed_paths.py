@@ -1,11 +1,16 @@
 """Tests for CI path classification."""
 
+from os import environ
 from pathlib import Path
 from subprocess import run
+from textwrap import dedent
 
 from pytest import mark
 
 from scripts.ci_changed_paths import _changed_paths, classify_paths
+
+
+REPOSITORY = Path(__file__).resolve().parents[1]
 
 
 def test_python_changes_run_python_checks_and_documentation() -> None:
@@ -106,11 +111,43 @@ def test_each_container_input_is_classified(path: str) -> None:
 
 def test_publish_workflow_disables_uv_cache_without_checkout_or_dependencies() -> None:
     workflow = Path(".github/workflows/publish.yml").read_text(encoding="utf-8")
-
     publish_job = workflow.split("  publish_pypi:", maxsplit=1)[1].split("  publish_container:", maxsplit=1)[0]
 
     assert "enable-cache: false" in publish_job
     assert "uv publish --check-url https://pypi.org/simple/ --trusted-publishing always" in publish_job
+
+
+def test_publish_release_notes_include_all_changelog_entries_until_previous_release(tmp_path: Path) -> None:
+    workflow = (REPOSITORY / ".github" / "workflows" / "publish.yml").read_text(encoding="utf-8")
+    changelog = tmp_path / "CHANGELOG.md"
+    changelog.write_text(
+        "## [Unreleased]\n\n"
+        "## [1.2.1] - 2026-10-20\n\n"
+        "### Changed\n\n- Release recovery fix.\n\n"
+        "## [1.2.0] - 2026-10-19\n\n"
+        "### Fixed\n\n- Add the Responses API.\n\n"
+        "## [1.1.10] - 2026-10-05\n\n"
+        "### Changed\n\n- Update the model catalog.\n",
+        encoding="utf-8",
+    )
+    step = workflow.split("      - name: Generate Release Notes from Changelog\n", maxsplit=1)[1]
+    step = step.split("      - name: Create Immutable Tag and Release\n", maxsplit=1)[0]
+    script = dedent(step.split("        run: |\n", maxsplit=1)[1])
+
+    result = run(
+        ["bash", "-c", script],
+        cwd=tmp_path,
+        check=False,
+        capture_output=True,
+        text=True,
+        env={**environ, "VERSION": "1.2.1", "REPOSITORY": "owner/repo"},
+    )
+
+    assert result.returncode == 0, result.stderr
+    release_notes = (tmp_path / "release_notes.md").read_text(encoding="utf-8")
+    assert "- Release recovery fix." in release_notes
+    assert "- Add the Responses API." in release_notes
+    assert "- Update the model catalog." not in release_notes
 
 
 def test_publish_workflow_verifies_pypi_artifact_hashes_before_resuming() -> None:
