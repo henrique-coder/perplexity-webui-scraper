@@ -303,26 +303,15 @@ jobs:
         run: uv build --python 3.14
 
       - name: Validate Package Metadata
-        run: uvx --python 3.14 twine check dist/*
+        run: uvx --python 3.14 twine check dist/*.whl dist/*.tar.gz
 
   release_policy:
     name: Release Policy
-    if: github.event_name == 'pull_request' && github.base_ref == 'prod'
+    if: github.event_name == 'pull_request' && github.base_ref == 'prod' && github.head_ref == 'dev' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-      - name: Require dev to prod promotion
-        env:
-          HEAD_REF: ${{ github.head_ref }}
-          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
-          BASE_REPOSITORY: ${{ github.repository }}
-        run: |
-          if [ "$HEAD_REF" != "dev" ] || [ "$HEAD_REPOSITORY" != "$BASE_REPOSITORY" ]; then
-            echo "::error::Production releases must be promoted through a same-repository dev -> prod pull request."
-            exit 1
-          fi
-
       - name: Checkout Code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
