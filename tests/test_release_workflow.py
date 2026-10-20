@@ -57,7 +57,7 @@ def test_pypi_artifact_validation_runs_before_upload() -> None:
     job = _job(workflow, "build_package", "publish_pypi")
 
     assert job.index("twine check dist/*.whl dist/*.tar.gz") < job.index("validate_release_artifacts.py")
-    assert 'validate_release_artifacts.py --version "$PROJECT_VERSION"' in job
+    assert 'validate_release_artifacts.py \\\n            --version "$PROJECT_VERSION" dist/*.whl dist/*.tar.gz' in job
 
 
 def test_release_jobs_are_gated_on_successful_registry_publication() -> None:
