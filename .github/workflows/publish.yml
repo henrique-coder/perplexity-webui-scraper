@@ -144,7 +144,8 @@ jobs:
           uv run --python 3.14 --no-sync --no-dev scripts/render_pypi_readme.py --reference "$GITHUB_SHA"
           uv build --python 3.14
           uvx --python 3.14 twine check dist/*.whl dist/*.tar.gz
-          uv run --python 3.14 --no-project python scripts/validate_release_artifacts.py --version "$PROJECT_VERSION"
+          uv run --python 3.14 --no-project python scripts/validate_release_artifacts.py \
+            --version "$PROJECT_VERSION" dist/*.whl dist/*.tar.gz
           sha256sum dist/* > dist/SHA256SUMS
 
       - name: Upload Package Artifacts
