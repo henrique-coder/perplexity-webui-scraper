@@ -14,7 +14,7 @@ from pyperclip import PyperclipException, copy
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
-import typer
+from typer import Exit, Option
 
 from perplexity_webui_scraper._internal.constants import (
     API_BASE_URL,
@@ -229,7 +229,7 @@ def _extract_and_present_token(session: Session) -> None:
 
 
 def run(
-    email: Annotated[str | None, typer.Argument(help="Your Perplexity account email.")] = None,
+    email: Annotated[str | None, Option("-e", "--email", help="Your Perplexity account email.")] = None,
 ) -> None:
     """Extract your Perplexity session token using email OTP authentication.
 
@@ -285,9 +285,9 @@ def run(
                 _extract_and_present_token(session)
                 _show_exit_message()
         except KeyboardInterrupt:
-            raise typer.Exit(code=0) from None
+            raise Exit(code=0) from None
         except Exception as error:
             console.print(f"\n[bold red]Error:[/bold red] {error}")
             console.input("[dim]Press ENTER to exit...[/dim]")
 
-            raise typer.Exit(code=1) from error
+            raise Exit(code=1) from error

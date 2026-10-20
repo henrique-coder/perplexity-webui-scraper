@@ -20,7 +20,7 @@ class ClientConfig(BaseModel):
         retry_base_delay: Initial backoff delay in seconds.
         retry_max_delay: Maximum backoff delay cap in seconds.
         retry_jitter: Jitter factor (0-1) to randomize retry delays.
-        rotate_fingerprint: Rotates browser fingerprint on each retry if ``True``.
+        rotate_fingerprint: Recreates the HTTP session after retries while preserving its fingerprint.
         requests_per_second: Max request rate. Set to ``0`` to disable.
         max_init_query_length: Truncates init query length to avoid HTTP 414.
         logging_level: Log verbosity. Defaults to ``"disabled"``.

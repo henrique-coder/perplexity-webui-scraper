@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
+from uuid import UUID
 
 from pytest import raises, warns
 
@@ -154,7 +155,7 @@ def test_non_available_model_defers_entitlement_check_to_backend() -> None:
     with warns(ModelRiskWarning):
         conversation.ask("hello")
 
-    assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, False)]
+    assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, True)]
     assert fake_http.stream_called is True
 
 
@@ -168,7 +169,7 @@ def test_acknowledged_non_available_model_defers_tier_check_to_backend() -> None
     with warns(ModelRiskWarning):
         conversation.ask("hello")
 
-    assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, False)]
+    assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, True)]
     assert fake_http.ask_payload is not None
     assert fake_http.ask_payload["params"]["model_preference"] == "claude45haiku"
 
@@ -182,7 +183,7 @@ def test_best_model_uses_turbo_copilot_for_free_account() -> None:
 
     conversation.ask("hello")
 
-    assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, False)]
+    assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, True)]
     assert fake_http.ask_payload is not None
     assert fake_http.ask_payload["params"]["model_preference"] == "turbo"
     assert fake_http.ask_payload["params"]["mode"] == "copilot"
@@ -197,10 +198,27 @@ def test_best_model_uses_pro_upgraded_copilot_for_pro_account() -> None:
 
     conversation.ask("hello")
 
-    assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, False)]
+    assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, True)]
     assert fake_http.ask_payload is not None
     assert fake_http.ask_payload["params"]["model_preference"] == "pplx_pro_upgraded"
     assert fake_http.ask_payload["params"]["mode"] == "copilot"
+    UUID(fake_http.ask_payload["params"]["frontend_uuid"])
+    UUID(fake_http.ask_payload["params"]["frontend_context_uuid"])
+    assert fake_http.ask_payload["params"]["query_source"] == "home"
+
+
+def test_writing_search_focus_disables_search_without_changing_search_focus() -> None:
+    fake_http = _FakeHTTP(_session_payload("pro"))
+    conversation = Conversation(
+        cast("HTTPClient", fake_http),
+        ConversationConfig(model="perplexity/best", search_focus="writing"),
+    )
+
+    conversation.ask("write a haiku")
+
+    assert fake_http.ask_payload is not None
+    assert fake_http.ask_payload["params"]["search_focus"] == "internet"
+    assert fake_http.ask_payload["params"]["skip_search_enabled"] is True
 
 
 def test_custom_model_builds_payload_after_risk_acknowledgement() -> None:
@@ -234,7 +252,7 @@ def test_unknown_session_tier_falls_back_to_user_settings() -> None:
 
     conversation.ask("hello")
 
-    assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, False), (ENDPOINT_USER_SETTINGS, False)]
+    assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, True), (ENDPOINT_USER_SETTINGS, True)]
     assert fake_http.ask_payload is not None
     assert fake_http.ask_payload["params"]["model_preference"] == "turbo"
     assert fake_http.ask_payload["params"]["mode"] == "copilot"
@@ -251,8 +269,20 @@ def test_free_account_cannot_send_files() -> None:
         conversation.ask("describe this", files=["image.png"])
 
     assert exc_info.value.account_tier == "free"
-    assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, False)]
+    assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, True)]
     assert fake_http.stream_called is False
+
+
+def test_account_checks_respect_http_rate_limiter() -> None:
+    fake_http = _FakeHTTP(_session_payload("pro"))
+    conversation = Conversation(
+        cast("HTTPClient", fake_http),
+        ConversationConfig(model="perplexity/best"),
+    )
+
+    conversation.ask("hello")
+
+    assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, True)]
 
 
 def test_client_get_account_session_uses_fast_session_request() -> None:
@@ -263,7 +293,7 @@ def test_client_get_account_session_uses_fast_session_request() -> None:
     session = client.get_account_session()
 
     assert session.account_tier == "pro"
-    assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, False)]
+    assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, True)]
 
 
 def test_client_get_account_profile_uses_settings_only_when_needed() -> None:
@@ -278,4 +308,4 @@ def test_client_get_account_profile_uses_settings_only_when_needed() -> None:
 
     assert profile.account_tier == "free"
     assert profile.settings is not None
-    assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, False), (ENDPOINT_USER_SETTINGS, False)]
+    assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, True), (ENDPOINT_USER_SETTINGS, True)]

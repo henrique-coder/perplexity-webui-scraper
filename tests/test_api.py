@@ -3,11 +3,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
-from niquests import Session
-from pytest import fixture, warns
+from fastapi import HTTPException
+from pytest import fixture, raises, warns
+from starlette.testclient import TestClient
 
 from perplexity_webui_scraper._internal.exceptions import FileAccessError, ModelAccessError, ModelRiskWarning
 from perplexity_webui_scraper.api.app import app
+from perplexity_webui_scraper.api.auth import ClientPool
+from perplexity_webui_scraper.api.routes.completions import _validate_model
+from perplexity_webui_scraper.api.schemas.request import ChatCompletionRequest
 from perplexity_webui_scraper.core import Conversation
 from perplexity_webui_scraper.models.registry import MODELS
 
@@ -60,12 +64,12 @@ def _patch_models():
 
 
 @fixture
-def client() -> Generator[Session, None, None]:
-    with Session(app=app) as session:
-        yield session
+def client() -> Generator[TestClient, None, None]:
+    with TestClient(app) as test_client:
+        yield test_client
 
 
-def test_missing_auth_header(client: Session) -> None:
+def test_missing_auth_header(client: TestClient) -> None:
     """Request without Authorization header should return 401."""
     response = client.post(
         "/v1/chat/completions",
@@ -76,7 +80,7 @@ def test_missing_auth_header(client: Session) -> None:
     assert "Missing or invalid Authorization header" in response.json()["error"]["message"]
 
 
-def test_api_does_not_allow_cross_origin_requests(client: Session) -> None:
+def test_api_does_not_allow_cross_origin_requests(client: TestClient) -> None:
     """Requests from arbitrary browser origins must not receive CORS permission."""
     response = client.get("/v1/models", headers={"Origin": "https://attacker.example"})
 
@@ -84,7 +88,94 @@ def test_api_does_not_allow_cross_origin_requests(client: Session) -> None:
     assert "access-control-allow-origin" not in response.headers
 
 
-def test_malformed_auth_header(client: Session) -> None:
+def test_server_default_token_requires_gateway_api_key(client: TestClient) -> None:
+    with (
+        patch.dict("os.environ", {"PERPLEXITY_SESSION_TOKEN": "upstream-secret", "PERPLEXITY_API_KEY": "gateway-key"}),
+        patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create") as get_client,
+    ):
+        response = client.post(
+            "/v1/chat/completions",
+            json={"model": MODEL_ID, "messages": [{"role": "user", "content": "Hello"}]},
+        )
+
+    assert response.status_code == 401
+    get_client.assert_not_called()
+    assert "upstream-secret" not in str(response.text)
+
+
+def test_server_default_token_is_used_with_gateway_key(client: TestClient) -> None:
+    mock_client = MagicMock()
+    mock_client.create_conversation.return_value = _make_mock_conversation()
+    with (
+        patch.dict("os.environ", {"PERPLEXITY_SESSION_TOKEN": "upstream-secret", "PERPLEXITY_API_KEY": "gateway-key"}),
+        patch(
+            "perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=mock_client
+        ) as get_client,
+    ):
+        response = client.post(
+            "/v1/chat/completions",
+            json={"model": MODEL_ID, "messages": [{"role": "user", "content": "Hello"}]},
+            headers={"X-API-Key": "gateway-key"},
+        )
+
+    assert response.status_code == 200
+    get_client.assert_called_once_with("upstream-secret")
+    assert "upstream-secret" not in str(response.text)
+
+
+def test_server_default_token_without_gateway_key_is_misconfigured(client: TestClient) -> None:
+    with (
+        patch.dict("os.environ", {"PERPLEXITY_SESSION_TOKEN": "upstream-secret"}, clear=True),
+        patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create") as get_client,
+    ):
+        response = client.post(
+            "/v1/chat/completions",
+            json={"model": MODEL_ID, "messages": [{"role": "user", "content": "Hello"}]},
+        )
+
+    assert response.status_code == 503
+    get_client.assert_not_called()
+    assert "upstream-secret" not in str(response.text)
+
+
+def test_chat_completions_rejects_invalid_gateway_key(client: TestClient) -> None:
+    with (
+        patch.dict(
+            "os.environ",
+            {"PERPLEXITY_SESSION_TOKEN": "upstream-secret", "PERPLEXITY_API_KEY": "correct"},
+            clear=True,
+        ),
+        patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create") as get_client,
+    ):
+        response = client.post(
+            "/v1/chat/completions",
+            json={"model": MODEL_ID, "messages": [{"role": "user", "content": "Hello"}]},
+            headers={"X-API-Key": "wrong"},
+        )
+    assert response.status_code == 401
+    get_client.assert_not_called()
+
+
+def test_caller_token_overrides_server_default(client: TestClient) -> None:
+    mock_client = MagicMock()
+    mock_client.create_conversation.return_value = _make_mock_conversation()
+    with (
+        patch.dict("os.environ", {"PERPLEXITY_SESSION_TOKEN": "upstream-secret", "PERPLEXITY_API_KEY": "gateway-key"}),
+        patch(
+            "perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=mock_client
+        ) as get_client,
+    ):
+        response = client.post(
+            "/v1/chat/completions",
+            json={"model": MODEL_ID, "messages": [{"role": "user", "content": "Hello"}]},
+            headers={"X-API-Key": "gateway-key", "Authorization": "Bearer caller-token"},
+        )
+
+    assert response.status_code == 200
+    get_client.assert_called_once_with("caller-token")
+
+
+def test_malformed_auth_header(client: TestClient) -> None:
     """Request with malformed Authorization header (not Bearer) should return 401."""
     response = client.post(
         "/v1/chat/completions",
@@ -95,7 +186,62 @@ def test_malformed_auth_header(client: Session) -> None:
     assert "Missing or invalid Authorization header" in response.json()["error"]["message"]
 
 
-def test_invalid_model(client: Session) -> None:
+def test_validation_error_does_not_echo_request_values(client: TestClient) -> None:
+    response = client.post(
+        "/v1/chat/completions",
+        json={"model": MODEL_ID, "messages": [{"role": "user", "content": {"secret": "private-value"}}]},
+        headers={"Authorization": AUTH_HEADER},
+    )
+
+    assert response.status_code == 422
+    assert "private-value" not in str(response.text)
+
+
+def test_request_body_limit_rejects_large_body_before_parsing(client: TestClient) -> None:
+    response = client.post(
+        "/v1/chat/completions",
+        content=b" " * (10 * 1024 * 1024 + 1),
+        headers={"Authorization": AUTH_HEADER, "Content-Type": "application/json"},
+    )
+
+    assert response.status_code == 413
+
+
+def test_client_pool_evicts_old_clients() -> None:
+    first = MagicMock()
+    second = MagicMock()
+
+    with patch("perplexity_webui_scraper.api.auth.Perplexity", side_effect=[first, second]):
+        pool = ClientPool(max_clients=1)
+        assert pool.get_or_create("token-a") is first
+        assert pool.get_or_create("token-b") is second
+
+    assert pool.get_or_create("token-b") is second
+
+
+def test_client_pool_reuses_clients_by_token() -> None:
+    client_instance = MagicMock()
+
+    with patch("perplexity_webui_scraper.api.auth.Perplexity", return_value=client_instance) as create_client:
+        pool = ClientPool(max_clients=2)
+        assert pool.get_or_create("same-token") is client_instance
+        assert pool.get_or_create("same-token") is client_instance
+
+    create_client.assert_called_once()
+
+
+def test_client_pool_expires_idle_clients() -> None:
+    client_instance = MagicMock()
+
+    with patch("perplexity_webui_scraper.api.auth.Perplexity", return_value=client_instance):
+        pool = ClientPool(max_clients=2, ttl_seconds=0.001)
+        assert pool.get_or_create("expired-token") is client_instance
+        pool._clients["expired-token"] = (client_instance, 0.0)
+        pool.get_or_create("new-token")
+        assert "expired-token" not in pool._clients
+
+
+def test_invalid_model(client: TestClient) -> None:
     """Request with an unregistered model should return 400 Bad Request."""
     response = client.post(
         "/v1/chat/completions",
@@ -106,7 +252,18 @@ def test_invalid_model(client: Session) -> None:
     assert "Unknown model" in response.json()["error"]["message"]
 
 
-def test_invalid_custom_model_exposes_validation_error(client: Session) -> None:
+def test_model_validation_helper_rejects_unknown_model() -> None:
+    with patch.object(_mock_models, "resolve_for_use", side_effect=ValueError):
+        request = ChatCompletionRequest(
+            model="unknown-model",
+            messages=[{"role": "user", "content": "Hello"}],  # type: ignore[list-item]
+        )
+
+        with raises(HTTPException, match="Unknown model"):
+            _validate_model(request)
+
+
+def test_invalid_custom_model_exposes_validation_error(client: TestClient) -> None:
     """Invalid custom identifiers should not be reported as unknown catalog models."""
     with patch("perplexity_webui_scraper.api.routes.completions.MODELS", MODELS):
         response = client.post(
@@ -125,7 +282,7 @@ def test_invalid_custom_model_exposes_validation_error(client: Session) -> None:
     assert "Available:" not in message
 
 
-def test_model_catalog_exposes_risk_metadata(client: Session) -> None:
+def test_model_catalog_exposes_risk_metadata(client: TestClient) -> None:
     response = client.get("/v1/models")
     assert response.status_code == 200
     data = response.json()["data"]
@@ -143,7 +300,7 @@ def test_model_catalog_exposes_risk_metadata(client: Session) -> None:
         assert metadata["last_tested_at"] == expected_tested_at
 
 
-def test_risky_model_api_requires_and_accepts_acknowledgement(client: Session) -> None:
+def test_risky_model_api_requires_and_accepts_acknowledgement(client: TestClient) -> None:
     risky_model_id = next(model.id for model in MODELS.list_all() if model.status != "available")
 
     with patch("perplexity_webui_scraper.api.routes.completions.MODELS", MODELS):
@@ -180,7 +337,7 @@ def test_risky_model_api_requires_and_accepts_acknowledgement(client: Session) -
 
 
 @patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create")
-def test_model_access_error_returns_403(mock_get_or_create: MagicMock, client: Session) -> None:
+def test_model_access_error_returns_403(mock_get_or_create: MagicMock, client: TestClient) -> None:
     """Model tier failures should return an OpenAI-compatible 403 error."""
     mock_client_instance = MagicMock()
     mock_conv = _make_mock_conversation()
@@ -202,7 +359,7 @@ def test_model_access_error_returns_403(mock_get_or_create: MagicMock, client: S
 
 
 @patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create")
-def test_file_access_error_returns_403(mock_get_or_create: MagicMock, client: Session) -> None:
+def test_file_access_error_returns_403(mock_get_or_create: MagicMock, client: TestClient) -> None:
     """Free-tier file failures should return an OpenAI-compatible 403 error."""
     mock_client_instance = MagicMock()
     mock_conv = _make_mock_conversation()
@@ -224,7 +381,7 @@ def test_file_access_error_returns_403(mock_get_or_create: MagicMock, client: Se
 
 
 @patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create")
-def test_perplexity_extensions_are_parsed(mock_get_or_create: MagicMock, client: Session) -> None:
+def test_perplexity_extensions_are_parsed(mock_get_or_create: MagicMock, client: TestClient) -> None:
     """Verify that Perplexity extensions are parsed into the config."""
     mock_client_instance = MagicMock()
     mock_conv = _make_mock_conversation()
@@ -259,7 +416,7 @@ def test_perplexity_extensions_are_parsed(mock_get_or_create: MagicMock, client:
 
 
 @patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create")
-def test_system_prompt_concatenation(mock_get_or_create: MagicMock, client: Session) -> None:
+def test_system_prompt_concatenation(mock_get_or_create: MagicMock, client: TestClient) -> None:
     """Verify that a 'system' message is prepended to the final query string sent to Perplexity."""
     mock_client_instance = MagicMock()
     mock_conv = _make_mock_conversation()

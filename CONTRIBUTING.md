@@ -15,7 +15,7 @@ This project wraps private Perplexity WebUI endpoints. Changes should be conserv
 
 Requirements:
 
-- Python 3.11, 3.12, 3.13, or 3.14
+- Python 3.11, 3.12, 3.13, 3.14, or 3.15. `.python-version` selects Python 3.15 for local development and primary end-user use. CI, Read the Docs, and package build jobs use Python 3.14 by default; CI tests every supported version, including 3.15. API/MCP containers use Python 3.15.
 - `uv`
 - `pnpm`
 - `just`
@@ -27,15 +27,17 @@ uv sync --all-extras --all-groups
 pnpm install
 ```
 
+CI quality, documentation, and package-build jobs use Python 3.14. The unit-test matrix runs Python 3.11 through 3.15 across three operating systems; API/MCP container images use Python 3.15.
+
 Useful commands:
 
-| Command                                              | Purpose                                                                                                                              |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `just format`                                        | Format Python, Markdown, YAML, TOML, and related project files.                                                                      |
-| `just lint`                                          | Run Ruff, ty, Prettier, and Taplo checks.                                                                                            |
-| `just test`                                          | Run the pytest suite.                                                                                                                |
-| `uv run --no-dev --group docs mkdocs build --strict` | Build the documentation site with MkDocs using only the project and `docs` dependencies. `--strict` fails on documentation warnings. |
-| `uv build`                                           | Build the Python source distribution and wheel.                                                                                      |
+| Command                                              | Purpose                                                                       |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `just format`                                        | Format Python, Markdown, YAML, TOML, and related project files.               |
+| `just lint`                                          | Run Ruff, ty, Prettier, and Taplo checks using the `.python-version` runtime. |
+| `just test`                                          | Run the pytest suite using the `.python-version` runtime.                     |
+| `uv run --no-dev --group docs mkdocs build --strict` | Build docs with pinned local Python; `--strict` fails on warnings.            |
+| `uv build`                                           | Build the source distribution and wheel using the pinned local Python.        |
 
 Install the Git hook once per checkout:
 
@@ -61,7 +63,7 @@ The `just lint` check runs at `git push`, not at `git add` or `git commit`. CI r
 1. Keep the target section in `CHANGELOG.md` as `## [X.Y.Z] - Unreleased` while developing.
 2. In the final `dev` to `prod` promotion PR, replace `Unreleased` with the UTC release date (`YYYY-MM-DD`).
 3. On `prod`, run **Publish Release** once in `validate` mode, review its build output, then rerun it with `publish` selected.
-4. The workflow publishes the Python package, API and MCP images, and documentation before creating the immutable tag and GitHub Release. It can safely resume after an interrupted PyPI publication.
+4. The workflow publishes the Python package and API/MCP images before creating the immutable tag and GitHub Release. Read the Docs builds and publishes documentation through its configured Git integration; it is not published by the release workflow. The release workflow can resume after an interrupted PyPI publication.
 
 - Keep changes focused on one concern.
 - Add or update tests for behavior changes.

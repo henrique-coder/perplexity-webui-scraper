@@ -7,6 +7,11 @@ to avoid recreating HTTP sessions on every request.
 
 from __future__ import annotations
 
+from collections import OrderedDict
+from hmac import compare_digest
+from threading import Lock
+from time import monotonic
+
 from fastapi import HTTPException
 
 from perplexity_webui_scraper import Perplexity
@@ -44,6 +49,39 @@ def extract_token(authorization: str | None) -> str:
     return token
 
 
+def resolve_session_token(
+    authorization: str | None,
+    api_key: str | None,
+    default_session_token: str | None,
+    configured_api_key: str | None,
+) -> str:
+    """Authenticate a gateway request and resolve its upstream Perplexity token.
+
+    When the server has a configured upstream token, a separate gateway key is
+    mandatory on every request. A caller may optionally supply its own Perplexity
+    token in Authorization to override the configured upstream token.
+    """
+    if default_session_token and not configured_api_key:
+        raise HTTPException(status_code=503, detail="Server default credentials are misconfigured.")
+
+    if configured_api_key and not compare_digest(api_key or "", configured_api_key):
+        raise HTTPException(status_code=401, detail="Missing or invalid gateway API key.")
+
+    if authorization:
+        return extract_token(authorization)
+
+    if default_session_token:
+        return default_session_token
+
+    raise HTTPException(
+        status_code=401,
+        detail=(
+            "Missing or invalid Authorization header. Pass your Perplexity session token as: "
+            "Authorization: Bearer <token>"
+        ),
+    )
+
+
 class ClientPool:
     """Per-token cache of :class:`~perplexity_webui_scraper.Perplexity` client instances.
 
@@ -57,8 +95,25 @@ class ClientPool:
         client = pool.get_or_create("my-session-token")
     """
 
-    def __init__(self) -> None:
-        self._clients: dict[str, Perplexity] = {}
+    def __init__(self, max_clients: int = 128, ttl_seconds: float = 30 * 60) -> None:
+        if max_clients < 1:
+            raise ValueError("max_clients must be at least one")
+        if ttl_seconds <= 0:
+            raise ValueError("ttl_seconds must be greater than zero")
+
+        self._clients: OrderedDict[str, tuple[Perplexity, float]] = OrderedDict()
+        self._max_clients = max_clients
+        self._ttl_seconds = ttl_seconds
+        self._lock = Lock()
+
+    def _evict_stale(self, now: float) -> None:
+        """Remove client references that have been idle beyond the configured TTL."""
+        stale_tokens = [
+            token for token, (_client, last_access) in self._clients.items() if now - last_access > self._ttl_seconds
+        ]
+
+        for token in stale_tokens:
+            self._clients.pop(token)
 
     def get_or_create(self, token: str) -> Perplexity:
         """Return an existing or newly created client for *token*.
@@ -69,7 +124,32 @@ class ClientPool:
         Returns:
             A :class:`~perplexity_webui_scraper.Perplexity` instance.
         """
-        if token not in self._clients:
-            self._clients[token] = Perplexity(token, config=ClientConfig())
+        with self._lock:
+            now = monotonic()
+            self._evict_stale(now)
+            cached = self._clients.get(token)
 
-        return self._clients[token]
+            if cached is not None:
+                self._clients.move_to_end(token)
+                self._clients[token] = (cached[0], now)
+
+                return cached[0]
+
+            client = Perplexity(token, config=ClientConfig())
+            self._clients[token] = (client, now)
+
+            if len(self._clients) > self._max_clients:
+                self._clients.popitem(last=False)
+
+            return client
+
+    def touch(self, token: str, client: Perplexity) -> None:
+        """Refresh TTL after a request only if *client* remains cached."""
+        with self._lock:
+            cached = self._clients.get(token)
+
+            if cached is None or cached[0] is not client:
+                return
+
+            self._clients[token] = (client, monotonic())
+            self._clients.move_to_end(token)

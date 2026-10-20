@@ -8,6 +8,7 @@ tables live here as module-level constants so they are defined exactly once.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Final
+from uuid import uuid4
 
 from perplexity_webui_scraper._internal.constants import (
     API_VERSION,
@@ -34,12 +35,6 @@ SOURCE_MAP: Final[dict[str, str]] = {
     "all": "web",
 }
 """Maps ``SourceFocus`` literals to Perplexity's internal source identifiers."""
-
-SEARCH_MAP: Final[dict[str, str]] = {
-    "web": "internet",
-    "writing": "writing",
-}
-"""Maps ``SearchFocus`` literals to Perplexity's internal search-focus identifiers."""
 
 TIME_MAP: Final[dict[str, str]] = {
     "all": "",
@@ -76,7 +71,7 @@ def build_payload(
         serialization.
     """
     raw_sources = config.source_focus if isinstance(config.source_focus, list) else [config.source_focus]
-    sources = [SOURCE_MAP.get(s, "web") for s in raw_sources]
+    sources = ["web", "scholar"] if raw_sources == ["all"] else [SOURCE_MAP.get(s, "web") for s in raw_sources]
 
     client_coordinates: dict[str, Any] | None = None
 
@@ -87,23 +82,31 @@ def build_payload(
             "name": "",
         }
 
+    frontend_uuid = str(uuid4())
+
     params: dict[str, Any] = {
         "attachments": file_urls,
         "language": config.language,
         "timezone": config.timezone,
         "client_coordinates": client_coordinates,
         "sources": sources,
+        "frontend_uuid": frontend_uuid,
         "model_preference": model.identifier,
         "mode": model.mode,
-        "search_focus": SEARCH_MAP.get(config.search_focus, "internet"),
+        "search_focus": "internet",
+        "skip_search_enabled": config.search_focus == "writing",
         "search_recency_filter": TIME_MAP.get(config.time_range, "") or None,
         "is_incognito": not config.save_to_library,
         "use_schematized_api": USE_SCHEMATIZED_API,
         "local_search_enabled": config.coordinates is not None,
         "prompt_source": PROMPT_SOURCE,
+        "query_source": "home",
         "send_back_text_in_streaming_api": SEND_BACK_TEXT,
         "version": API_VERSION,
     }
+
+    if backend_uuid is None:
+        params["frontend_context_uuid"] = str(uuid4())
 
     # Space requests override incognito mode.
 
@@ -118,6 +121,7 @@ def build_payload(
     if backend_uuid is not None:
         params["last_backend_uuid"] = backend_uuid
         params["query_source"] = "followup"
+        params["followup_source"] = "link"
 
         if read_write_token:
             params["read_write_token"] = read_write_token

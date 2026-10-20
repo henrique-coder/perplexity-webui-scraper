@@ -1,0 +1,4 @@
+allowBuilds:
+  "@firebase/util": true
+  protobufjs: true
+minimumReleaseAge: 1440

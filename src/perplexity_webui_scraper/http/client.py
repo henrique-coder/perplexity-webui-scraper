@@ -9,11 +9,14 @@ error codes into typed exceptions.
 from __future__ import annotations
 
 from contextlib import suppress
+from math import isfinite
+from threading import RLock
 from time import monotonic
 from typing import TYPE_CHECKING, Any
 
+from curl_cffi.requests import BrowserTypeLiteral, Session
 from curl_cffi.requests import Response as CurlResponse
-from curl_cffi.requests import Session
+from curl_cffi.requests.cookies import Cookies
 
 from perplexity_webui_scraper._internal.constants import (
     API_BASE_URL,
@@ -35,27 +38,24 @@ from perplexity_webui_scraper._internal.logging import (
     log_response,
     log_retry,
 )
-from perplexity_webui_scraper.http.fingerprint import get_random_browser_profile
 from perplexity_webui_scraper.http.resilience import RateLimiter, RetryConfig, retry_with_backoff
 
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from curl_cffi.requests import BrowserTypeLiteral
-
 
 logger = get_logger(__name__)
 
 
 class HTTPClient:
-    """HTTP client with retry, rate limiting, fingerprint rotation, and error handling.
+    """HTTP client with retry, rate limiting, session renewal, and error handling.
 
     Attributes:
         _session_token: The Perplexity session token used for authentication.
         _timeout: Request timeout in seconds.
         _impersonate: Current browser fingerprint profile.
-        _rotate_fingerprint: Whether to rotate the profile on retry.
+        _rotate_fingerprint: Whether to renew the session on retry.
         _max_init_query_length: Max characters for the search-init query.
         _retry_config: Retry behaviour configuration.
         _rate_limiter: Optional rate limiter instance.
@@ -69,6 +69,7 @@ class HTTPClient:
         "_retry_config",
         "_rotate_fingerprint",
         "_session",
+        "_session_lock",
         "_session_token",
         "_timeout",
     )
@@ -97,11 +98,30 @@ class HTTPClient:
             retry_max_delay: Maximum backoff delay cap in seconds.
             retry_jitter: Jitter factor (0-1).
             requests_per_second: Rate limit; ``0`` disables it.
-            rotate_fingerprint: Rotate fingerprint on each retry.
+            rotate_fingerprint: Recreate the HTTP session after a retry while retaining its fingerprint.
             max_init_query_length: Truncate init query to this length;
                 ``0`` disables truncation.
         """
         self._session_token = session_token
+
+        if timeout <= 0:
+            raise ValueError("timeout must be greater than zero")
+
+        if max_retries < 0:
+            raise ValueError("max_retries cannot be negative")
+
+        if retry_base_delay < 0 or retry_max_delay < 0:
+            raise ValueError("retry delays cannot be negative")
+
+        if not isfinite(retry_jitter) or not 0 <= retry_jitter <= 1:
+            raise ValueError("retry_jitter must be between zero and one")
+
+        if not isfinite(requests_per_second) or requests_per_second < 0:
+            raise ValueError("requests_per_second cannot be negative")
+
+        if max_init_query_length < 0:
+            raise ValueError("max_init_query_length cannot be negative")
+
         self._timeout = timeout
         self._impersonate: BrowserTypeLiteral = impersonate
         self._rotate_fingerprint = rotate_fingerprint
@@ -119,6 +139,7 @@ class HTTPClient:
         )
 
         self._session = self._create_session(impersonate)
+        self._session_lock = RLock()
         logger.debug("HTTPClient initialized | impersonate={}", impersonate)
 
     # ------------------------------------------------------------------
@@ -134,26 +155,28 @@ class HTTPClient:
         Returns:
             Configured :class:`curl_cffi.requests.Session`.
         """
+        cookies = Cookies()
+        cookies.set(SESSION_COOKIE_NAME, self._session_token, secure=True)
+
         return Session(
             headers=dict(DEFAULT_HEADERS),
-            cookies={SESSION_COOKIE_NAME: self._session_token},
+            cookies=cookies,
             timeout=self._timeout,
             impersonate=impersonate,  # type: ignore[arg-type]
         )
 
     def _rotate_session(self) -> None:
-        """Replace the current session with a new random browser fingerprint."""
+        """Replace the current session while retaining its browser fingerprint."""
         if not self._rotate_fingerprint:
             return
 
-        new_profile = get_random_browser_profile()
-        logger.debug("Rotating fingerprint | old={} new={}", self._impersonate, new_profile)
+        logger.debug("Recreating HTTP session | impersonate={}", self._impersonate)
 
-        with suppress(Exception):
-            self._session.close()
+        with self._session_lock:
+            with suppress(Exception):
+                self._session.close()
 
-        self._impersonate = new_profile
-        self._session = self._create_session(new_profile)
+            self._session = self._create_session(self._impersonate)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -174,8 +197,7 @@ class HTTPClient:
         """
         log_retry(attempt, self._retry_config.max_retries, exception, wait)
 
-        if self._rotate_fingerprint:
-            self._rotate_session()
+        self._rotate_session()
 
     def _handle_error(self, error: Exception, context: str = "") -> None:
         """Translate a raw exception into a typed Perplexity exception.
@@ -250,7 +272,10 @@ class HTTPClient:
             HTTPError: On other HTTP errors.
             PerplexityError: On network errors.
         """
-        url = f"{API_BASE_URL}{endpoint}" if endpoint.startswith("/") else endpoint
+        if not endpoint.startswith("/"):
+            raise ValueError("Authenticated HTTP endpoints must be relative paths")
+
+        url = f"{API_BASE_URL}{endpoint}"
         log_request("GET", url, params=params)
 
         def _do_get() -> CurlResponse:
@@ -258,7 +283,10 @@ class HTTPClient:
                 self._throttle()
 
             t0 = monotonic()
-            response = self._session.get(url, params=params)
+
+            with self._session_lock:
+                response = self._session.get(url, params=params)
+
             log_response("GET", url, response.status_code, elapsed_ms=(monotonic() - t0) * 1000)
             self._raise_for_status(response, f"GET {endpoint}: ")
 
@@ -299,13 +327,19 @@ class HTTPClient:
             HTTPError: On other HTTP errors.
             PerplexityError: On network errors.
         """
-        url = f"{API_BASE_URL}{endpoint}" if endpoint.startswith("/") else endpoint
+        if not endpoint.startswith("/"):
+            raise ValueError("Authenticated HTTP endpoints must be relative paths")
+
+        url = f"{API_BASE_URL}{endpoint}"
         log_request("POST", url, body_size=len(str(json)) if json else 0)
 
         def _do_post() -> CurlResponse:
             self._throttle()
             t0 = monotonic()
-            response = self._session.post(url, json=json, stream=stream)
+
+            with self._session_lock:
+                response = self._session.post(url, json=json, stream=stream)
+
             log_response("POST", url, response.status_code, elapsed_ms=(monotonic() - t0) * 1000)
             self._raise_for_status(response, f"POST {endpoint}: ")
 
@@ -334,12 +368,13 @@ class HTTPClient:
         Yields:
             Raw bytes lines from the SSE response.
         """
-        response = self.post(endpoint, json=json, stream=True)
+        with self._session_lock:
+            response = self.post(endpoint, json=json, stream=True)
 
-        try:
-            yield from response.iter_lines()
-        finally:
-            response.close()
+            try:
+                yield from response.iter_lines()
+            finally:
+                response.close()
 
     def init_search(self, query: str) -> None:
         """Initialize a search session (required before each prompt).
@@ -370,7 +405,8 @@ class HTTPClient:
 
     def close(self) -> None:
         """Close the underlying curl-cffi session and release resources."""
-        self._session.close()
+        with self._session_lock:
+            self._session.close()
 
     def __enter__(self) -> HTTPClient:
         return self

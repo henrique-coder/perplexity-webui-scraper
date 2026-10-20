@@ -29,7 +29,10 @@ test:
     uv run --no-dev --group test pytest
 
 docs:
-    uv run --no-dev --group docs mkdocs serve --watch docs --watch src
+    uv run --no-dev --group docs mkdocs serve -a localhost:4000 --watch docs --watch src
+
+build:
+    uv build
 
 build-container:
     podman build -t perplexity-webui-scraper .

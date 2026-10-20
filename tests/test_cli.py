@@ -1,337 +1,168 @@
-"""Unified CLI command delegation tests."""
+"""Tests for the unified Typer CLI and optional features."""
 
 from __future__ import annotations
 
-from sys import modules as sys_modules
-from types import ModuleType
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from subprocess import run
+from tomllib import loads
 from unittest.mock import Mock, patch
 
 from pytest import raises
-from typer import Exit
 from typer.testing import CliRunner
 
-from perplexity_webui_scraper import ResponseParsingError
-from perplexity_webui_scraper.cli.__main__ import cli
-from perplexity_webui_scraper.cli.commands.chat import run as run_chat
-
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
-    from typing import Self
+from perplexity_webui_scraper.cli.__main__ import _COMMANDS, _load_command, api, cli, token
 
 
 runner = CliRunner()
-TEST_HOST = "127.0.0.1"
 
 
-def _stub_module(name: str, attr: str) -> tuple[dict[str, ModuleType], Mock]:
-    mock = Mock()
-    module = ModuleType(name)
-    setattr(module, attr, mock)
-
-    return {name: module}, mock
-
-
-def test_root_help_lists_subcommands() -> None:
-    result = runner.invoke(cli, ["--help"])
+def test_root_help_lists_commands_without_importing_feature_modules() -> None:
+    with patch("perplexity_webui_scraper.cli.__main__.import_module") as import_module:
+        result = runner.invoke(cli, ["--help"])
 
     assert result.exit_code == 0
-    assert "api" in result.output
-    assert "mcp" in result.output
-    assert "token" in result.output
-    assert "chat" in result.output
+    assert all(name in result.output for name in _COMMANDS)
+    import_module.assert_not_called()
 
 
-def test_api_subcommand_delegates_with_options() -> None:
-    modules, run_api = _stub_module("perplexity_webui_scraper.api.launcher", "main")
+def test_help_aliases_work_for_root_and_all_subcommands() -> None:
+    for command in ([], ["token"], ["api"], ["mcp"]):
+        for option in ("-h", "--help"):
+            result = runner.invoke(cli, [*command, option])
 
-    with patch.dict(sys_modules, modules):
-        result = runner.invoke(
-            cli,
-            [
-                "api",
-                "--host",
-                TEST_HOST,
-                "--port",
-                "8080",
-                "--reload",
-                "--log-level",
-                "debug",
-            ],
-        )
+            assert result.exit_code == 0, (command, option, result.output)
+            assert "Usage:" in result.output
+
+
+def test_public_extra_order_matches_all_extra() -> None:
+    project = loads(Path("pyproject.toml").read_text())
+    extras = project["project"]["optional-dependencies"]
+    assert list(extras) == ["all", "token", "api", "mcp"]
+    assert extras["all"] == ["perplexity-webui-scraper[token,api,mcp]"]
+
+
+def test_base_only_install_runs_root_help_without_feature_dependencies() -> None:
+    help_result = run(_base_only_command("--help"), capture_output=True, check=False, text=True)
+    assert help_result.returncode == 0, help_result.stderr
+    assert "token" in help_result.stdout
+    assert "api" in help_result.stdout
+    assert "mcp" in help_result.stdout
+    dependency_result = run(
+        [
+            "uv",
+            "run",
+            "--isolated",
+            "--no-project",
+            "--with",
+            f"perplexity-webui-scraper @ file://{Path.cwd()}",
+            "--",
+            "python",
+            "-c",
+            (
+                "from importlib.util import find_spec; "
+                "print(find_spec('fastapi'), find_spec('pyperclip'), find_spec('fastmcp'))"
+            ),
+        ],
+        capture_output=True,
+        check=False,
+        text=True,
+    )
+    assert dependency_result.returncode == 0, dependency_result.stderr
+    assert "None None None" in dependency_result.stdout
+
+
+def test_base_only_feature_command_explains_extra() -> None:
+    result = run(_base_only_command("token"), capture_output=True, check=False, text=True)
+    assert result.returncode == 1
+    assert "perplexity-webui-scraper[token]" in result.stderr
+
+
+def _base_only_command(*arguments: str) -> list[str]:
+    return [
+        "uv",
+        "run",
+        "--isolated",
+        "--no-project",
+        "--with",
+        f"perplexity-webui-scraper @ file://{Path.cwd()}",
+        "--",
+        "perplexity-webui-scraper",
+        *arguments,
+    ]
+
+
+def test_unavailable_extra_reports_install_command() -> None:
+    with (
+        patch(
+            "perplexity_webui_scraper.cli.__main__.import_module",
+            side_effect=ModuleNotFoundError("missing fastapi", name="fastapi"),
+        ),
+        raises(SystemExit, match=r"perplexity-webui-scraper\[api\]"),
+    ):
+        _load_command("api")
+
+
+def test_missing_token_extra_is_reported_as_clean_cli_error() -> None:
+    with patch(
+        "perplexity_webui_scraper.cli.__main__.import_module",
+        side_effect=ModuleNotFoundError("missing pyperclip", name="pyperclip"),
+    ):
+        result = runner.invoke(cli, ["token"])
+
+    assert result.exit_code == 1
+    assert "perplexity-webui-scraper[token]" in result.output
+
+
+def test_token_dispatch_uses_token_extra_app() -> None:
+    token_app = Mock()
+    with (
+        patch("perplexity_webui_scraper.cli.__main__._load_command", return_value=(token_app, "token")),
+        patch("perplexity_webui_scraper.cli.__main__.echo"),
+    ):
+        token("user@example.com")
+
+    token_app.assert_called_once_with("user@example.com")
+
+
+def test_token_command_dispatches_email_to_authentication_function() -> None:
+    token_run = Mock()
+    token_module = Mock(run=token_run)
+    with patch("perplexity_webui_scraper.cli.__main__.import_module", return_value=token_module):
+        result = runner.invoke(cli, ["token", "--email", "user@example.com"])
 
     assert result.exit_code == 0
-    run_api.assert_called_once_with(host=TEST_HOST, port=8080, reload=True, log_level="debug")
+    token_run.assert_called_once_with("user@example.com")
 
 
-def test_mcp_subcommand_delegates() -> None:
-    modules, run_mcp = _stub_module("perplexity_webui_scraper.mcp.server", "main")
+def test_token_command_accepts_short_email_option() -> None:
+    token_run = Mock()
+    token_module = Mock(run=token_run)
+    with patch("perplexity_webui_scraper.cli.__main__.import_module", return_value=token_module):
+        result = runner.invoke(cli, ["token", "-e", "user@example.com"])
 
-    with patch.dict(sys_modules, modules):
+    assert result.exit_code == 0
+    token_run.assert_called_once_with("user@example.com")
+
+
+def test_api_dispatch_passes_cli_options_to_launcher() -> None:
+    api_launcher = Mock()
+    with patch("perplexity_webui_scraper.cli.__main__._load_command", return_value=(api_launcher, "api")):
+        api("127.0.0.1", 8080, True, "debug", "token", "gateway")
+
+    api_launcher.assert_called_once_with(
+        host="127.0.0.1",
+        port=8080,
+        reload=True,
+        log_level="debug",
+        default_session_token="token",
+        gateway_api_key="gateway",
+    )
+
+
+def test_mcp_command_invokes_mcp_server() -> None:
+    mcp_command = Mock()
+    with patch("perplexity_webui_scraper.cli.__main__._load_command", return_value=(mcp_command, "mcp")):
         result = runner.invoke(cli, ["mcp"])
 
     assert result.exit_code == 0
-    run_mcp.assert_called_once_with()
-
-
-def test_token_subcommand_delegates_with_email() -> None:
-    modules, run_token = _stub_module("perplexity_webui_scraper.cli.commands.get_session_token", "run")
-
-    with patch.dict(sys_modules, modules):
-        result = runner.invoke(cli, ["token", "user@example.com"])
-
-    assert result.exit_code == 0
-    run_token.assert_called_once_with("user@example.com")
-
-
-def test_chat_subcommand_delegates_with_defaults() -> None:
-    modules, run_chat = _stub_module("perplexity_webui_scraper.cli.commands.chat", "run")
-
-    with patch.dict(sys_modules, modules):
-        result = runner.invoke(cli, ["chat", "What is Python?"])
-
-    assert result.exit_code == 0
-    run_chat.assert_called_once_with(
-        query="What is Python?",
-        model=None,
-        search_focus="web",
-        source_focus="web",
-        time_range="all",
-        citation_mode="clean",
-        language="en-US",
-        files=None,
-        timezone=None,
-        latitude=None,
-        longitude=None,
-        space_uuid=None,
-        save=False,
-        copy=False,
-        raw=False,
-        allow_risky_model=False,
-        custom_model_mode="copilot",
-        research_interaction="auto",
-        token=None,
-    )
-
-
-def test_chat_subcommand_delegates_with_all_options() -> None:
-    modules, run_chat = _stub_module("perplexity_webui_scraper.cli.commands.chat", "run")
-
-    with patch.dict(sys_modules, modules):
-        result = runner.invoke(
-            cli,
-            [
-                "chat",
-                "Explain AI",
-                "perplexity/sonar-2",
-                "-sf",
-                "writing",
-                "-SF",
-                "academic",
-                "-tr",
-                "week",
-                "-cm",
-                "markdown",
-                "-l",
-                "pt-BR",
-                "--copy",
-                "--raw",
-                "--allow-risky-model",
-                "--custom-model-mode",
-                "search",
-                "-t",
-                "my-token",
-            ],
-        )
-
-    assert result.exit_code == 0
-    run_chat.assert_called_once_with(
-        query="Explain AI",
-        model="perplexity/sonar-2",
-        search_focus="writing",
-        source_focus="academic",
-        time_range="week",
-        citation_mode="markdown",
-        language="pt-BR",
-        files=None,
-        timezone=None,
-        latitude=None,
-        longitude=None,
-        space_uuid=None,
-        save=False,
-        copy=True,
-        raw=True,
-        allow_risky_model=True,
-        custom_model_mode="search",
-        research_interaction="auto",
-        token="my-token",
-    )
-
-
-def test_ask_setup_subcommand_delegates() -> None:
-    modules, run_setup = _stub_module("perplexity_webui_scraper.cli.commands.chat", "setup")
-
-    with patch.dict(sys_modules, modules):
-        result = runner.invoke(cli, ["chat", "setup"])
-
-    assert result.exit_code == 0
-    run_setup.assert_called_once_with()
-
-
-def test_chat_rejects_partial_coordinates() -> None:
-    with raises(Exit) as exc_info:
-        run_chat(
-            query="Hello",
-            model="perplexity/best",
-            search_focus="web",
-            source_focus="web",
-            time_range="all",
-            citation_mode="clean",
-            language="en-US",
-            files=None,
-            timezone=None,
-            latitude=1.0,
-            longitude=None,
-            space_uuid=None,
-            save=False,
-            copy=False,
-            raw=False,
-            token="test-token",
-        )
-
-    assert exc_info.value.exit_code == 1
-
-
-def test_chat_reports_invalid_custom_identifier() -> None:
-    with (
-        patch("perplexity_webui_scraper.cli.commands.chat.Console") as console_type,
-        raises(Exit) as exc_info,
-    ):
-        run_chat(
-            query="Hello",
-            model="custom:",
-            search_focus="web",
-            source_focus="web",
-            time_range="all",
-            citation_mode="clean",
-            language="en-US",
-            files=None,
-            timezone=None,
-            latitude=None,
-            longitude=None,
-            space_uuid=None,
-            save=False,
-            copy=False,
-            raw=False,
-            allow_risky_model=True,
-            token="test-token",
-        )
-
-    assert exc_info.value.exit_code == 1
-    message = console_type.return_value.print.call_args.args[0]
-    assert "Invalid custom model" in message
-    assert "Custom model identifiers must contain" in message
-    assert "Unknown model" not in message
-
-
-def test_chat_retries_best_as_writing_on_processing_failure() -> None:
-    class _Conversation:
-        def __init__(self, fail: bool) -> None:
-            self.fail = fail
-            self.answer: str | None = None
-
-        def ask(self, query: str, files: list[Any] | None = None, stream: bool = False) -> Iterator[object]:
-            if self.fail:
-                raise ResponseParsingError("Query processing failed: Error in processing query.")
-
-            self.answer = "ok"
-
-            return iter(())
-
-    class _Client:
-        def __init__(self, session_token: str) -> None:
-            self.configs: list[Any] = []
-            self.calls = 0
-
-        def __enter__(self) -> Self:
-            return self
-
-        def __exit__(self, *args: object) -> None:
-            return None
-
-        def create_conversation(self, config: Any) -> _Conversation:
-            self.configs.append(config)
-            self.calls += 1
-
-            return _Conversation(fail=self.calls == 1)
-
-    fake_client = _Client("token")
-
-    with patch("perplexity_webui_scraper.cli.commands.chat.Perplexity", return_value=fake_client):
-        run_chat(
-            query="oi",
-            model="perplexity/best",
-            search_focus="web",
-            source_focus="web",
-            time_range="all",
-            citation_mode="clean",
-            language="en-US",
-            files=None,
-            timezone=None,
-            latitude=None,
-            longitude=None,
-            space_uuid=None,
-            save=False,
-            copy=False,
-            raw=True,
-            allow_risky_model=True,
-            token="test-token",
-        )
-
-    assert len(fake_client.configs) == 2
-    assert fake_client.configs[0].search_focus == "web"
-    assert fake_client.configs[1].search_focus == "writing"
-
-
-def test_chat_formats_response_parsing_error_without_traceback() -> None:
-    class _Conversation:
-        answer = None
-
-        def ask(self, query: str, files: list[Any] | None = None, stream: bool = False) -> Iterator[object]:
-            raise ResponseParsingError("Query processing failed: Error in processing query.")
-
-    class _Client:
-        def __init__(self, session_token: str) -> None:
-            return None
-
-        def __enter__(self) -> Self:
-            return self
-
-        def __exit__(self, *args: object) -> None:
-            return None
-
-        def create_conversation(self, config: Any) -> _Conversation:
-            return _Conversation()
-
-    with patch("perplexity_webui_scraper.cli.commands.chat.Perplexity", _Client), raises(Exit) as exc_info:
-        run_chat(
-            query="oi",
-            model="perplexity/sonar-2",
-            search_focus="web",
-            source_focus="web",
-            time_range="all",
-            citation_mode="clean",
-            language="en-US",
-            files=None,
-            timezone=None,
-            latitude=None,
-            longitude=None,
-            space_uuid=None,
-            save=False,
-            copy=False,
-            raw=True,
-            token="test-token",
-        )
-
-    assert exc_info.value.exit_code == 1
+    mcp_command.assert_called_once_with()

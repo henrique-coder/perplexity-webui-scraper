@@ -33,7 +33,7 @@ def _models() -> list[Model]:
 
 def _status_reference() -> list[str]:
     lines = [
-        "### Status reference",
+        "### Model status reference",
         "",
         "| Status | Meaning | Runtime behavior |",
         "| --- | --- | --- |",

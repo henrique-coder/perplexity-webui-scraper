@@ -1,4 +1,4 @@
-# MCP Server (Model Context Protocol)
+# MCP server
 
 The MCP server exposes each registered model as a separate tool. Enable only the tools your MCP client needs.
 
@@ -6,7 +6,7 @@ The MCP server exposes each registered model as a separate tool. Enable only the
 
 Add one of the following entries to your MCP client configuration. `uvx` creates an isolated Python environment for the server.
 
-**Claude Desktop** (`~/.config/claude/claude_desktop_config.json`):
+**PyPI installation:**
 
 ```json
 {
@@ -15,7 +15,7 @@ Add one of the following entries to your MCP client configuration. `uvx` creates
       "command": "uvx",
       "args": [
         "--from",
-        "perplexity-webui-scraper[mcp]@latest",
+        "perplexity-webui-scraper[mcp]",
         "perplexity-webui-scraper",
         "mcp"
       ],
@@ -27,28 +27,7 @@ Add one of the following entries to your MCP client configuration. `uvx` creates
 }
 ```
 
-**From GitHub prod branch:**
-
-```json
-{
-  "mcpServers": {
-    "perplexity-webui-scraper": {
-      "command": "uvx",
-      "args": [
-        "--from",
-        "perplexity-webui-scraper[mcp]@git+https://github.com/henrique-coder/perplexity-webui-scraper.git@prod",
-        "perplexity-webui-scraper",
-        "mcp"
-      ],
-      "env": {
-        "PERPLEXITY_SESSION_TOKEN": "your_token_here"
-      }
-    }
-  }
-}
-```
-
-**From local directory (for development):**
+**Local checkout:**
 
 ```json
 {
@@ -70,7 +49,7 @@ Add one of the following entries to your MCP client configuration. `uvx` creates
 }
 ```
 
-## Optional Podman Image
+## Container deployment with Podman
 
 For containerized stdio setups only:
 
@@ -82,16 +61,16 @@ podman pull ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
 podman run --rm -it -e PERPLEXITY_SESSION_TOKEN=your_token ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
 ```
 
-This is niche. Prefer `uvx` for normal MCP client setups.
+Use `uvx` for standard MCP client configurations. The container image runs the server over stdio and does not expose an HTTP endpoint.
 
 ## Available Tools
 
-Each tool uses a specific AI model. Enable only the ones you need:
+Each tool maps to a registered model. Enable only the tools required by the MCP client:
 
-Tools marked `[AVAILABLE]` can be called normally. `[UNKNOWN]` and `[UNAVAILABLE]` tools require `allow_risky_model=true`. Official listing is exposed separately as `is_official`; it does not imply that a tool has been tested. The generic `pplx_custom` tool accepts an internal identifier, which always starts with `unknown` status and `is_official=false`.
+Tools for models with `available` status can be called without acknowledgement. Models with `unknown` or `unavailable` status require `allow_risky_model=true`. `is_official` reports whether a model appears in Perplexity's picker; it does not indicate test status. `pplx_custom` accepts a custom identifier; custom models default to `unknown` and `is_official=false`.
 
 <!-- BEGIN GENERATED MODEL CATALOG -->
-### Status reference
+### Model status reference
 
 | Status | Meaning | Runtime behavior |
 | --- | --- | --- |
@@ -109,6 +88,8 @@ Tools marked `[AVAILABLE]` can be called normally. `[UNKNOWN]` and `[UNAVAILABLE
 | `pplx_gpt61_sol_think` | `openai/gpt-6.1-sol-thinking` | GPT-6.1 Sol Thinking | `true` | pro | `available` | 2026-10-05T20:16:28.012592Z |
 | `pplx_gpt6_astra` | `openai/gpt-6-astra` | GPT-6 Astra | `true` | max | `available` | 2026-10-05T20:16:31.992994Z |
 | `pplx_gpt6_astra_think` | `openai/gpt-6-astra-thinking` | GPT-6 Astra Thinking | `true` | max | `available` | 2026-10-05T20:16:35.921714Z |
+| `pplx_gemini4_argon` | `google/gemini-4-argon` | Gemini 4 Argon | `true` | max | `unknown` | — |
+| `pplx_gemini4_argon_think` | `google/gemini-4-argon-thinking` | Gemini 4 Argon Thinking | `true` | max | `unknown` | — |
 | `pplx_gemini38_flash` | `google/gemini-3.8-flash` | Gemini 3.8 Flash | `true` | pro | `available` | 2026-10-05T20:16:40.371258Z |
 | `pplx_gemini38_flash_think` | `google/gemini-3.8-flash-thinking` | Gemini 3.8 Flash Thinking | `true` | pro | `available` | 2026-10-05T20:16:44.417812Z |
 | `pplx_claude_sonnet55` | `anthropic/claude-sonnet-5.5` | Claude Sonnet 5.5 | `true` | pro | `available` | 2026-10-05T20:16:48.109965Z |
@@ -121,7 +102,10 @@ Tools marked `[AVAILABLE]` can be called normally. `[UNKNOWN]` and `[UNAVAILABLE
 | `pplx_glm53` | `z-ai/glm-5.3` | GLM 5.3 Thinking | `true` | pro | `available` | 2026-10-05T20:17:16.544851Z |
 | `pplx_grok47` | `x-ai/grok-4.7` | Grok 4.7 | `true` | pro | `available` | 2026-10-05T20:17:21.160176Z |
 | `pplx_grok47_think` | `x-ai/grok-4.7-thinking` | Grok 4.7 Thinking | `true` | pro | `available` | 2026-10-05T20:17:27.797021Z |
-| `pplx_nemotron3_ultra_think` | `nvidia/nemotron-3-ultra-thinking` | Nemotron 3 Ultra | `true` | pro | `available` | 2026-10-05T20:17:33.054764Z |
+| `pplx_nemotron35_super_vl_think` | `nvidia/nemotron-3.5-super-vl-thinking` | Nemotron 3.5 Super VL Thinking | `true` | pro | `unknown` | — |
+| `pplx_nemotron3_ultra_think` | `nvidia/nemotron-3-ultra-thinking` | Nemotron 3 Ultra | `false` | pro | `available` | 2026-10-05T20:17:33.054764Z |
+| `pplx_claude_haiku55` | `anthropic/claude-haiku-5.5` | Claude Haiku 5.5 | `false` | pro | `unknown` | — |
+| `pplx_claude_haiku55_think` | `anthropic/claude-haiku-5.5-thinking` | Claude Haiku 5.5 Thinking | `false` | pro | `unknown` | — |
 | `pplx_gpt56_terra` | `openai/gpt-5.6-terra` | GPT-5.6 Terra | `false` | pro | `available` | 2026-10-05T20:17:36.892876Z |
 | `pplx_gpt56_terra_thinking` | `openai/gpt-5.6-terra-thinking` | GPT-5.6 Terra Thinking | `false` | pro | `available` | 2026-10-05T20:17:41.372437Z |
 | `pplx_gpt56_sol` | `openai/gpt-5.6-sol` | GPT-5.6 Sol | `false` | max | `available` | 2026-10-05T20:17:44.686046Z |

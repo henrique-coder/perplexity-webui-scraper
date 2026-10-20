@@ -1,204 +1,108 @@
-"""Unified command entry point: python -m perplexity_webui_scraper.cli."""
+"""Unified CLI dispatcher; feature commands are provided by optional extras."""
 
 from __future__ import annotations
 
-from typing import Annotated
+from importlib import import_module
+from typing import TYPE_CHECKING, Annotated, Any
 
-from typer import Argument, Context, Option, Typer
+from typer import Exit, Option, Typer, echo
 
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
+_COMMANDS: dict[str, tuple[str, str, str]] = {
+    "token": ("perplexity_webui_scraper.cli.commands.get_session_token", "run", "token"),
+    "api": ("perplexity_webui_scraper.api.launcher", "main", "api"),
+    "mcp": ("perplexity_webui_scraper.mcp.server", "main", "mcp"),
+}
+
+_OPTIONAL_MODULES: dict[str, set[str]] = {
+    "token": {"typer", "rich", "pyperclip"},
+    "api": {"typer", "fastapi", "rich", "uvicorn"},
+    "mcp": {"fastmcp"},
+}
 
 cli = Typer(
     name="perplexity-webui-scraper",
-    help="Perplexity WebUI Scraper command line tools.",
+    help="Perplexity WebUI Scraper optional commands.",
     add_completion=False,
     no_args_is_help=True,
-)
-
-chat_app = Typer(
-    name="chat",
-    help="Chat with Perplexity AI directly from the terminal.",
-    invoke_without_command=True,
-    no_args_is_help=False,
-    context_settings={"allow_interspersed_args": True},
+    context_settings={"help_option_names": ["-h", "--help"]},
 )
 
 
-@chat_app.callback(invoke_without_command=True)
-def chat(
-    ctx: Context,
-    query: Annotated[
+def _load_command(command_name: str) -> tuple[Callable[..., Any], str]:
+    """Load a command implementation and identify its public extra if unavailable."""
+    module_name, symbol, extra = _COMMANDS[command_name]
+    try:
+        module = import_module(module_name)
+    except ModuleNotFoundError as error:
+        if error.name in _OPTIONAL_MODULES[extra]:
+            raise SystemExit(f"Install perplexity-webui-scraper[{extra}] to use the {command_name} command") from error
+        raise
+    return getattr(module, symbol), extra
+
+
+@cli.command(name="token", context_settings={"help_option_names": ["-h", "--help"]})
+def token(
+    email: Annotated[str | None, Option("-e", "--email", help="Perplexity account email.")] = None,
+) -> None:
+    """Generate a Perplexity session token through email authentication."""
+    try:
+        token_app, _ = _load_command("token")
+    except SystemExit as error:
+        echo(str(error), err=True)
+        raise Exit(code=1) from error
+    token_app(email)
+
+
+@cli.command(
+    name="api",
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+)
+def api(
+    host: Annotated[str, Option("--host", "-H", help="Host address to bind the server to.")] = "127.0.0.1",
+    port: Annotated[int, Option("--port", "-p", help="Port to listen on.")] = 8000,
+    reload: Annotated[bool, Option("--reload", help="Enable auto-reload for development.")] = False,
+    log_level: Annotated[str, Option("--log-level", help="Uvicorn log level.")] = "info",
+    session_token: Annotated[
         str | None,
-        Argument(help="The initial question to ask Perplexity AI (optional)."),
+        Option("--session-token", envvar="PERPLEXITY_SESSION_TOKEN", help="Optional server-default Perplexity token."),
     ] = None,
-    model: Annotated[
+    api_key: Annotated[
         str | None,
-        Argument(help="Model ID (e.g. 'perplexity/best')."),
-    ] = None,
-    search_focus: Annotated[
-        str,
-        Option("--search-focus", "-sf", help="Search mode: 'web' or 'writing'."),
-    ] = "web",
-    source_focus: Annotated[
-        str,
-        Option("--source-focus", "-SF", help="Source filter: 'web', 'academic', 'social', 'finance', 'all'."),
-    ] = "web",
-    time_range: Annotated[
-        str,
-        Option("--time-range", "-tr", help="Recency filter: 'all', 'day', 'week', 'month', 'year'."),
-    ] = "all",
-    citation_mode: Annotated[
-        str,
-        Option("--citation-mode", "-cm", help="Citation style: 'default', 'markdown', 'clean'."),
-    ] = "clean",
-    language: Annotated[
-        str,
-        Option("--language", "-l", help="Response language (BCP-47 tag, e.g. 'en-US', 'pt-BR')."),
-    ] = "en-US",
-    files: Annotated[
-        list[str] | None,
-        Option("--file", "-f", help="File attachment paths (repeatable)."),
-    ] = None,
-    timezone: Annotated[
-        str | None,
-        Option("--timezone", "-tz", help="IANA timezone string for localization (e.g., 'America/Sao_Paulo')."),
-    ] = None,
-    latitude: Annotated[
-        float | None,
-        Option("--latitude", "-lat", help="Latitude for location-aware results."),
-    ] = None,
-    longitude: Annotated[
-        float | None,
-        Option("--longitude", "-lon", help="Longitude for location-aware results."),
-    ] = None,
-    space_uuid: Annotated[
-        str | None,
-        Option("--space", "-s", help="UUID of a Perplexity Space (collection) to post into."),
-    ] = None,
-    save: Annotated[
-        bool,
-        Option("--save/--no-save", help="Save conversation to your Perplexity library."),
-    ] = False,
-    copy: Annotated[
-        bool,
-        Option("--copy", "-cp", help="Copy the final answer to clipboard."),
-    ] = False,
-    raw: Annotated[
-        bool,
-        Option("--raw", "-r", help="Plain text output without Rich formatting."),
-    ] = False,
-    allow_risky_model: Annotated[
-        bool,
-        Option("--allow-risky-model", help="Acknowledge a model whose status is not available."),
-    ] = False,
-    custom_model_mode: Annotated[
-        str,
-        Option("--custom-model-mode", help="Backend mode for custom:<identifier> models."),
-    ] = "copilot",
-    research_interaction: Annotated[
-        str,
-        Option("--research-interaction", help="Deep Research clarification handling: 'auto' or 'manual'."),
-    ] = "auto",
-    token: Annotated[
-        str | None,
-        Option("--token", "-t", help="Session token override (skips saved token)."),
+        Option("--api-key", envvar="PERPLEXITY_API_KEY", help="Gateway key required on each request."),
     ] = None,
 ) -> None:
-    """Ask Perplexity AI a question with real-time streaming."""
-    if ctx.invoked_subcommand is not None:
-        return
-
-    if query == "setup" and model is None:
-        from perplexity_webui_scraper.cli.commands.chat import setup as run_setup  # noqa: PLC0415
-
-        run_setup()
-
-        return
-
-    # Start REPL or single query if query is provided
-
-    from perplexity_webui_scraper.cli.commands.chat import run as run_chat  # noqa: PLC0415
-
-    run_chat(
-        query=query,
-        model=model,
-        search_focus=search_focus,
-        source_focus=source_focus,
-        time_range=time_range,
-        citation_mode=citation_mode,
-        language=language,
-        files=files,
-        timezone=timezone,
-        latitude=latitude,
-        longitude=longitude,
-        space_uuid=space_uuid,
-        save=save,
-        copy=copy,
-        raw=raw,
-        allow_risky_model=allow_risky_model,
-        custom_model_mode=custom_model_mode,
-        research_interaction=research_interaction,
-        token=token,
+    """Start the OpenAI-compatible REST API server."""
+    try:
+        api_main, _ = _load_command("api")
+    except SystemExit as error:
+        echo(str(error), err=True)
+        raise Exit(code=1) from error
+    api_main(
+        host=host,
+        port=port,
+        reload=reload,
+        log_level=log_level,
+        default_session_token=session_token,
+        gateway_api_key=api_key,
     )
 
 
-@chat_app.command()
-def setup() -> None:
-    """Configure the saved token and default model."""
-    from perplexity_webui_scraper.cli.commands.chat import setup as run_setup  # noqa: PLC0415
-
-    run_setup()
-
-
-cli.add_typer(chat_app)
-
-
-@cli.command(name="token")
-def token(
-    email: Annotated[str | None, Argument(help="Your Perplexity account email.")] = None,
-) -> None:
-    """Generate a Perplexity session token via email OTP or magic link."""
-    from perplexity_webui_scraper.cli.commands.get_session_token import run  # noqa: PLC0415
-
-    run(email)
-
-
-@cli.command(name="api")
-def api(
-    host: Annotated[
-        str,
-        Option("--host", "-H", help="Host address to bind the server to."),
-    ] = "127.0.0.1",
-    port: Annotated[
-        int,
-        Option("--port", "-p", help="Port to listen on."),
-    ] = 8000,
-    reload: Annotated[
-        bool,
-        Option("--reload", help="Enable auto-reload for development."),
-    ] = False,
-    log_level: Annotated[
-        str,
-        Option("--log-level", help="Uvicorn log level."),
-    ] = "info",
-) -> None:
-    """Start the OpenAI-compatible REST API server."""
-    from perplexity_webui_scraper.api.launcher import main as run_api  # noqa: PLC0415
-
-    run_api(host=host, port=port, reload=reload, log_level=log_level)
-
-
-@cli.command(name="mcp")
+@cli.command(name="mcp", context_settings={"help_option_names": ["-h", "--help"]})
 def mcp() -> None:
     """Start the MCP server."""
-    from perplexity_webui_scraper.mcp.server import main as run_mcp  # noqa: PLC0415
-
-    run_mcp()
+    try:
+        mcp_command, _ = _load_command("mcp")
+    except SystemExit as error:
+        echo(str(error), err=True)
+        raise Exit(code=1) from error
+    mcp_command()
 
 
 def main() -> None:
-    """Console script entry point."""
+    """Run the Typer command-line application."""
     cli()
-
-
-if __name__ == "__main__":
-    main()

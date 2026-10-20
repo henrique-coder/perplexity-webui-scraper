@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-import argparse
+from argparse import ArgumentParser
 from pathlib import Path
-import re
+from re import compile
 
 
-_LOGO_URL_PATTERN = re.compile(
+_LOGO_URL_PATTERN = compile(
     r"https://raw\.githubusercontent\.com/henrique-coder/perplexity-webui-scraper/[^/\s]+/docs/assets/icon\.png"
 )
 _LOGO_URL_TEMPLATE = (
     "https://raw.githubusercontent.com/henrique-coder/perplexity-webui-scraper/{reference}/docs/assets/icon.png"
 )
-_REFERENCE_PATTERN = re.compile(r"[A-Za-z0-9._-]+")
+_REFERENCE_PATTERN = compile(r"[A-Za-z0-9._-]+")
 
 
 def render_readme(source: str, reference: str) -> str:
@@ -43,7 +43,7 @@ def render_readme(source: str, reference: str) -> str:
 
 def main() -> None:
     """Render the README file in place for the package build."""
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = ArgumentParser(description=__doc__)
     parser.add_argument("--reference", required=True, help="Immutable GitHub revision for the release README")
     parser.add_argument("--source", type=Path, default=Path("README.md"), help="README path to render")
     args = parser.parse_args()

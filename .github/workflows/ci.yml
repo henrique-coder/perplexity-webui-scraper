@@ -29,6 +29,7 @@ jobs:
       frontend: ${{ steps.classify.outputs.frontend }}
       workflows: ${{ steps.classify.outputs.workflows }}
       metadata: ${{ steps.classify.outputs.metadata }}
+      containers: ${{ steps.classify.outputs.containers }}
 
     steps:
       - name: Checkout Code
@@ -36,6 +37,14 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "latest"
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
 
       - name: Classify Changed Files
         id: classify
@@ -49,12 +58,12 @@ jobs:
           HEAD_SHA: ${{ github.sha }}
         run: |
           if [ "$EVENT_NAME" = "workflow_dispatch" ] || [ "$BASE_REF" = "prod" ]; then
-            python scripts/ci_changed_paths.py --all
+            uv run --python 3.14 --no-project python scripts/ci_changed_paths.py --all
             exit 0
           fi
 
           if [ "$EVENT_NAME" = "pull_request" ]; then
-            python scripts/ci_changed_paths.py "$PR_BASE_SHA" "$PR_HEAD_SHA"
+            uv run --python 3.14 --no-project python scripts/ci_changed_paths.py "$PR_BASE_SHA" "$PR_HEAD_SHA"
             exit 0
           fi
 
@@ -63,7 +72,7 @@ jobs:
           else
             BASE_SHA="$EVENT_BEFORE"
           fi
-          python scripts/ci_changed_paths.py "$BASE_SHA" "$HEAD_SHA"
+          uv run --python 3.14 --no-project python scripts/ci_changed_paths.py "$BASE_SHA" "$HEAD_SHA"
 
   python_quality:
     name: Python Quality
@@ -79,7 +88,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
           python-version: "3.14"
@@ -87,13 +96,13 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install Dependencies
-        run: uv sync --frozen --no-dev --group lint --group test
+        run: uv sync --frozen --python 3.14 --no-dev --group lint --group test
 
       - name: Check Code Quality
         run: |
-          uv run --no-sync ruff check
-          uv run --no-sync ty check
-          uv run --no-sync scripts/render_model_docs.py --check
+          uv run --python 3.14 --no-sync ruff check
+          uv run --python 3.14 --no-sync ty check
+          uv run --python 3.14 --no-sync scripts/render_model_docs.py --check
 
   documentation:
     name: Documentation
@@ -109,7 +118,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
           python-version: "3.14"
@@ -117,10 +126,10 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install Dependencies
-        run: uv sync --frozen --no-dev --group docs
+        run: uv sync --frozen --python 3.14 --no-dev --group docs
 
       - name: Build Documentation
-        run: uv run --no-sync mkdocs build --strict
+        run: uv run --python 3.14 --no-sync mkdocs build --strict
 
   formatting:
     name: Formatting & Configuration
@@ -145,6 +154,8 @@ jobs:
         with:
           version: 11.17.0
           run_install: false
+          cache: true
+          cache_dependency_path: pnpm-lock.yaml
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
@@ -168,15 +179,43 @@ jobs:
           persist-credentials: false
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
+          python-version: "3.14"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
 
       - name: Install Workflow Linter
-        run: uv sync --frozen --only-group workflow --no-install-project
+        run: uv sync --frozen --python 3.14 --only-group workflow --no-install-project
 
       - name: Scan Workflows
-        run: uv run --no-sync zizmor .github/workflows
+        run: uv run --python 3.14 --no-sync zizmor .github/workflows
+
+  containers:
+    name: Container Build
+    needs: changes
+    if: needs.changes.outputs.containers == 'true' || needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Build API Image
+        run: podman build -t perplexity-api-ci -f Containerfile .
+
+      - name: Build MCP Image
+        run: podman build -t perplexity-mcp-ci -f Containerfile.mcp .
+
+      - name: Smoke Test API Image
+        run: podman run --rm perplexity-api-ci --help
+
+      - name: Smoke Test MCP Image
+        run: podman run --rm perplexity-mcp-ci --help
 
   tests:
     name: Tests (${{ matrix.os }}, Python ${{ matrix.python }})
@@ -190,9 +229,21 @@ jobs:
         include:
           - os: ubuntu-latest
             python: "3.11"
+          - os: macos-latest
+            python: "3.11"
+          - os: windows-latest
+            python: "3.11"
           - os: ubuntu-latest
             python: "3.12"
+          - os: macos-latest
+            python: "3.12"
+          - os: windows-latest
+            python: "3.12"
           - os: ubuntu-latest
+            python: "3.13"
+          - os: macos-latest
+            python: "3.13"
+          - os: windows-latest
             python: "3.13"
           - os: ubuntu-latest
             python: "3.14"
@@ -200,6 +251,12 @@ jobs:
             python: "3.14"
           - os: windows-latest
             python: "3.14"
+          - os: ubuntu-latest
+            python: "3.15"
+          - os: macos-latest
+            python: "3.15"
+          - os: windows-latest
+            python: "3.15"
 
     steps:
       - name: Checkout Code
@@ -208,7 +265,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
           python-version: ${{ matrix.python }}
@@ -216,10 +273,10 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Install Dependencies
-        run: uv sync --frozen --no-dev --group test
+        run: uv sync --frozen --python "${{ matrix.python }}" --no-dev --group test
 
       - name: Run Test Suite
-        run: uv run --no-sync pytest
+        run: uv run --python "${{ matrix.python }}" --no-sync pytest
 
   build:
     name: Build Distribution
@@ -235,7 +292,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
           python-version: "3.14"
@@ -243,10 +300,10 @@ jobs:
           cache-dependency-glob: "uv.lock"
 
       - name: Build Package
-        run: uv build
+        run: uv build --python 3.14
 
       - name: Validate Package Metadata
-        run: uvx twine check dist/*
+        run: uvx --python 3.14 twine check dist/*
 
   release_policy:
     name: Release Policy
@@ -297,6 +354,7 @@ jobs:
       - documentation
       - formatting
       - workflow_lint
+      - containers
       - tests
       - build
       - release_policy
@@ -309,6 +367,7 @@ jobs:
           DOCUMENTATION_RESULT: ${{ needs.documentation.result }}
           FORMATTING_RESULT: ${{ needs.formatting.result }}
           WORKFLOW_LINT_RESULT: ${{ needs.workflow_lint.result }}
+          CONTAINERS_RESULT: ${{ needs.containers.result }}
           TESTS_RESULT: ${{ needs.tests.result }}
           BUILD_RESULT: ${{ needs.build.result }}
           RELEASE_POLICY_RESULT: ${{ needs.release_policy.result }}
@@ -319,6 +378,7 @@ jobs:
             "$DOCUMENTATION_RESULT" \
             "$FORMATTING_RESULT" \
             "$WORKFLOW_LINT_RESULT" \
+            "$CONTAINERS_RESULT" \
             "$TESTS_RESULT" \
             "$BUILD_RESULT"; do
             if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then

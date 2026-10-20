@@ -200,12 +200,12 @@ class Conversation:
 
     def _validate_request_access(self, model: Model, has_files: bool) -> Model:
         """Ensure the account can use the selected model and attachments."""
-        response = self._http.get(ENDPOINT_AUTH_SESSION, rate_limited=False)
+        response = self._http.get(ENDPOINT_AUTH_SESSION)
         session = AccountSession.model_validate(response.json())
         settings: AccountSettings | None = None
 
         if session.account_tier == "unknown":
-            settings_response = self._http.get(ENDPOINT_USER_SETTINGS, rate_limited=False)
+            settings_response = self._http.get(ENDPOINT_USER_SETTINGS)
             settings = AccountSettings.model_validate(settings_response.json())
 
         profile = AccountProfile(session=session, settings=settings)

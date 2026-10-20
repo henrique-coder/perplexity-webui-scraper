@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from math import isfinite
 from random import uniform
 from threading import Lock
 from time import monotonic, sleep
 from typing import TYPE_CHECKING, TypeVar
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 if TYPE_CHECKING:
@@ -37,6 +38,23 @@ class RetryConfig(BaseModel):
     base_delay: float = 1.0
     max_delay: float = 60.0
     jitter: float = 0.5
+
+    @model_validator(mode="after")
+    def _validate_ranges(self) -> RetryConfig:
+        """Reject retry settings that can disable requests or produce invalid waits."""
+        if self.max_retries < 0:
+            raise ValueError("max_retries cannot be negative")
+
+        if not isfinite(self.base_delay) or self.base_delay < 0:
+            raise ValueError("base_delay must be finite and non-negative")
+
+        if not isfinite(self.max_delay) or self.max_delay < 0:
+            raise ValueError("max_delay must be finite and non-negative")
+
+        if not isfinite(self.jitter) or not 0 <= self.jitter <= 1:
+            raise ValueError("jitter must be between zero and one")
+
+        return self
 
 
 class RateLimiter:
