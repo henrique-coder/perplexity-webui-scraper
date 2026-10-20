@@ -120,3 +120,18 @@ def test_publish_workflow_verifies_pypi_artifact_hashes_before_resuming() -> Non
     assert "Check Existing PyPI Artifacts" in publish_job
     assert "python3 scripts/check_pypi_artifacts.py" in publish_job
     assert "steps.pypi_artifacts.outputs.publish == 'true'" in publish_job
+
+
+def test_publish_job_checks_out_source_for_artifact_verifier() -> None:
+    workflow = Path(".github/workflows/publish.yml").read_text(encoding="utf-8")
+    publish_job = workflow.split("  publish_pypi:", maxsplit=1)[1].split("  publish_container:", maxsplit=1)[0]
+
+    assert "uses: actions/checkout@" in publish_job
+    assert "ref: ${{ github.sha }}" in publish_job
+
+
+def test_publish_job_checks_out_source_before_downloading_artifacts() -> None:
+    workflow = Path(".github/workflows/publish.yml").read_text(encoding="utf-8")
+    publish_job = workflow.split("  publish_pypi:", maxsplit=1)[1].split("  publish_container:", maxsplit=1)[0]
+
+    assert publish_job.index("name: Checkout Release Source") < publish_job.index("name: Download Package Artifacts")
