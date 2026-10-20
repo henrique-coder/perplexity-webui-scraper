@@ -179,7 +179,15 @@ jobs:
           name: python-dist
           path: dist
 
-      - name: Publish Distributions to PyPI
+      - name: Check Existing PyPI Artifacts
+        id: pypi_artifacts
+        env:
+          PACKAGE_NAME: ${{ needs.validate.outputs.package_name }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: python3 scripts/check_pypi_artifacts.py
+
+      - name: Publish Missing Distributions to PyPI
+        if: steps.pypi_artifacts.outputs.publish == 'true'
         env:
           UV_TRUSTED_PUBLISHING: always
         run: uv publish dist/*.whl dist/*.tar.gz

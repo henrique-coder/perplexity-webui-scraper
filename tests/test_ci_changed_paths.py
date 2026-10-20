@@ -111,3 +111,12 @@ def test_publish_workflow_disables_uv_cache_without_checkout_or_dependencies() -
 
     assert "enable-cache: false" in publish_job
     assert "uv publish dist/*.whl dist/*.tar.gz" in publish_job
+
+
+def test_publish_workflow_verifies_pypi_artifact_hashes_before_resuming() -> None:
+    workflow = Path(".github/workflows/publish.yml").read_text(encoding="utf-8")
+    publish_job = workflow.split("  publish_pypi:", maxsplit=1)[1].split("  publish_container:", maxsplit=1)[0]
+
+    assert "Check Existing PyPI Artifacts" in publish_job
+    assert "python3 scripts/check_pypi_artifacts.py" in publish_job
+    assert "steps.pypi_artifacts.outputs.publish == 'true'" in publish_job
