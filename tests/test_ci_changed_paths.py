@@ -2,6 +2,7 @@
 
 from os import environ
 from pathlib import Path
+from shlex import quote
 from subprocess import run
 from textwrap import dedent
 
@@ -134,8 +135,10 @@ def test_publish_release_notes_include_all_changelog_entries_until_previous_rele
     step = step.split("      - name: Create Immutable Tag and Release\n", maxsplit=1)[0]
     script = dedent(step.split("        run: |\n", maxsplit=1)[1])
 
+    python_step = script.split("python3 - <<'PY'\n", maxsplit=1)[1].split("\nPY\n", maxsplit=1)[0]
+    python_command = "python3 -c " + quote(python_step) + "\n" + script.split("\nPY\n", maxsplit=1)[1]
     result = run(
-        ["bash", "-c", script],
+        ["bash", "-c", python_command],
         cwd=tmp_path,
         check=False,
         capture_output=True,
