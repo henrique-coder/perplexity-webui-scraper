@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+## [1.2.1] - 2026-10-20
 
-- **Python runtimes:** Use Python 3.14 for CI quality, documentation, and package build/release jobs. Keep Python 3.15 as the primary direct-install runtime, `.python-version` pin, and API/MCP container runtime; the unit-test matrix covers Python 3.11 through 3.15.
+### Fixed
+
+- **Release workflow:** Validate wheel/sdist versions before upload and prevent rebuilt files from replacing files already published under a yanked version.
+- **Release workflow:** Skip identical PyPI files, check out the release source for helper scripts, and gate container/GitHub Release jobs on verified PyPI state.
+- **Release policy:** Restrict production-promotion checks to `dev` → `prod` pull requests.
 
 ## [1.2.0] - 2026-10-19
 

@@ -56,6 +56,7 @@ jobs:
         env:
           REQUESTED_VERSION: ${{ inputs.version }}
           RELEASE_MODE: ${{ inputs.mode }}
+          GITHUB_SHA: ${{ github.sha }}
         run: |
           if [ "$GITHUB_REF" != "refs/heads/prod" ]; then
             echo "::error::Publish Release must be dispatched from the prod branch."
@@ -131,7 +132,7 @@ jobs:
 
       - name: Build and Validate Package
         env:
-          RELEASE_REF: ${{ github.sha }}
+          PROJECT_VERSION: ${{ needs.validate.outputs.version }}
         run: |
           README_BACKUP=$(mktemp)
           cp README.md "$README_BACKUP"
@@ -140,9 +141,11 @@ jobs:
             rm -f "$README_BACKUP"
           }
           trap cleanup EXIT
-          uv run --python 3.14 --no-sync --no-dev scripts/render_pypi_readme.py --reference "$RELEASE_REF"
+          uv run --python 3.14 --no-sync --no-dev scripts/render_pypi_readme.py --reference "$GITHUB_SHA"
           uv build --python 3.14
-          uvx --python 3.14 twine check dist/*
+          uvx --python 3.14 twine check dist/*.whl dist/*.tar.gz
+          uv run --python 3.14 --no-project python scripts/validate_release_artifacts.py \
+            --version "$PROJECT_VERSION" dist/*.whl dist/*.tar.gz
           sha256sum dist/* > dist/SHA256SUMS
 
       - name: Upload Package Artifacts
@@ -166,13 +169,18 @@ jobs:
     environment: release
 
     steps:
+      - name: Checkout Release Source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
       - name: Set up uv
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "latest"
-          python-version: "3.14"
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          enable-cache: false
+          ignore-empty-workdir: true
 
       - name: Download Package Artifacts
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
@@ -180,17 +188,24 @@ jobs:
           name: python-dist
           path: dist
 
-      - name: Publish Idempotently to PyPI
+      - name: Verify PyPI Artifact State
+        id: pypi_state
         env:
           PACKAGE_NAME: ${{ needs.validate.outputs.package_name }}
           VERSION: ${{ needs.validate.outputs.version }}
+        run: python3 scripts/check_pypi_artifacts.py
+
+      - name: Publish Distributions to PyPI
+        if: steps.pypi_state.outputs.publish == 'true'
+        env:
           UV_TRUSTED_PUBLISHING: always
-        run: |
-          if curl --fail --silent --show-error "https://pypi.org/pypi/$PACKAGE_NAME/$VERSION/json" >/dev/null; then
-            echo "::error::PyPI already contains $PACKAGE_NAME $VERSION. Verify published artifact digests before resuming this release."
-            exit 1
-          fi
-          uv publish dist/*.whl dist/*.tar.gz
+        run: uv publish --check-url https://pypi.org/simple/ --trusted-publishing always dist/*.whl dist/*.tar.gz
+
+      - name: Confirm PyPI Publication State
+        env:
+          PACKAGE_NAME: ${{ needs.validate.outputs.package_name }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: python3 scripts/check_pypi_artifacts.py --verify-only
 
   publish_container:
     name: Publish Container Images
@@ -297,11 +312,30 @@ jobs:
           VERSION: ${{ needs.validate.outputs.version }}
           REPOSITORY: ${{ github.repository }}
         run: |
-          awk -v heading="## [$VERSION] - " '
-            index($0, heading) == 1 { found=1; next }
-            found && /^## \[/ { exit }
-            found { print }
-          ' CHANGELOG.md > release_notes.md
+          python3 - <<'PY'
+          from os import environ
+          from pathlib import Path
+          from re import finditer
+
+          changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
+          sections = list(finditer(r"(?m)^## \[(\d+\.\d+\.\d+)\][^\n]*\n", changelog))
+          version = environ["VERSION"]
+          selected = next((index for index, match in enumerate(sections) if match.group(1) == version), None)
+          if selected is None:
+              raise SystemExit(f"No changelog section found for {version}.")
+
+          previous_version = tuple(int(part) for part in version.split("."))
+          release_sections = []
+          for index in range(selected, len(sections)):
+              candidate = tuple(int(part) for part in sections[index].group(1).split("."))
+              if index > selected and candidate[:2] != previous_version[:2]:
+                  break
+              start = sections[index].end()
+              end = sections[index + 1].start() if index + 1 < len(sections) else len(changelog)
+              release_sections.append(changelog[start:end].strip())
+
+          Path("release_notes.md").write_text("\n\n".join(release_sections) + "\n", encoding="utf-8")
+          PY
           sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' release_notes.md
 
           if [ ! -s release_notes.md ]; then
