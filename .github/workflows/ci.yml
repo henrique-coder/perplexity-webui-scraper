@@ -303,7 +303,7 @@ jobs:
         run: uv build --python 3.14
 
       - name: Validate Package Metadata
-        run: uvx --python 3.14 twine check dist/*
+        run: uvx --python 3.14 twine check dist/*.whl dist/*.tar.gz
 
   release_policy:
     name: Release Policy
