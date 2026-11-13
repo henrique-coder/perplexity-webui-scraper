@@ -88,21 +88,25 @@ Tools for models with `available` status can be called without acknowledgement. 
 | `pplx_gpt61_sol_think` | `openai/gpt-6.1-sol-thinking` | GPT-6.1 Sol Thinking | `true` | pro | `available` | 2026-10-05T20:16:28.012592Z |
 | `pplx_gpt6_astra` | `openai/gpt-6-astra` | GPT-6 Astra | `true` | max | `available` | 2026-10-05T20:16:31.992994Z |
 | `pplx_gpt6_astra_think` | `openai/gpt-6-astra-thinking` | GPT-6 Astra Thinking | `true` | max | `available` | 2026-10-05T20:16:35.921714Z |
-| `pplx_gemini4_argon` | `google/gemini-4-argon` | Gemini 4 Argon | `true` | max | `unknown` | — |
-| `pplx_gemini4_argon_think` | `google/gemini-4-argon-thinking` | Gemini 4 Argon Thinking | `true` | max | `unknown` | — |
+| `pplx_gemini4_carbon` | `google/gemini-4-carbon` | Gemini 4 Carbon | `true` | max | `unknown` | — |
+| `pplx_gemini4_carbon_think` | `google/gemini-4-carbon-thinking` | Gemini 4 Carbon Thinking | `true` | max | `unknown` | — |
 | `pplx_gemini38_flash` | `google/gemini-3.8-flash` | Gemini 3.8 Flash | `true` | pro | `available` | 2026-10-05T20:16:40.371258Z |
 | `pplx_gemini38_flash_think` | `google/gemini-3.8-flash-thinking` | Gemini 3.8 Flash Thinking | `true` | pro | `available` | 2026-10-05T20:16:44.417812Z |
 | `pplx_claude_sonnet55` | `anthropic/claude-sonnet-5.5` | Claude Sonnet 5.5 | `true` | pro | `available` | 2026-10-05T20:16:48.109965Z |
 | `pplx_claude_sonnet55_think` | `anthropic/claude-sonnet-5.5-thinking` | Claude Sonnet 5.5 Thinking | `true` | pro | `available` | 2026-10-05T20:16:52.166366Z |
 | `pplx_claude_opus55` | `anthropic/claude-opus-5.5` | Claude Opus 5.5 | `true` | max | `available` | 2026-10-05T20:16:55.692021Z |
 | `pplx_claude_opus55_think` | `anthropic/claude-opus-5.5-thinking` | Claude Opus 5.5 Thinking | `true` | max | `available` | 2026-10-05T20:17:00.347130Z |
-| `pplx_claude_fable51` | `anthropic/claude-fable-5.1` | Claude Fable 5.1 | `true` | max | `available` | 2026-10-05T20:17:03.783203Z |
-| `pplx_claude_fable51_think` | `anthropic/claude-fable-5.1-thinking` | Claude Fable 5.1 Thinking | `true` | max | `available` | 2026-10-05T20:17:08.318815Z |
+| `pplx_claude_fable52` | `anthropic/claude-fable-5.2` | Claude Fable 5.2 | `true` | max | `unknown` | — |
+| `pplx_claude_fable52_think` | `anthropic/claude-fable-5.2-thinking` | Claude Fable 5.2 Thinking | `true` | max | `unknown` | — |
 | `pplx_kimi_k3_thinking` | `moonshot/kimi-k3-thinking` | Kimi K3 Thinking | `true` | pro | `available` | 2026-10-05T20:17:13.205366Z |
 | `pplx_glm53` | `z-ai/glm-5.3` | GLM 5.3 Thinking | `true` | pro | `available` | 2026-10-05T20:17:16.544851Z |
 | `pplx_grok47` | `x-ai/grok-4.7` | Grok 4.7 | `true` | pro | `available` | 2026-10-05T20:17:21.160176Z |
 | `pplx_grok47_think` | `x-ai/grok-4.7-thinking` | Grok 4.7 Thinking | `true` | pro | `available` | 2026-10-05T20:17:27.797021Z |
 | `pplx_nemotron35_super_vl_think` | `nvidia/nemotron-3.5-super-vl-thinking` | Nemotron 3.5 Super VL Thinking | `true` | pro | `unknown` | — |
+| `pplx_gemini4_argon` | `google/gemini-4-argon` | Gemini 4 Argon | `false` | max | `unknown` | — |
+| `pplx_gemini4_argon_think` | `google/gemini-4-argon-thinking` | Gemini 4 Argon Thinking | `false` | max | `unknown` | — |
+| `pplx_claude_fable51` | `anthropic/claude-fable-5.1` | Claude Fable 5.1 | `false` | max | `available` | 2026-10-05T20:17:03.783203Z |
+| `pplx_claude_fable51_think` | `anthropic/claude-fable-5.1-thinking` | Claude Fable 5.1 Thinking | `false` | max | `available` | 2026-10-05T20:17:08.318815Z |
 | `pplx_nemotron3_ultra_think` | `nvidia/nemotron-3-ultra-thinking` | Nemotron 3 Ultra | `false` | pro | `available` | 2026-10-05T20:17:33.054764Z |
 | `pplx_claude_haiku55` | `anthropic/claude-haiku-5.5` | Claude Haiku 5.5 | `false` | pro | `unknown` | — |
 | `pplx_claude_haiku55_think` | `anthropic/claude-haiku-5.5-thinking` | Claude Haiku 5.5 Thinking | `false` | pro | `unknown` | — |
