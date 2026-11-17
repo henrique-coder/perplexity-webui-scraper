@@ -1,8 +1,8 @@
-.debug/
-.env
+# Directories: build context exclusions
 .git/
-.gemini/
 .claude/
+.debug/
+.gemini/
 .idea/
 .mypy_cache/
 .pytest_cache/
@@ -10,6 +10,14 @@
 .venv/
 .vscode/
 __pycache__/
+node_modules/
+
+# Directories: generated output
+build/
+dist/
+site/
+
+# File extensions and generated suffixes
 *.bak
 *.build/
 *.dist/
@@ -18,7 +26,3 @@ __pycache__/
 *.onefile-build/
 *.py[cod]
 *.tmp
-build/
-dist/
-node_modules/
-site/

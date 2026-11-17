@@ -1,8 +1,18 @@
-# Folders
+# Directories: generated API documentation
 docs/api/
+docs/superpowers/
+
+# Directories: generated output
+.superpowers/
+site/
+
+# Named generated files
 docs/api-reference.md
 docs/mcp-server.md
 
-# Files
-uv.lock
+# Dependency lockfiles
 pnpm-lock.yaml
+uv.lock
+
+# Editor settings
+.editorconfig
