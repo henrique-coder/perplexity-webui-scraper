@@ -12,7 +12,7 @@ from zipfile import ZipFile
 
 from pytest import raises
 
-from scripts.validate_release_policy import validate_release_policy
+from scripts.verify_release_policy import validate_release_policy
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -49,8 +49,13 @@ def test_pypi_publish_uses_uv_duplicate_check_and_no_unused_cache() -> None:
     assert "--check-url https://pypi.org/simple/" in job
     assert "--trusted-publishing always" in job
     assert "UV_TRUSTED_PUBLISHING: always" in job
-    assert "python3 scripts/check_pypi_artifacts.py" in job
-    assert "python3 scripts/check_pypi_artifacts.py --verify-only" in job
+    assert 'uv run --python "$RELEASE_PYTHON" --no-project python scripts/verify_pypi_uploads.py' in job
+    assert 'uv run --python "$RELEASE_PYTHON" --no-project python scripts/verify_pypi_uploads.py --verify-only' in job
+
+
+def test_workflows_use_uv_instead_of_bare_python3() -> None:
+    assert "python3" not in CI_WORKFLOW.read_text(encoding="utf-8")
+    assert "python3" not in PUBLISH_WORKFLOW.read_text(encoding="utf-8")
 
 
 def test_release_verifies_all_pypi_hashes_before_publishing_containers() -> None:
@@ -61,16 +66,16 @@ def test_release_verifies_all_pypi_hashes_before_publishing_containers() -> None
     confirmation = job.index("name: Confirm PyPI Publication State")
 
     assert validation < publish < confirmation
-    assert "sha256" in (ROOT / "scripts" / "check_pypi_artifacts.py").read_text(encoding="utf-8")
-    assert "different SHA-256 digest" in (ROOT / "scripts" / "check_pypi_artifacts.py").read_text(encoding="utf-8")
+    assert "sha256" in (ROOT / "scripts" / "verify_pypi_uploads.py").read_text(encoding="utf-8")
+    assert "different SHA-256 digest" in (ROOT / "scripts" / "verify_pypi_uploads.py").read_text(encoding="utf-8")
 
 
 def test_pypi_artifact_validation_runs_before_upload() -> None:
     workflow = PUBLISH_WORKFLOW.read_text(encoding="utf-8")
     job = _job(workflow, "build_package", "publish_pypi")
 
-    assert job.index("twine check dist/*.whl dist/*.tar.gz") < job.index("validate_release_artifacts.py")
-    assert 'validate_release_artifacts.py \\\n            --version "$PROJECT_VERSION" dist/*.whl dist/*.tar.gz' in job
+    assert job.index("twine check dist/*.whl dist/*.tar.gz") < job.index("verify_release_artifacts.py")
+    assert 'verify_release_artifacts.py \\\n            --version "$PROJECT_VERSION" dist/*.whl dist/*.tar.gz' in job
 
 
 def test_release_jobs_are_gated_on_successful_registry_publication() -> None:
@@ -146,7 +151,7 @@ def test_release_workflow_prevents_credentials_from_persisting_after_checkout() 
 def test_release_artifact_validator_cli_checks_and_reports_artifacts(tmp_path: Path) -> None:
     version = loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
     artifacts = _write_release_artifacts(tmp_path, version, version)
-    script = ROOT / "scripts" / "validate_release_artifacts.py"
+    script = ROOT / "scripts" / "verify_release_artifacts.py"
 
     result = run(
         [executable, str(script), "--version", version, *(str(path) for path in artifacts)],
@@ -183,6 +188,6 @@ def test_release_policy_gate_rejects_unreleased_and_invalid_headings_and_accepts
     release_policy_job = _job(ci_workflow, "release_policy", "required")
     validate_job = _job(publish_workflow, "validate", "build_package")
 
-    assert "scripts/validate_release_policy.py" in release_policy_job
-    assert "scripts/validate_release_policy.py" in validate_job
+    assert "scripts/verify_release_policy.py" in release_policy_job
+    assert "scripts/verify_release_policy.py" in validate_job
     assert "GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}" in validate_job

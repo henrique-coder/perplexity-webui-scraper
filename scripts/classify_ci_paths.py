@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 CHECKS = ("python", "documentation", "frontend", "workflows", "containers", "metadata")
 PYTHON_PATHS = ("src/", "tests/", ".python-version", "pyproject.toml", "uv.lock", "Justfile", "scripts/")
-DOCUMENTATION_PATHS = ("docs/", "README.md", "mkdocs.yml", ".readthedocs.yaml")
+DOCUMENTATION_PATHS = ("docs/", "README.md", "zensical.toml", ".readthedocs.yaml")
 FRONTEND_PATHS = ("package.json", "pnpm-lock.yaml", ".prettier", ".taplo")
 WORKFLOW_PATHS = (".github/workflows/", ".github/actions/")
 CONTAINER_PATHS = ("Containerfile", "Containerfile.mcp", ".dockerignore")

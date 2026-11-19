@@ -2,20 +2,23 @@
 
 from __future__ import annotations
 
-from argparse import ArgumentParser
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
+from os import environ
 from pathlib import Path
-from shlex import split
 from tempfile import NamedTemporaryFile
 from time import sleep
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
+from dotenv import dotenv_values
 from orjson import OPT_INDENT_2, dumps, loads
+from typer import Option, Typer
 
 from perplexity_webui_scraper import Perplexity
 from perplexity_webui_scraper._internal.exceptions import AuthenticationError, HTTPError, ResponseParsingError
+from perplexity_webui_scraper.auth.cookies import parse_session_credential
 from perplexity_webui_scraper.config import ClientConfig, ConversationConfig
+from perplexity_webui_scraper.core.account import TIER_RANK
 from perplexity_webui_scraper.models.registry import MODELS
 
 
@@ -24,8 +27,15 @@ if TYPE_CHECKING:
 
 
 _PROMPT = "Reply with exactly: OK"
-_TIER_RANK: dict[str, int] = {"free": 0, "pro": 1, "max": 2}
 _DEFAULT_REPORT = Path("reports/model-smoke-results.json")
+
+app = Typer(
+    name="smoke-test-models",
+    help="Run short live pings for every model in the registry.",
+    add_completion=False,
+    no_args_is_help=False,
+    context_settings={"help_option_names": ["-h", "--help"]},
+)
 
 
 def _utc_now() -> str:
@@ -33,25 +43,25 @@ def _utc_now() -> str:
 
 
 def _read_session_token(env_file: Path) -> str:
-    """Read the Perplexity token from .env without exposing it."""
-    for line in env_file.read_text(encoding="utf-8").splitlines():
-        value = line.strip()
-        if value.startswith("export "):
-            value = value.removeprefix("export ").lstrip()
-        key, separator, raw_value = value.partition("=")
-        if separator and key.strip() == "PERPLEXITY_SESSION_TOKEN":
-            parsed = split(raw_value.strip(), comments=True, posix=True)
-            if parsed and parsed[0]:
-                return parsed[0]
-    raise ValueError(f"PERPLEXITY_SESSION_TOKEN is missing from {env_file}")
+    """Read and validate the Perplexity session token from .env or environment."""
+    file_token = (dotenv_values(env_file).get("PERPLEXITY_SESSION_TOKEN") or "").strip() if env_file.is_file() else ""
+    token = file_token or environ.get("PERPLEXITY_SESSION_TOKEN", "").strip()
+
+    if not token:
+        raise ValueError(f"PERPLEXITY_SESSION_TOKEN is missing from {env_file}")
+
+    parse_session_credential(token)
+
+    return token
 
 
 def _write_report(path: Path, report: dict[str, Any]) -> None:
     """Persist reports atomically to allow interrupted runs to resume."""
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    with NamedTemporaryFile("w", encoding="utf-8", dir=path.parent, delete=False) as temporary:
-        temporary.write(dumps(report, option=OPT_INDENT_2).decode() + "\n")
+    with NamedTemporaryFile("wb", dir=path.parent, delete=False) as temporary:
+        temporary.write(dumps(report, option=OPT_INDENT_2))
+        temporary.write(b"\n")
         temporary_path = Path(temporary.name)
 
     temporary_path.replace(path)
@@ -59,10 +69,12 @@ def _write_report(path: Path, report: dict[str, Any]) -> None:
 
 def _account_tier_gate(model: Model, account_tier: str) -> str | None:
     """Return why the current account cannot test this model, if applicable."""
-    if model.min_tier is None or account_tier not in _TIER_RANK:
+    if model.min_tier is None or account_tier not in TIER_RANK or TIER_RANK[account_tier] < 0:
         return None
-    if _TIER_RANK[account_tier] < _TIER_RANK[model.min_tier]:
+
+    if TIER_RANK[account_tier] < TIER_RANK[model.min_tier]:
         return f"requires_{model.min_tier}_tier"
+
     return None
 
 
@@ -88,15 +100,16 @@ def _probe_model(model: Model, token: str, attempts: int = 2) -> dict[str, Any]:
                 conversation = client.create_conversation(conversation_config)
                 conversation.ask(_PROMPT, allow_risky_model=True)
                 answer = (conversation.answer or "").strip()
+
             if answer:
                 result.update({"status": "passed", "answer_characters": len(answer)})
             else:
                 result.update({"status": "empty_response", "answer_characters": 0})
+
             break
         except AuthenticationError as error:
             result.update({"status": "authentication_error", "http_status": error.status_code})
             break
-
         except HTTPError as error:
             if error.status_code == 429 and attempt < attempts:
                 sleep(2**attempt)
@@ -105,14 +118,12 @@ def _probe_model(model: Model, token: str, attempts: int = 2) -> dict[str, Any]:
             status = "rate_limited" if error.status_code == 429 else "http_error"
             result.update({"status": status, "http_status": error.status_code, "error_type": type(error).__name__})
             break
-
         except ResponseParsingError as error:
             message = error.message.lower()
             unavailable_markers = ("model not found", "unknown model", "model unavailable", "unsupported model")
             status = "model_rejected" if any(marker in message for marker in unavailable_markers) else "response_error"
             result.update({"status": status, "error_type": type(error).__name__})
             break
-
         except Exception as error:
             result.update({"status": "error", "error_type": type(error).__name__})
             break
@@ -126,7 +137,8 @@ def _load_resume(path: Path) -> dict[str, dict[str, Any]]:
     if not path.is_file():
         return {}
 
-    existing = loads(path.read_text(encoding="utf-8"))
+    existing = loads(path.read_bytes())
+
     if not isinstance(existing, dict) or existing.get("status") != "running":
         return {}
 
@@ -194,7 +206,6 @@ def _run(report_path: Path, workers: int) -> dict[str, Any]:
         status: sum(item["status"] == status for item in report["models"])
         for status in sorted({item["status"] for item in report["models"]})
     }
-
     report["status"] = "complete"
     report["completed_at"] = _utc_now()
 
@@ -203,17 +214,20 @@ def _run(report_path: Path, workers: int) -> dict[str, Any]:
     return report
 
 
-def main() -> None:
-    parser = ArgumentParser(description="Run short live pings for every model in the registry.")
-    parser.add_argument("--workers", type=int, default=4, help="Parallel requests, from 1 to 8 (default: 4).")
-    parser.add_argument("--output", type=Path, default=_DEFAULT_REPORT, help="Output report path.")
-    args = parser.parse_args()
-
-    if not 1 <= args.workers <= 8:
-        parser.error("--workers must be between 1 and 8")
-
-    _run(args.output, args.workers)
+@app.command()
+def main(
+    workers: Annotated[
+        int,
+        Option("--workers", min=1, max=8, help="Parallel requests, from 1 to 8."),
+    ] = 4,
+    output: Annotated[
+        Path,
+        Option("--output", help="Output report path."),
+    ] = _DEFAULT_REPORT,
+) -> None:
+    """Run short live availability pings across catalog models."""
+    _run(output, workers)
 
 
 if __name__ == "__main__":
-    main()
+    app()

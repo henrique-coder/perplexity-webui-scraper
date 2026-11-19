@@ -7,7 +7,7 @@ from subprocess import run
 from sys import executable
 from textwrap import dedent
 
-from scripts.ci_changed_paths import _changed_paths, classify_paths
+from scripts.classify_ci_paths import _changed_paths, classify_paths
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]
@@ -175,7 +175,7 @@ def test_publish_release_notes_stop_at_previous_minor_release(tmp_path: Path) ->
     step = workflow.split("      - name: Generate Release Notes from Changelog\n", maxsplit=1)[1]
     step = step.split("      - name: Create Immutable Tag and Release\n", maxsplit=1)[0]
     script = dedent(step.split("        run: |\n", maxsplit=1)[1])
-    python_match = search(r"(?s)python3 - <<'PY'\n(.*?)\nPY\n", script)
+    python_match = search(r'(?s)uv run --python "\$RELEASE_PYTHON" --no-project python - <<\'PY\'\n(.*?)\nPY\n', script)
     assert python_match is not None
     release_script = python_match.group(1)
     release_version = release_history.split("[", maxsplit=1)[1].split("]", maxsplit=1)[0]

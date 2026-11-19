@@ -1,21 +1,8 @@
-# /// script
-# requires-python = ">=3.11, <3.16"
-# dependencies = [
-#     "curl-cffi",
-#     "orjson",
-#     "perplexity-webui-scraper",
-#     "pydantic",
-#     "pydoll-python>=3.0.0",
-#     "python-dotenv",
-#     "typer",
-# ]
-# ///
-
 """Synchronize the local model catalog from Perplexity's v2 configuration and UI.
 
 Model status is deliberately preserved from the local catalog. Availability
-checks are performed separately by the status workflow and are not part of
-this synchronizer.
+checks are performed separately by ``probe_model_availability.py`` and are not
+part of this synchronizer.
 """
 
 from __future__ import annotations
@@ -24,46 +11,107 @@ from copy import deepcopy
 from os import environ
 from pathlib import Path
 from re import IGNORECASE, sub
+from shutil import which
 from subprocess import run
+from sys import executable, platform
 from tempfile import NamedTemporaryFile
-from typing import TYPE_CHECKING, Annotated, Any, Literal
+from time import monotonic, sleep
+from typing import TYPE_CHECKING, Annotated, Any, Final
 
-from curl_cffi.requests import Session
-from dotenv import load_dotenv
+from dotenv import dotenv_values
+from DrissionPage import ChromiumOptions, ChromiumPage
 from orjson import OPT_INDENT_2, JSONDecodeError, dumps, loads
 from pydantic import BaseModel, ConfigDict, Field
-from pydoll.playwright.sync_api import Page, sync_playwright
 from typer import Exit, Option, Typer, echo
 
-from perplexity_webui_scraper._internal.constants import API_BASE_URL, API_VERSION, SESSION_COOKIE_NAME
+from perplexity_webui_scraper._internal.constants import (
+    API_BASE_URL,
+    API_SOURCE,
+    API_VERSION,
+    ENDPOINT_MODELS_CONFIG_V2,
+    SESSION_COOKIE_PREFIX,
+)
+from perplexity_webui_scraper.auth.cookies import parse_session_credential
+from perplexity_webui_scraper.http.client import HTTPClient
+from perplexity_webui_scraper.models.types import Model, ModelMode, ModelTier
 
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
 
-ROOT = Path(__file__).resolve().parents[1]
-MODELS_FILE = ROOT / "src/perplexity_webui_scraper/_static/models.json"
-DOC_RENDERER = ROOT / "scripts/render_model_docs.py"
-MODELS_URL = f"{API_BASE_URL}/rest/models/config/v2"
-MODEL_MODES = {"search", "research"}
-MODEL_ENTRY_KEYS = frozenset(
-    {
-        "id",
-        "name",
-        "description",
-        "identifier",
-        "identifier_by_tier",
-        "tool_name",
-        "provider",
-        "min_tier",
-        "is_official",
-        "mode",
-        "mode_by_tier",
-        "status",
-        "last_tested_at",
-    }
+ROOT: Final[Path] = Path(__file__).resolve().parents[1]
+MODELS_FILE: Final[Path] = ROOT / "src/perplexity_webui_scraper/_static/models.json"
+DOC_GENERATOR: Final[Path] = ROOT / "scripts/generate_model_docs.py"
+MODEL_MODES: Final[frozenset[str]] = frozenset({"search", "research"})
+MODEL_ENTRY_KEYS: Final[frozenset[str]] = frozenset(Model.model_fields)
+
+_BROWSER_COMMANDS: Final[tuple[str, ...]] = (
+    "google-chrome",
+    "google-chrome-stable",
+    "chromium",
+    "chromium-browser",
+    "brave-browser",
+    "microsoft-edge",
 )
+_KNOWN_BROWSER_PATHS: Final[tuple[Path, ...]] = (
+    Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
+    Path("/Applications/Chromium.app/Contents/MacOS/Chromium"),
+    Path("/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"),
+    Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe"),
+    Path(r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"),
+    Path(r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"),
+)
+
+_FIND_AND_CLICK_MODEL_BUTTON_JS: Final[str] = """
+() => {
+    const isVisible = (el) => {
+        const style = window.getComputedStyle(el);
+        return (
+            style.display !== 'none'
+            && style.visibility !== 'hidden'
+            && style.visibility !== 'collapse'
+            && el.getClientRects().length > 0
+        );
+    };
+    const buttons = Array.from(document.querySelectorAll('button, [role="button"]'));
+    const target = buttons.find((el) => {
+        if (!isVisible(el)) return false;
+        const label = (el.getAttribute('aria-label') || el.textContent || '').trim();
+        return label === 'Model';
+    });
+    if (!target) return false;
+    target.click();
+    return true;
+}
+""".strip()
+
+_COLLECT_PICKER_MODELS_JS: Final[str] = """
+() => {
+    const isVisible = (el) => {
+        const style = window.getComputedStyle(el);
+        return (
+            style.display !== 'none'
+            && style.visibility !== 'hidden'
+            && style.visibility !== 'collapse'
+            && el.getClientRects().length > 0
+        );
+    };
+    const items = Array.from(document.querySelectorAll('[role="menuitemradio"], [role="menuitem"]'))
+        .filter(isVisible);
+    if (!items.length) return [];
+    const names = [];
+    for (const item of items) {
+        for (const span of item.querySelectorAll('span[translate="no"]')) {
+            const text = (span.textContent || '').trim();
+            if (text && !names.includes(text)) {
+                names.push(text);
+            }
+        }
+    }
+    return names;
+}
+""".strip()
 
 
 class EndpointModel(BaseModel):
@@ -113,10 +161,77 @@ class ResolvedFamily(BaseModel):
     variants: list[FamilyVariant]
 
 
+def _resolve_browser_path(browser_path: Path | None = None) -> Path | None:
+    """Locate an existing Chromium-compatible browser executable when explicitly discoverable."""
+    if browser_path is not None:
+        resolved = browser_path.expanduser()
+
+        if not resolved.is_file():
+            raise FileNotFoundError(f"Browser executable not found: {resolved}")
+
+        return resolved
+
+    for env_var in ("CHROME_PATH", "CHROMIUM_PATH"):
+        configured = environ.get(env_var, "").strip()
+
+        if configured:
+            candidate = Path(configured).expanduser()
+
+            if candidate.is_file():
+                return candidate
+
+            raise FileNotFoundError(f"{env_var} points to a missing executable: {candidate}")
+
+    for command in _BROWSER_COMMANDS:
+        found = which(command)
+
+        if found:
+            return Path(found)
+
+    for candidate in _KNOWN_BROWSER_PATHS:
+        if candidate.is_file():
+            return candidate
+
+    return None
+
+
+def _build_chromium_options(browser_path: Path | None = None) -> ChromiumOptions:
+    """Configure an isolated headless Chromium session for DrissionPage."""
+    options = ChromiumOptions().auto_port()
+    options.headless(True)
+    options.set_argument("--disable-blink-features=AutomationControlled")
+
+    if platform.startswith("linux"):
+        options.set_argument("--no-sandbox")
+
+    resolved_browser = _resolve_browser_path(browser_path)
+
+    if resolved_browser is not None:
+        options.set_browser_path(str(resolved_browser))
+
+    return options
+
+
+def _poll_until(evaluate_fn: Any, *, timeout: float, interval: float = 0.2) -> Any:
+    """Poll a page-evaluation callback until it returns a truthy result."""
+    deadline = monotonic() + timeout
+
+    while monotonic() < deadline:
+        value = evaluate_fn()
+
+        if value:
+            return value
+
+        sleep(interval)
+
+    raise TimeoutError("Timed out waiting for WebUI model picker state")
+
+
 def _normalize(value: str) -> str:
     """Normalize UI labels for comparison without relying on model names."""
-    value = sub(r"\s+thinking$", "", value.strip(), flags=IGNORECASE)
-    return sub(r"[^a-z0-9]+", "", value.casefold())
+    trimmed = sub(r"\s+thinking$", "", value.strip(), flags=IGNORECASE)
+
+    return sub(r"[^a-z0-9]+", "", trimmed.casefold())
 
 
 def _slug(value: str) -> str:
@@ -129,17 +244,24 @@ def _provider_slug(provider: str | None) -> str | None:
     if not provider:
         return None
 
-    slug = provider.casefold().replace("_ai", "").replace("_", "-")
-    if slug in {"xai", "zai"}:
-        return f"{slug[0]}-{slug[1:]}"
-    return slug
+    lowered = provider.casefold()
+
+    if lowered in {"xai", "x_ai"}:
+        return "x-ai"
+
+    if lowered in {"zai", "z_ai"}:
+        return "z-ai"
+
+    return lowered.replace("_ai", "").replace("_", "-")
 
 
 def _public_id(provider: str, label: str, reasoning: bool) -> str:
     """Build a new public ID from provider and endpoint label data."""
     slug = _slug(label)
+
     if reasoning and not slug.endswith("-thinking"):
         slug = f"{slug}-thinking"
+
     return f"{provider}/{slug}"
 
 
@@ -147,35 +269,56 @@ def _tool_name(model_id: str) -> str:
     """Build a deterministic MCP tool name from a generated public ID."""
     slug = model_id.split("/", maxsplit=1)[-1]
     words: list[str] = []
+
     for word in slug.split("-"):
         normalized = word.replace(".", "")
+
         if normalized == "thinking":
             normalized = "think"
+
         if normalized.isdigit() and words:
             words[-1] += normalized
         else:
             words.append(normalized)
+
     return "pplx_" + "_".join(words)
 
 
-def _read_models() -> list[dict[str, Any]]:
+def _read_session_token(env_file: Path) -> str:
+    """Resolve and validate PERPLEXITY_SESSION_TOKEN from .env or environment."""
+    file_token = (dotenv_values(env_file).get("PERPLEXITY_SESSION_TOKEN") or "").strip() if env_file.is_file() else ""
+    token = file_token or environ.get("PERPLEXITY_SESSION_TOKEN", "").strip()
+
+    if not token:
+        raise RuntimeError("PERPLEXITY_SESSION_TOKEN is not set")
+
+    parse_session_credential(token)
+
+    return token
+
+
+def _read_models(catalog_path: Path = MODELS_FILE) -> list[dict[str, Any]]:
     """Read and validate the current local catalog."""
-    if not MODELS_FILE.is_file():
-        echo(f"Local catalog not found at {MODELS_FILE}; starting with defaults.")
+    if not catalog_path.is_file():
+        echo(f"Local catalog not found at {catalog_path}; starting with defaults.")
+
         return []
 
     try:
-        data = loads(MODELS_FILE.read_bytes())
+        data = loads(catalog_path.read_bytes())
     except (OSError, JSONDecodeError) as error:
-        echo(f"Could not read {MODELS_FILE} ({error}); starting with defaults.")
+        echo(f"Could not read {catalog_path} ({type(error).__name__}); starting with defaults.")
+
         return []
 
     if not isinstance(data, list):
-        echo(f"Ignoring invalid catalog at {MODELS_FILE}; starting with defaults.")
+        echo(f"Ignoring invalid catalog at {catalog_path}; starting with defaults.")
+
         return []
 
     entries: list[dict[str, Any]] = []
     skipped = 0
+
     for item in data:
         if (
             not isinstance(item, dict)
@@ -184,9 +327,12 @@ def _read_models() -> list[dict[str, Any]]:
         ):
             skipped += 1
             continue
+
         entries.append({key: value for key, value in item.items() if key in MODEL_ENTRY_KEYS})
+
     if skipped:
         echo(f"Skipped {skipped} invalid local catalog entries.")
+
     return entries
 
 
@@ -196,104 +342,84 @@ def _atomic_write(path: Path, value: object) -> None:
         handle.write(dumps(value, option=OPT_INDENT_2))
         handle.write(b"\n")
         temporary = Path(handle.name)
+
     temporary.replace(path)
 
 
-def _fetch_webui_models(token: str) -> list[str]:
-    """Read visible model family names from the authenticated picker."""
-    names: list[str] = []
-    error: Exception | None = None
+def _fetch_webui_models(token: str, *, browser_path: Path | None = None) -> list[str]:
+    """Read visible model family names from the authenticated WebUI picker with DrissionPage."""
+    credential = parse_session_credential(token)
+    account_uuid = credential.name.removeprefix(SESSION_COOKIE_PREFIX)
+    options = _build_chromium_options(browser_path)
+    page = ChromiumPage(addr_or_opts=options)
 
-    def collect(page: Page) -> None:
-        nonlocal error
-        try:
-            page.wait_for_load_state("domcontentloaded")
-            button = page.get_by_role("button", name="Model", exact=True)
-            button.wait_for(state="visible", timeout=15_000)
-            button.click()
-            items = page.locator('[role="menuitemradio"], [role="menuitem"]')
-            # Pydoll's Playwright layer does not implement Playwright's CSS :visible pseudo-class.
-            page.wait_for_function(
-                """() => Array.from(document.querySelectorAll('[role="menuitemradio"], [role="menuitem"]')).some(
-                    (element) => {
-                        const style = window.getComputedStyle(element);
-                        return style.display !== 'none'
-                            && style.visibility !== 'hidden'
-                            && style.visibility !== 'collapse'
-                            && element.getClientRects().length > 0;
-                    }
-                )""",
-                timeout=10_000,
-            )
-            visible_items = [item for item in items.all() if item.is_visible()]
-            visible_names = [
-                name for item in visible_items for name in item.locator('span[translate="no"]').all_text_contents()
-            ]
-            names.extend(dict.fromkeys(name.strip() for name in visible_names if name.strip()))
-        except Exception as exc:
-            error = exc
+    try:
+        page.run_cdp("Network.enable")
+        page.run_cdp(
+            "Network.setCookie",
+            name=credential.name,
+            value=credential.value,
+            url=f"{API_BASE_URL}/",
+            secure=True,
+            httpOnly=True,
+            sameSite="Lax",
+        )
+        page.run_cdp(
+            "Network.setCookie",
+            name="__Host-pplx-last-active-account",
+            value=account_uuid,
+            url=f"{API_BASE_URL}/",
+            secure=True,
+            httpOnly=False,
+            sameSite="Lax",
+        )
+        page.get(f"{API_BASE_URL}/")
 
-    with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=True)
-        try:
-            context = browser.new_context()
-            context.add_cookies(
-                [
-                    {
-                        "name": SESSION_COOKIE_NAME,
-                        "value": token,
-                        "url": f"{API_BASE_URL}/",
-                        "secure": True,
-                        "httpOnly": True,
-                        "sameSite": "Lax",
-                    }
-                ]
-            )
-            page = context.new_page()
-            page.goto(f"{API_BASE_URL}/", wait_until="domcontentloaded")
-            collect(page)
-        finally:
-            browser.close()
-
-    if error:
+        _poll_until(lambda: page.run_js(f"return ({_FIND_AND_CLICK_MODEL_BUTTON_JS})();"), timeout=15.0)
+        names = _poll_until(lambda: page.run_js(f"return ({_COLLECT_PICKER_MODELS_JS})();"), timeout=10.0)
+    except Exception as error:
         raise RuntimeError("Failed to read the authenticated Perplexity model picker") from error
-    if not names:
+    finally:
+        page.quit(del_data=True)
+
+    if not isinstance(names, list) or not names:
         raise RuntimeError("The Perplexity model picker returned no model names")
-    return names
+
+    return [str(name).strip() for name in names if str(name).strip()]
 
 
 def _fetch_endpoint(token: str) -> EndpointCatalog:
-    """Fetch and validate Perplexity's current v2 configuration."""
-    with Session(impersonate="chrome") as session:
-        response = session.get(
-            MODELS_URL,
-            params={"version": API_VERSION, "source": "default"},
-            cookies={SESSION_COOKIE_NAME: token},
-            headers={
-                "Accept": "application/json",
-                "Referer": f"{API_BASE_URL}/",
-                "X-App-ApiClient": "default",
-                "X-App-ApiVersion": API_VERSION,
-            },
-            timeout=30,
+    """Fetch and validate Perplexity's current v2 model configuration."""
+    client = HTTPClient(token, timeout=30)
+
+    try:
+        response = client.get(
+            ENDPOINT_MODELS_CONFIG_V2,
+            params={"version": API_VERSION, "source": API_SOURCE},
         )
-    response.raise_for_status()
+    finally:
+        client.close()
+
     return EndpointCatalog.model_validate(loads(response.content))
 
 
 def _variants(model: EndpointModel) -> list[FamilyVariant]:
     """Return endpoint-provided non-reasoning and reasoning variants."""
     variants: list[FamilyVariant] = []
+
     if model.non_reasoning_model:
         variants.append(FamilyVariant(identifier=model.non_reasoning_model, reasoning=False))
+
     if model.reasoning_model:
         variants.append(FamilyVariant(identifier=model.reasoning_model, reasoning=True))
+
     return variants
 
 
 def _uses_default_namespace(model: EndpointModel, defaults: Iterable[str]) -> bool:
     """Identify browser/default selector entries when labels collide."""
     identifiers = (model.non_reasoning_model, model.reasoning_model)
+
     return any(
         identifier and any(identifier == default or identifier.startswith(f"{default}_") for default in defaults)
         for identifier in identifiers
@@ -303,6 +429,7 @@ def _uses_default_namespace(model: EndpointModel, defaults: Iterable[str]) -> bo
 def _resolve_families(endpoint: EndpointCatalog, webui_names: list[str]) -> list[ResolvedFamily]:
     """Resolve visible UI families to unique endpoint picker entries."""
     groups: dict[str, list[EndpointModel]] = {}
+
     for model in endpoint.search_config:
         groups.setdefault(_normalize(model.label), []).append(model)
 
@@ -316,23 +443,30 @@ def _resolve_families(endpoint: EndpointCatalog, webui_names: list[str]) -> list
     unmatched: list[str] = []
 
     for name in dict.fromkeys(webui_names):
-        candidates = groups.get(_normalize(name), [])
+        normalized = _normalize(name)
+        candidates = groups.get(normalized, [])
+
         if not candidates:
-            if _normalize(name) not in default_labels:
+            if normalized not in default_labels:
                 unmatched.append(name)
+
             continue
 
         preferred = [model for model in candidates if not _uses_default_namespace(model, default_identifiers)]
         resolved = preferred or candidates
+
         if len(resolved) != 1:
             labels = ", ".join(model.label for model in resolved)
             raise RuntimeError(f"Ambiguous UI model {name!r}; candidates: {labels}")
+
         families.append(ResolvedFamily(model=resolved[0], variants=_variants(resolved[0])))
 
     if unmatched:
         raise RuntimeError(f"UI model names without endpoint matches: {', '.join(unmatched)}")
+
     if not families:
         raise RuntimeError("No current WebUI model families were resolved")
+
     return families
 
 
@@ -341,6 +475,7 @@ def _default_order(endpoint: EndpointCatalog, webui_names: list[str]) -> list[st
     picker_labels = {_normalize(model.label) for model in endpoint.search_config}
     ui_labels = {_normalize(name) for name in webui_names if _normalize(name) not in picker_labels}
     identifiers: list[str] = []
+
     for identifier, model in endpoint.models.items():
         if (
             _normalize(model.label) in ui_labels
@@ -352,8 +487,10 @@ def _default_order(endpoint: EndpointCatalog, webui_names: list[str]) -> list[st
 
     for identifier in endpoint.default_models.values():
         model = endpoint.models.get(identifier)
+
         if model and model.provider and model.mode in MODEL_MODES and identifier not in identifiers:
             identifiers.append(identifier)
+
     return identifiers
 
 
@@ -361,27 +498,37 @@ def _entry_identifiers(entry: dict[str, Any]) -> set[str]:
     """Return the primary and tier-specific internal IDs for a local entry."""
     identifiers = {str(entry["identifier"])}
     overrides = entry.get("identifier_by_tier", {})
+
     if isinstance(overrides, dict):
         identifiers.update(str(value) for value in overrides.values())
+
     return identifiers
 
 
 def _new_entry(
-    identifier: str, detail: EndpointDetail, family: EndpointModel | None, reasoning: bool
+    identifier: str,
+    detail: EndpointDetail,
+    family: EndpointModel | None,
+    reasoning: bool,
 ) -> dict[str, Any]:
     """Create a new unverified entry entirely from endpoint metadata."""
     provider = _provider_slug(detail.provider)
+
     if provider is None:
         raise RuntimeError(f"Cannot generate a public model entry without provider: {identifier}")
+
     model_id = _public_id(provider, detail.label, reasoning)
     name = detail.label
+
     if reasoning and not name.casefold().endswith("thinking"):
         name = f"{name} Thinking"
+
     description = detail.description or f"{name} model."
-    tier = family.subscription_tier if family else None
-    min_tier = tier if tier in {"free", "pro", "max"} else None
-    mode: Literal["copilot", "search", "research"] = "research" if detail.mode == "research" else "copilot"
-    return {
+    raw_tier = family.subscription_tier if family else None
+    min_tier: ModelTier | None = raw_tier if raw_tier in ("free", "pro", "max") else None
+    mode: ModelMode = "research" if detail.mode == "research" else "copilot"
+
+    entry: dict[str, Any] = {
         "id": model_id,
         "name": name,
         "description": description,
@@ -394,16 +541,22 @@ def _new_entry(
         "last_tested_at": None,
         "is_official": True,
     }
+    Model.model_validate(entry)
+
+    return entry
 
 
 def _synchronize(
-    local: list[dict[str, Any]], endpoint: EndpointCatalog, webui_names: list[str]
+    local: list[dict[str, Any]],
+    endpoint: EndpointCatalog,
+    webui_names: list[str],
 ) -> list[dict[str, Any]]:
     """Merge current official models into the local catalog without deleting history."""
     families = _resolve_families(endpoint, webui_names)
     default_ids = _default_order(endpoint, webui_names)
     family_by_identifier: dict[str, tuple[EndpointModel | None, bool]] = {}
     ordered_identifiers = list(default_ids)
+
     for family in families:
         for variant in family.variants:
             family_by_identifier[variant.identifier] = (family.model, variant.reasoning)
@@ -411,36 +564,46 @@ def _synchronize(
 
     official_identifiers = set(ordered_identifiers)
     by_identifier: dict[str, dict[str, Any]] = {}
+
     for entry in local:
         for identifier in _entry_identifiers(entry):
             by_identifier[identifier] = entry
 
     additions: list[dict[str, Any]] = []
+
     for identifier in ordered_identifiers:
         if identifier in by_identifier:
             continue
+
         detail = endpoint.models.get(identifier)
+
         if detail is None:
             raise RuntimeError(f"Endpoint default or UI identifier is missing from models: {identifier}")
+
         family, reasoning = family_by_identifier.get(identifier, (None, False))
         additions.append(_new_entry(identifier, detail, family, reasoning))
         by_identifier[identifier] = additions[-1]
 
     all_entries = [*(deepcopy(entry) for entry in local), *additions]
     original_positions = {id(entry): index for index, entry in enumerate(all_entries)}
+
     for entry in all_entries:
         entry["is_official"] = bool(_entry_identifiers(entry) & official_identifiers)
+        Model.model_validate(entry)
 
     rank = {identifier: index for index, identifier in enumerate(dict.fromkeys(ordered_identifiers))}
 
     def official_key(entry: dict[str, Any]) -> tuple[int, int]:
         entry_rank = min(
-            (rank.get(identifier, len(rank)) for identifier in _entry_identifiers(entry)), default=len(rank)
+            (rank.get(identifier, len(rank)) for identifier in _entry_identifiers(entry)),
+            default=len(rank),
         )
+
         return entry_rank, original_positions[id(entry)]
 
     official = sorted((entry for entry in all_entries if entry["is_official"]), key=official_key)
     historical = [entry for entry in all_entries if not entry["is_official"]]
+
     return [*official, *historical]
 
 
@@ -451,46 +614,60 @@ def _summary(current: list[dict[str, Any]], candidate: list[dict[str, Any]]) -> 
     available = sum(entry.get("status") == "available" for entry in candidate)
     unknown = sum(entry.get("status") == "unknown" for entry in candidate)
     unavailable = sum(entry.get("status") == "unavailable" for entry in candidate)
+
     echo(f"Current entries: {len(current)}; generated entries: {len(candidate)}")
     echo(f"Official: {sum(bool(entry.get('is_official')) for entry in candidate)}")
     echo(f"Status preserved: {available} available, {unknown} unknown, {unavailable} unavailable")
     echo(f"Added: {sorted(candidate_ids - current_ids) or 'none'}")
     echo(f"Removed: {sorted(current_ids - candidate_ids) or 'none'}")
+
     if current != candidate:
         echo("Catalog differs from the local file.")
     else:
         echo("Generated catalog is byte-for-byte equivalent after JSON normalization.")
 
 
-app = Typer(add_completion=False, no_args_is_help=False)
+app = Typer(
+    name="sync-model-catalog",
+    help="Synchronize the model catalog from Perplexity's v2 configuration and WebUI picker.",
+    add_completion=False,
+    no_args_is_help=False,
+    context_settings={"help_option_names": ["-h", "--help"]},
+)
 
 
 @app.command()
 def main(
     apply: Annotated[
-        bool, Option("--apply/--no-apply", help="Write models.json and regenerate model documentation")
+        bool,
+        Option("--apply/--no-apply", help="Write models.json and regenerate model documentation."),
     ] = True,
-    check: Annotated[bool, Option("--check", help="Exit 1 when generated metadata differs from models.json")] = False,
+    check: Annotated[
+        bool,
+        Option("--check", help="Exit 1 when generated metadata differs from models.json."),
+    ] = False,
+    browser: Annotated[
+        Path | None,
+        Option("--browser", help="Optional path to a Chromium-compatible browser executable."),
+    ] = None,
 ) -> None:
     """Synchronize catalog metadata and optionally write files."""
-    load_dotenv(ROOT / ".env")
-    token = environ.get("PERPLEXITY_SESSION_TOKEN", "").strip()
-    if not token:
-        raise RuntimeError("PERPLEXITY_SESSION_TOKEN is not set")
-
+    token = _read_session_token(ROOT / ".env")
     current = _read_models()
-    webui_names = _fetch_webui_models(token)
+    webui_names = _fetch_webui_models(token, browser_path=browser)
     endpoint = _fetch_endpoint(token)
     candidate = _synchronize(current, endpoint, webui_names)
 
     _summary(current, candidate)
+
     if check:
         raise Exit(code=int(current != candidate))
+
     if not apply:
         return
 
     _atomic_write(MODELS_FILE, candidate)
-    run(["uv", "run", "--no-dev", str(DOC_RENDERER)], cwd=ROOT, check=True)
+    run([executable, str(DOC_GENERATOR)], cwd=ROOT, check=True)
     echo(f"Applied catalog synchronization to {MODELS_FILE}")
 
 

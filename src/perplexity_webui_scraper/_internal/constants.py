@@ -49,6 +49,9 @@ ENDPOINT_AUTH_SESSION: Final[str] = "/api/auth/session"
 ENDPOINT_USER_SETTINGS: Final[str] = "/rest/user/settings"
 """Endpoint to read authenticated user settings and subscription metadata."""
 
+ENDPOINT_MODELS_CONFIG_V2: Final[str] = "/rest/models/config/v2"
+"""Endpoint to read Perplexity's current v2 model configuration."""
+
 ENDPOINT_AUTH_OTP_REDIRECT: Final[str] = "/api/auth/otp-redirect-link"
 """Endpoint to convert an OTP code into a redirect URL."""
 

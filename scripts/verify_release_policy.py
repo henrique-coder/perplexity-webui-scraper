@@ -17,17 +17,16 @@ _DATED_HEADING_PATTERN = r"^## \[(?P<version>\d+\.\d+\.\d+)\] - (?P<date>\d{4}-\
 def validate_release_policy(root: Path, expected_version: str | None = None) -> str:
     """Verify project, lockfile, and top dated changelog section share one version."""
     with (root / "pyproject.toml").open("rb") as pyproject_file:
-        project_version = load(pyproject_file)["project"]["version"]
+        project_metadata = load(pyproject_file).get("project", {})
+
+    project_name = project_metadata.get("name", "perplexity-webui-scraper")
+    project_version = project_metadata.get("version")
 
     with (root / "uv.lock").open("rb") as lock_file:
         lock_data = load(lock_file)
 
     lock_version = next(
-        (
-            package["version"]
-            for package in lock_data.get("package", [])
-            if package.get("name") == "perplexity-webui-scraper"
-        ),
+        (package["version"] for package in lock_data.get("package", []) if package.get("name") == project_name),
         None,
     )
 
@@ -87,9 +86,11 @@ def main() -> int:
         version = validate_release_policy(arguments.root, expected_version=arguments.expected_version)
     except ValueError as error:
         stderr.write(f"Release policy validation failed: {error}\n")
+
         return 1
 
     stdout.write(f"Validated release policy for {version}.\n")
+
     return 0
 
 

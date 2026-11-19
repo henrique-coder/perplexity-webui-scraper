@@ -6,7 +6,7 @@ from sys import executable, platform
 
 from pytest import mark, raises
 
-from scripts.render_pypi_readme import render_readme
+from scripts.rewrite_pypi_readme import render_readme
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -39,8 +39,8 @@ def test_pypi_build_registers_readme_restoration_before_any_build_step() -> None
     backup = build.index('cp README.md "$README_BACKUP"')
     restore = build.index('cp "$README_BACKUP" README.md')
     trap = build.index("trap cleanup EXIT")
-    render = build.index("scripts/render_pypi_readme.py")
-    build_package = build.index("uv build --python 3.14")
+    render = build.index("scripts/rewrite_pypi_readme.py")
+    build_package = build.index('uv build --python "$RELEASE_PYTHON"')
 
     assert backup < restore < trap < render < build_package
 
@@ -57,12 +57,12 @@ def test_render_pypi_readme_restoration_trap_restores_source_after_failure(tmp_p
     readme.write_text(original, encoding="utf-8")
     bin_directory = tmp_path / "bin"
     bin_directory.mkdir()
-    render_script = ROOT / "scripts" / "render_pypi_readme.py"
+    render_script = ROOT / "scripts" / "rewrite_pypi_readme.py"
     uv_shim = bin_directory / "uv"
     uv_shim.write_text(
         "#!/bin/sh\n"
         'for arg in "$@"; do\n'
-        '  if [ "$arg" = "scripts/render_pypi_readme.py" ]; then\n'
+        '  if [ "$arg" = "scripts/rewrite_pypi_readme.py" ]; then\n'
         f'    exec {quote(executable)} {quote(str(render_script))} --reference "$GITHUB_SHA" --source README.md\n'
         "  fi\n"
         "done\n"

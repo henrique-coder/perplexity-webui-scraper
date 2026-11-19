@@ -11,9 +11,9 @@ from zipfile import ZipFile
 
 from pytest import raises
 
-from scripts.check_pypi_artifacts import fetch_published_files, missing_artifact_paths
-from scripts.check_pypi_artifacts import main as check_pypi_artifacts
-from scripts.validate_release_artifacts import validate_artifacts
+from scripts.verify_pypi_uploads import fetch_published_files, missing_artifact_paths
+from scripts.verify_pypi_uploads import main as check_pypi_artifacts
+from scripts.verify_release_artifacts import validate_artifacts
 
 
 PACKAGE_VERSION = "9.8.7"
@@ -41,7 +41,7 @@ def test_fetch_published_files_treats_missing_release_as_unpublished(monkeypatch
         request_arguments.append((request.full_url, request.get_method()))
         raise error
 
-    monkeypatch.setattr("scripts.check_pypi_artifacts.urlopen", urlopen)
+    monkeypatch.setattr("scripts.verify_pypi_uploads.urlopen", urlopen)
 
     assert fetch_published_files("package", "0") == {}
     assert request_arguments == [("https://pypi.org/pypi/package/0/json", "GET")]
@@ -57,7 +57,7 @@ def test_check_pypi_artifacts_verify_only_requires_every_digest(tmp_path: Path, 
     monkeypatch.setenv("PACKAGE_NAME", "package")
     monkeypatch.setenv("VERSION", PACKAGE_VERSION)
     monkeypatch.setattr(
-        "scripts.check_pypi_artifacts.fetch_published_files",
+        "scripts.verify_pypi_uploads.fetch_published_files",
         lambda _package, _version: {(tmp_path / "dist" / wheel.name).name: wheel_digest},
     )
 
@@ -93,7 +93,7 @@ def test_validate_artifacts_accepts_matching_metadata_and_rejects_mismatch(tmp_p
 
 def test_validate_artifacts_rejects_identical_artifact_digests(monkeypatch: Any, tmp_path: Path) -> None:
     artifacts = _write_artifacts(tmp_path, PACKAGE_VERSION, PACKAGE_VERSION)
-    monkeypatch.setattr("scripts.validate_release_artifacts._sha256", lambda _path: "same-digest")
+    monkeypatch.setattr("scripts.verify_release_artifacts._sha256", lambda _path: "same-digest")
 
     with raises(ValueError, match="identical SHA-256 digests"):
         validate_artifacts(artifacts, PACKAGE_VERSION)
