@@ -117,12 +117,12 @@ class ChatMessage(BaseModel):
     """A single message in a conversation.
 
     Attributes:
-        role: Message author: ``"system"``, ``"user"``, or ``"assistant"``.
+        role: Message author: ``"system"``, ``"developer"``, ``"user"``, or ``"assistant"``.
         content: Either a plain string or a list of :data:`ContentPart` objects
             for multimodal messages.
     """
 
-    role: Literal["system", "user", "assistant"]
+    role: Literal["system", "developer", "user", "assistant"]
     content: str | list[ContentPart]
 
     def text(self) -> str:

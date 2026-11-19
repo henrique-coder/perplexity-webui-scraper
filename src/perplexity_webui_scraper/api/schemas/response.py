@@ -2,50 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime  # noqa: TC003
 from time import time
 from typing import Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
-
-
-class ModelObject(BaseModel):
-    """A single model entry in the ``GET /v1/models`` response.
-
-    Attributes:
-        id: Canonical model ID (e.g. ``"perplexity/best"``).
-        object: Always ``"model"``.
-        created: Unix timestamp. Model registration time is not tracked, so this is ``0``.
-        owned_by: Model provider string.
-    """
-
-    id: str
-    object: Literal["model"] = "model"
-    created: int = 0
-    owned_by: str = "perplexity"
-    perplexity: ModelCatalogMetadata
-
-
-class ModelCatalogMetadata(BaseModel):
-    """Perplexity-specific availability metadata for a catalog model."""
-
-    min_tier: Literal["free", "pro", "max"] | None
-    is_official: bool
-    status: Literal["available", "unknown", "unavailable"]
-    last_tested_at: datetime | None
-
-
-class ModelList(BaseModel):
-    """Response for ``GET /v1/models``.
-
-    Attributes:
-        object: Always ``"list"``.
-        data: List of :class:`ModelObject` entries.
-    """
-
-    object: Literal["list"] = "list"
-    data: list[ModelObject]
 
 
 class PerplexityResponseExtensions(BaseModel):
