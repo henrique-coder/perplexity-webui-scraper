@@ -81,32 +81,28 @@ dev = [
     { include-group = "docs" },
     { include-group = "hooks" },
     { include-group = "lint" },
-    { include-group = "test" },
+    { include-group = "scripts" },
+    { include-group = "tests" },
+    { include-group = "workflow" },
 ]
 docs = [
-    "mkdocs>=1.6.0",
-    "mkdocs-material>=9.7.0",
-    "mkdocstrings[python]>=1.0.0",
-    "ruff>=0.16.0",
+    "zensical>=0.1.0",
 ]
 hooks = [
     "prek>=0.4.0",
 ]
 lint = [
-    { include-group = "workflow" },
     "ruff>=0.16.0",
     "ty>=0.0.60",
 ]
-test = [
-    "fastapi>=0.120.0",
-    "fastmcp>=3.0.0",
+scripts = [
+    "DrissionPage>=4.1.0",
+    "python-dotenv>=1.0.0",
+]
+tests = [
     "httpx2>=2.14.0",
-    "openai>=2.0.0,<3.0.0",
-    "prompt-toolkit>=3.0.30",
-    "pyperclip>=1.9.0",
+    "openai>=2.0.0, <3.0.0",
     "pytest>=8.0.0",
-    "rich>=13.0.0",
-    "typer>=0.20.0",
 ]
 workflow = [
     "zizmor>=1.28.0",
