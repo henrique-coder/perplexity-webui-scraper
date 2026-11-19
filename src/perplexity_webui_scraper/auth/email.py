@@ -17,19 +17,10 @@ from perplexity_webui_scraper._internal.constants import (
     ENDPOINT_AUTH_OTP_REDIRECT,
     ENDPOINT_AUTH_SIGNIN,
     ENDPOINT_AUTH_TOTP_CHALLENGE_VERIFY,
-    SESSION_COOKIE_PREFIX,
 )
 from perplexity_webui_scraper._internal.exceptions import AuthRequestError, RateLimitError
-from perplexity_webui_scraper.auth.cookies import (
-    extract_session_cookie,
-    parse_session_cookie_name,
-    serialize_session_credential,
-)
-from perplexity_webui_scraper.auth.requests import (
-    redirect_url,
-    request_with_rate_limit_retry,
-    validate_auth_response,
-)
+from perplexity_webui_scraper.auth.cookies import extract_session_cookie, serialize_session_credential
+from perplexity_webui_scraper.auth.requests import redirect_url, request_with_rate_limit_retry
 from perplexity_webui_scraper.auth.session_token import pack_session_token
 
 
@@ -43,18 +34,6 @@ _INVALID_TOTP_ERRORS = frozenset({"invalid_code", "invalid_totp", "invalid_otp"}
 _OTP_PATTERN = r"[0-9]{6}"
 _EMAIL_CALLBACK_PATH = "/api/auth/callback/email"
 _INVALID_EMAIL_OTP_MESSAGE = "Verification failed. The OTP code may be invalid or expired."
-
-
-def _is_invalid_totp_response(response: Any) -> bool:
-    """Return whether an authentication response represents a rejected TOTP code."""
-    try:
-        data = loads(response.content)
-    except Exception:
-        data = None
-
-    if isinstance(data, dict) and data.get("error") in _INVALID_TOTP_ERRORS:
-        return True
-    return response.status_code == 400 and not getattr(response, "content", b"")
 
 
 def create_session() -> Session:
@@ -303,18 +282,6 @@ def verify_totp(
             return
 
         try:
-            validate_auth_response(response)
-        except Exception:
-            if not _is_invalid_totp_response(response):
-                status_code = getattr(response, "status_code", None)
-                if status_code is None:
-                    raise ValueError("TOTP verification request failed.") from None
-                raise ValueError(f"TOTP verification request failed with HTTP {status_code}.") from None
-            if on_invalid_code is not None:
-                on_invalid_code()
-            continue
-
-        try:
             data = loads(response.content)
             if not isinstance(data, dict):
                 raise TypeError("Invalid TOTP verification response.")
@@ -342,14 +309,7 @@ def verify_totp(
 
 def get_session_credential(session: Session) -> str:
     """Return the compact ``wsk_`` token for the active authenticated account."""
-    cookies = session.cookies
-    values = dict(cookies.items())
-    active_account_id = values.get("__Host-pplx-last-active-account")
-    active_cookie_name = f"{SESSION_COOKIE_PREFIX}{active_account_id}" if active_account_id else ""
-    if active_account_id and parse_session_cookie_name(active_cookie_name) is None:
-        active_account_id = None
-
-    credential = extract_session_cookie(cookies, active_account_id)
+    credential = extract_session_cookie(session.cookies)
     if credential is None:
         raise ValueError(
             "The authentication session returned no account-scoped UUID cookie. "
