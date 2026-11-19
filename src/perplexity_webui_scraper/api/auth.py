@@ -120,13 +120,14 @@ class ClientPool:
         self._lock = Lock()
 
     def _evict_stale(self, now: float) -> None:
-        """Remove client references that have been idle beyond the configured TTL."""
+        """Remove and close client references that have been idle beyond TTL."""
         stale_tokens = [
             token for token, (_client, last_access) in self._clients.items() if now - last_access > self._ttl_seconds
         ]
 
         for token in stale_tokens:
-            self._clients.pop(token)
+            stale_client, _last_access = self._clients.pop(token)
+            stale_client.close()
 
     def get_or_create(self, token: str) -> Perplexity:
         """Return an existing or newly created client for *token*.
@@ -153,18 +154,7 @@ class ClientPool:
             self._clients[canonical_token] = (client, now)
 
             if len(self._clients) > self._max_clients:
-                self._clients.popitem(last=False)
+                _evicted_token, (evicted_client, _last_access) = self._clients.popitem(last=False)
+                evicted_client.close()
 
             return client
-
-    def touch(self, token: str, client: Perplexity) -> None:
-        """Refresh TTL after a request only if *client* remains cached."""
-        canonical_token = _canonical_session_token(token)
-        with self._lock:
-            cached = self._clients.get(canonical_token)
-
-            if cached is None or cached[0] is not client:
-                return
-
-            self._clients[canonical_token] = (client, monotonic())
-            self._clients.move_to_end(canonical_token)

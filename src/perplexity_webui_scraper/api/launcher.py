@@ -15,7 +15,7 @@ from uvicorn import run as uvicorn_run
 console = Console(stderr=True, soft_wrap=True)
 
 app = Typer(
-    name="perplexity-webui-scraper-api",
+    name="perplexity-webui-scraper api",
     help="OpenAI-compatible API server powered by Perplexity WebUI Scraper.",
     add_completion=False,
     context_settings={"help_option_names": ["-h", "--help"]},
@@ -45,7 +45,7 @@ def main(
         Option(
             "--session-token",
             envvar="PERPLEXITY_SESSION_TOKEN",
-            help="Optional server-default account session-cookie pair.",
+            help="Optional server-default Perplexity session credential.",
         ),
     ] = None,
     gateway_api_key: Annotated[
@@ -53,9 +53,10 @@ def main(
         Option("--api-key", envvar="PERPLEXITY_API_KEY", help="Gateway key required on each request when configured."),
     ] = None,
 ) -> None:
-    """Start the API server; callers authenticate with account cookie pairs.
+    """Start the API server; callers authenticate with session credentials.
 
-    Requests use the full UUID-suffixed session-cookie pair in ``Authorization``.
+    Requests supply either a raw UUID-suffixed session-cookie pair or a compact
+    ``wsk_`` token in ``Authorization``.
     """
     if default_session_token:
         environ["PERPLEXITY_SESSION_TOKEN"] = default_session_token
@@ -75,9 +76,9 @@ def main(
         (f"http://{host}:{port}/redoc\n", "white"),
         ("🔑  Auth:  ", "bold cyan"),
         (
-            "X-API-Key + server session-cookie pair"
+            "X-API-Key + server session credential"
             if environ.get("PERPLEXITY_SESSION_TOKEN")
-            else "Authorization: Bearer <account session-cookie pair>",
+            else "Authorization: Bearer <session credential>",
             "dim white",
         ),
     )
