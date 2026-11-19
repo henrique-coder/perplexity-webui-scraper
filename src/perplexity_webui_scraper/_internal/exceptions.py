@@ -92,20 +92,14 @@ class HTTPError(PerplexityError):
 
     Attributes:
         status_code: HTTP status code, if available.
-        url: Deprecated compatibility attribute; always ``None``.
-        response_body: Deprecated compatibility attribute; always ``None``.
     """
 
     def __init__(
         self,
         message: str,
         status_code: int | None = None,
-        url: str | None = None,
-        response_body: str | None = None,
     ) -> None:
         self.status_code = status_code
-        self.url = None
-        self.response_body = None
         super().__init__(message)
 
     def clear_previous_exception_context(self) -> None:
@@ -253,14 +247,9 @@ class ResearchClarifyingQuestionsError(PerplexityError):
 
 
 class ResponseParsingError(PerplexityError):
-    """Raised when the API response cannot be parsed into a known structure.
+    """Raised when the API response cannot be parsed into a known structure."""
 
-    Attributes:
-        raw_data: Deprecated compatibility attribute; always ``None``.
-    """
-
-    def __init__(self, message: str, raw_data: str | None = None) -> None:
-        self.raw_data = None
+    def __init__(self, message: str) -> None:
         super().__init__(f"Failed to parse API response: {message}")
 
 
