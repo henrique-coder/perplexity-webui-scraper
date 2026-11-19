@@ -15,6 +15,7 @@ def test_payload_all_sources_expands_to_web_and_academic() -> None:
         config=ConversationConfig(source_focus="all"),
         backend_uuid=None,
         read_write_token=None,
+        rum_session_id="rum-session-id",
     )
 
     assert payload["params"]["sources"] == ["web", "scholar"]
@@ -28,6 +29,7 @@ def test_new_thread_payload_matches_observed_home_request_fields() -> None:
         config=ConversationConfig(),
         backend_uuid=None,
         read_write_token=None,
+        rum_session_id="rum-session-id",
     )
 
     params = payload["params"]
@@ -37,6 +39,8 @@ def test_new_thread_payload_matches_observed_home_request_fields() -> None:
     assert params["search_focus"] == "internet"
     assert params["skip_search_enabled"] is False
     assert params["sources"] == ["web"]
+    assert params["source"] == "default"
+    assert params["rum_session_id"] == "rum-session-id"
 
 
 def test_writing_mode_uses_search_disabled_flag_from_webui_capture() -> None:
@@ -47,6 +51,7 @@ def test_writing_mode_uses_search_disabled_flag_from_webui_capture() -> None:
         config=ConversationConfig(search_focus="writing"),
         backend_uuid=None,
         read_write_token=None,
+        rum_session_id="rum-session-id",
     )
 
     assert payload["params"]["search_focus"] == "internet"
@@ -62,6 +67,7 @@ def test_followup_payload_reuses_thread_and_matches_observed_followup_fields() -
         config=ConversationConfig(),
         backend_uuid=backend_uuid,
         read_write_token="write-token",
+        rum_session_id="rum-session-id",
     )
 
     params = payload["params"]

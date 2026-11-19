@@ -10,11 +10,13 @@ making them independently testable without any HTTP or client machinery.
 
 from __future__ import annotations
 
-from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from ipaddress import ip_address
+from typing import TYPE_CHECKING, Any, Literal
+from urllib.parse import urlsplit
 
-from orjson import JSONDecodeError, loads
+from orjson import JSONDecodeError, dumps, loads
+from pydantic import ValidationError
 
 from perplexity_webui_scraper._internal.constants import (
     CITATION_PATTERN,
@@ -25,13 +27,17 @@ from perplexity_webui_scraper._internal.exceptions import (
     ResearchClarifyingQuestionsError,
     ResponseParsingError,
 )
-from perplexity_webui_scraper.core.response import SearchResultItem
+from perplexity_webui_scraper.core.response import ActivityEvent, SearchResultItem
+
+
+MAX_SSE_FRAME_BYTES = 2 * 1024 * 1024
+MAX_RAW_DATA_BYTES = 64 * 1024
+MAX_WORKFLOW_STATE_BYTES = 4 * 1024 * 1024
+MAX_ANSWER_BYTES = 1024 * 1024
 
 
 if TYPE_CHECKING:
     from re import Match
-
-    from perplexity_webui_scraper._internal.types import CitationMode
 
 
 @dataclass
@@ -42,6 +48,8 @@ class SchematizedStreamState:
     answer: str | None = None
     chunks: list[str] = field(default_factory=list)
     markdown_chunks: list[str] = field(default_factory=list)
+    activity: dict[str, ActivityEvent] = field(default_factory=dict)
+    search_results: list[SearchResultItem] = field(default_factory=list)
 
 
 def _json_pointer_tokens(path: str) -> list[str]:
@@ -63,10 +71,15 @@ def _apply_json_patch(document: Any, operation: dict[str, Any]) -> None:
     private avoids adding a dependency for a wire-format detail.
     """
     op = operation.get("op")
-    tokens = _json_pointer_tokens(str(operation.get("path", "")))
+    path = operation.get("path", "")
+
+    if not isinstance(path, str) or len(path) > 2048:
+        raise ResponseParsingError("JSON Patch path exceeds the maximum allowed size") from None
+
+    tokens = _json_pointer_tokens(path)
 
     if not tokens:
-        raise ValueError("Root JSON Patch operations are not supported")
+        raise ResponseParsingError("Root JSON Patch operations are not supported") from None
 
     target = document
 
@@ -85,67 +98,115 @@ def _apply_json_patch(document: Any, operation: dict[str, Any]) -> None:
         elif op == "remove":
             target.pop(int(key))
         else:
-            raise ValueError(f"Unsupported JSON Patch operation: {op!r}")
+            raise ResponseParsingError("Unsupported JSON Patch operation") from None
 
         return
 
     if not isinstance(target, dict):
-        raise TypeError("JSON Patch target must be an object or list")
+        raise ResponseParsingError("JSON Patch target must be an object or list") from None
 
     if op in {"add", "replace"}:
+        if key not in target and op == "replace":
+            raise ResponseParsingError("JSON Patch replace target does not exist") from None
         target[key] = operation.get("value")
     elif op == "remove":
         target.pop(key, None)
     else:
-        raise ValueError(f"Unsupported JSON Patch operation: {op!r}")
+        raise ResponseParsingError("Unsupported JSON Patch operation") from None
 
 
 def _process_schematized_blocks(
     data: dict[str, Any],
     search_results: list[SearchResultItem],
-    citation_mode: CitationMode,
+    citation_mode: Literal["default", "markdown", "clean"],
     state: SchematizedStreamState,
 ) -> tuple[str | None, list[str], list[SearchResultItem], dict[str, Any]]:
     """Process the ``workflow_block``/``diff_block`` stream format."""
     raw_blocks = data.get("blocks", [])
     raw_data: dict[str, Any] = {}
 
-    for block in raw_blocks if isinstance(raw_blocks, list) else []:
+    if not isinstance(raw_blocks, list):
+        raise ResponseParsingError("SSE blocks field must be a list.") from None
+
+    if len(raw_blocks) > 100:
+        raise ResponseParsingError("SSE event contains more than 100 blocks.") from None
+
+    for block in raw_blocks:
         if not isinstance(block, dict):
             continue
 
         workflow_block = block.get("workflow_block")
 
         if isinstance(workflow_block, dict):
-            state.workflow_block = deepcopy(workflow_block)
-            raw_data["workflow_block"] = deepcopy(workflow_block)
+            state.workflow_block = workflow_block
+            _check_workflow_state_size(state)
+            _update_activity(state, workflow_block, search_results)
+            raw_data["workflow_block"] = _bounded_raw_value(workflow_block)
 
         diff_block = block.get("diff_block")
 
         if isinstance(diff_block, dict) and state.workflow_block is not None:
-            for patch in diff_block.get("patches", []):
-                if isinstance(patch, dict):
-                    _apply_json_patch(state.workflow_block, patch)
+            patches = diff_block.get("patches", [])
 
-            raw_data["diff_block"] = deepcopy(diff_block)
+            if not isinstance(patches, list):
+                state.workflow_block = None
+                raise ResponseParsingError("SSE diff patches field must be a list.") from None
+
+            if len(patches) > 100:
+                state.workflow_block = None
+                raise ResponseParsingError("SSE diff contains more than 100 patch operations.") from None
+
+            try:
+                for patch in patches:
+                    if isinstance(patch, dict):
+                        _apply_json_patch(state.workflow_block, patch)
+            except (ValueError, TypeError, IndexError, KeyError):
+                state.workflow_block = None
+                raise ResponseParsingError("Malformed SSE diff patch.") from None
+
+            _check_workflow_state_size(state)
+            _update_activity(state, state.workflow_block, search_results)
+            raw_data["diff_block"] = _bounded_raw_value(diff_block)
 
         markdown_block = block.get("markdown_block")
 
         if isinstance(markdown_block, dict):
-            _process_markdown_block(markdown_block, citation_mode, state)
-            raw_data["markdown_block"] = deepcopy(markdown_block)
+            _process_markdown_block(
+                markdown_block,
+                citation_mode,
+                state.search_results or search_results,
+                state,
+            )
+            raw_data["markdown_block"] = _bounded_raw_value(markdown_block)
 
         web_result_block = block.get("web_result_block")
 
         if isinstance(web_result_block, dict):
-            updated_results = _extract_web_results(web_result_block)
+            if isinstance(web_result_block.get("web_results"), list):
+                updated_results = _extract_web_results(web_result_block)
+            else:
+                raise ResponseParsingError("Web result block must contain a list.") from None
 
             if updated_results is not None:
                 search_results = updated_results
+                state.search_results = _merge_search_results(state.search_results, updated_results)[:50]
 
-            raw_data["web_result_block"] = deepcopy(web_result_block)
+            _update_activity(state, state.workflow_block, state.search_results or search_results)
+
+            if state.activity.get("search_web") is not None:
+                event = state.activity["search_web"]
+                state.activity["search_web"] = ActivityEvent(
+                    kind=event.kind,
+                    status=event.status,
+                    label=event.label,
+                    queries=event.queries,
+                    results=_validated_search_results([*state.search_results, *event.results])[:50],
+                )
+
+            raw_data["web_result_block"] = _bounded_raw_value(web_result_block)
 
     if state.workflow_block is not None:
+        raw_data["workflow_block"] = _bounded_raw_value(state.workflow_block)
         extracted = _extract_workflow_text(state.workflow_block, citation_mode, search_results)
 
         if extracted is not None:
@@ -153,69 +214,307 @@ def _process_schematized_blocks(
 
     is_final = bool(data.get("text_completed") or data.get("final_sse_message") or data.get("final"))
 
+    if is_final:
+        state.activity = _complete_activity(state.activity)
+
     if is_final and state.answer is None and state.markdown_chunks:
         state.answer = format_citations("".join(state.markdown_chunks), citation_mode, search_results)
 
     answer = state.answer if is_final else None
-
-    if state.workflow_block is not None:
-        raw_data["workflow_block"] = deepcopy(state.workflow_block)
 
     raw = raw_data
 
     return answer, list(state.chunks), search_results, raw
 
 
-def _prefer_longer_text(text: str | None, chunks: list[str]) -> str | None:
-    """Prefer the accumulated chunks when the stream's text field lags."""
-    joined_chunks = "".join(chunks)
+def _update_activity(
+    state: SchematizedStreamState,
+    workflow_block: dict[str, Any] | None,
+    search_results: list[SearchResultItem],
+) -> None:
+    """Project allowlisted public search workflow fields into typed activity."""
+    if not isinstance(workflow_block, dict):
+        return
 
-    if joined_chunks and (text is None or len(joined_chunks) > len(text)):
-        return joined_chunks
+    query_evidence = False
+    queries: list[str] = []
+    steps = workflow_block.get("steps", [])
+
+    for step in steps[:100] if isinstance(steps, list) else []:
+        if not isinstance(step, dict) or step.get("tool_name") != "search_web":
+            continue
+
+        raw_items = step.get("items", [])
+
+        for item in raw_items[:100] if isinstance(raw_items, list) else []:
+            if not isinstance(item, dict) or item.get("type") != "WORKFLOW_ITEM_QUERIES":
+                continue
+
+            payload = item.get("payload")
+            queries_payload = payload.get("queries_payload") if isinstance(payload, dict) else None
+            raw_queries = queries_payload.get("queries") if isinstance(queries_payload, dict) else None
+
+            if isinstance(raw_queries, list):
+                query_evidence = True
+
+                for query in raw_queries[:20]:
+                    safe_query = _safe_activity_text(query)
+
+                    if safe_query is not None and safe_query not in queries and len(queries) < 20:
+                        queries.append(safe_query)
+
+    if not query_evidence:
+        return
+
+    source_results: list[SearchResultItem] = []
+    for step in steps[:100] if isinstance(steps, list) else []:
+        if not isinstance(step, dict) or step.get("tool_name") != "search_web":
+            continue
+
+        raw_items = step.get("items", [])
+
+        for item in raw_items[:100] if isinstance(raw_items, list) else []:
+            if not isinstance(item, dict) or item.get("type") != "WORKFLOW_ITEM_SOURCES":
+                continue
+
+            payload = item.get("payload")
+            sources_payload = payload.get("sources_payload") if isinstance(payload, dict) else None
+            raw_sources = sources_payload.get("sources") if isinstance(sources_payload, dict) else None
+
+            if not isinstance(raw_sources, list):
+                continue
+
+            for source in raw_sources[:50]:
+                if not isinstance(source, dict):
+                    continue
+
+                url = source.get("url")
+                title = source.get("name")
+                snippet = source.get("snippet")
+
+                if not isinstance(url, str) or not isinstance(title, str) or not isinstance(snippet, str):
+                    continue
+
+                source_results.append(SearchResultItem(url=url, title=title, snippet=snippet))
+
+    results = _validated_search_results([*search_results, *source_results])[:50]
+    status: Literal["in_progress", "completed"] = (
+        "completed" if workflow_block.get("status") == "WORKFLOW_COMPLETED" else "in_progress"
+    )
+    existing = state.activity.get("search_web")
+    combined_queries: list[str] = []
+
+    for query in [*(existing.queries if existing else []), *queries]:
+        if query not in combined_queries:
+            combined_queries.append(query)
+
+        if len(combined_queries) == 20:
+            break
+
+    state.activity["search_web"] = ActivityEvent(
+        kind="search",
+        status=status,
+        label="Searching the web",
+        queries=combined_queries,
+        results=results,
+    )
+
+
+def _safe_activity_text(value: Any, max_length: int = 512) -> str | None:
+    """Bound and reject control characters in user-visible query summaries."""
+    if not isinstance(value, str):
+        return None
+
+    text = value.strip()
+
+    if (
+        not text
+        or len(text) > max_length
+        or any(ord(character) < 32 and character not in "\t\n\r" for character in text)
+    ):
+        return None
 
     return text
 
 
+def _validated_search_results(search_results: list[SearchResultItem]) -> list[SearchResultItem]:
+    """Return a bounded list of public HTTPS source metadata without private payloads."""
+    results: list[SearchResultItem] = []
+    seen_urls: set[str] = set()
+
+    for result in search_results:
+        url = result.url
+
+        if not isinstance(url, str) or len(url) > 2048:
+            continue
+
+        try:
+            parsed = urlsplit(url)
+            port = parsed.port
+        except ValueError:
+            continue
+
+        if (
+            parsed.scheme != "https"
+            or not parsed.hostname
+            or parsed.username is not None
+            or parsed.password is not None
+        ):
+            continue
+
+        if port is not None and not 1 <= port <= 65535:
+            continue
+
+        hostname = parsed.hostname.lower().rstrip(".")
+
+        if not hostname or hostname == "localhost" or hostname.endswith((".localhost", ".local")):
+            continue
+
+        try:
+            address = ip_address(hostname)
+        except ValueError:
+            address = None
+
+        if address is not None and not address.is_global:
+            continue
+
+        canonical_url = url.split("#", 1)[0]
+
+        title = _safe_activity_text(result.title)
+        snippet = _safe_activity_text(result.snippet, max_length=2048)
+
+        if title is None or snippet is None:
+            continue
+
+        if canonical_url in seen_urls:
+            for index, existing in enumerate(results):
+                if existing.url == canonical_url:
+                    results[index] = SearchResultItem(url=canonical_url, title=title, snippet=snippet)
+                    break
+
+            continue
+
+        seen_urls.add(canonical_url)
+        results.append(SearchResultItem(url=canonical_url, title=title, snippet=snippet))
+
+        if len(results) == 50:
+            break
+
+    return results
+
+
+def _merge_search_results(
+    current_results: list[SearchResultItem],
+    updated_results: list[SearchResultItem],
+) -> list[SearchResultItem]:
+    """Merge newly observed results into the current conversation's source list."""
+    result_by_url = {result.url: result for result in current_results if result.url}
+
+    for result in updated_results:
+        if result.url:
+            result_by_url[result.url] = result
+
+    return list(result_by_url.values())
+
+
+def _complete_activity(activity: dict[str, ActivityEvent]) -> dict[str, ActivityEvent]:
+    """Return completed copies of events without mutating earlier snapshots."""
+    return {
+        key: ActivityEvent(
+            kind=event.kind,
+            status="completed",
+            label=event.label,
+            queries=event.queries,
+            results=list(event.results),
+        )
+        for key, event in activity.items()
+    }
+
+
+def _bounded_raw_value(value: dict[str, Any]) -> dict[str, Any]:
+    """Keep bounded raw diagnostics without retaining full upstream blocks."""
+    serialized = dumps(value)
+
+    if len(serialized) <= MAX_RAW_DATA_BYTES:
+        return loads(serialized)
+
+    return {"truncated": True, "original_size_bytes": len(serialized)}
+
+
+def _check_workflow_state_size(state: SchematizedStreamState) -> None:
+    """Prevent incremental JSON patches from growing retained workflow state without bound."""
+    if state.workflow_block is None:
+        return
+
+    try:
+        oversized = len(dumps(state.workflow_block)) > MAX_WORKFLOW_STATE_BYTES
+    except TypeError:
+        oversized = True
+
+    if oversized:
+        state.workflow_block = None
+        raise ResponseParsingError("Workflow state exceeds the 4 MiB maximum allowed size.") from None
+
+
+def _prefer_longer_text(text: str | None, chunks: list[str]) -> str | None:
+    """Prefer the accumulated chunks when the stream's text field lags."""
+    joined_chunks = "".join(chunks[:100])[:MAX_ANSWER_BYTES]
+
+    if joined_chunks and (text is None or len(joined_chunks) > len(text)):
+        return joined_chunks[:MAX_ANSWER_BYTES]
+
+    return text[:MAX_ANSWER_BYTES] if text is not None else None
+
+
 def _process_markdown_block(
     markdown_block: dict[str, Any],
-    citation_mode: CitationMode,
+    citation_mode: Literal["default", "markdown", "clean"],
+    search_results: list[SearchResultItem],
     state: SchematizedStreamState,
 ) -> None:
     """Merge an incremental markdown block into the stream state."""
-    raw_chunks = markdown_block.get("chunks", [])
+    raw_chunks = markdown_block.get("chunks")
 
     if isinstance(raw_chunks, list):
         offset = markdown_block.get("chunk_starting_offset", 0)
 
-        if not isinstance(offset, int) or offset < 0:
+        if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
             offset = 0
 
         if offset == 0:
             state.markdown_chunks = []
 
+        if offset > 100 or offset + len(raw_chunks) > 100:
+            raise ResponseParsingError("Markdown chunk index exceeds the 100-chunk maximum.") from None
+
         while len(state.markdown_chunks) < offset:
             state.markdown_chunks.append("")
 
-        for index, chunk in enumerate(raw_chunks):
-            value = format_citations(str(chunk), citation_mode, []) if chunk is not None else ""
+        for index, chunk in enumerate(raw_chunks[:100]):
+            value = str(chunk)[:65_536] if chunk is not None else ""
             target = offset + index
 
             if target == len(state.markdown_chunks):
-                state.markdown_chunks.append(value or "")
+                state.markdown_chunks.append(value)
             elif target < len(state.markdown_chunks):
-                state.markdown_chunks[target] = value or ""
+                state.markdown_chunks[target] = value
             else:
-                state.markdown_chunks.extend([""] * (target - len(state.markdown_chunks)))
-                state.markdown_chunks.append(value or "")
+                if target > 100:
+                    raise ResponseParsingError("Markdown chunk index exceeds the 100-chunk maximum.") from None
 
-    state.chunks = list(state.markdown_chunks) or state.chunks
+                state.markdown_chunks.extend([""] * (target - len(state.markdown_chunks)))
+                state.markdown_chunks.append(value)
+
+    state.chunks = [
+        format_citations(chunk, citation_mode, search_results) or "" for chunk in state.markdown_chunks[:100]
+    ]
 
     answer = markdown_block.get("answer")
-    answer_text = answer if isinstance(answer, str) and answer else None
+    answer_text = answer[:1_048_576] if isinstance(answer, str) and answer else None
     answer_text = _prefer_longer_text(answer_text, state.markdown_chunks)
 
     if answer_text is not None:
-        state.answer = format_citations(answer_text, citation_mode, [])
+        state.answer = format_citations(answer_text, citation_mode, search_results)
 
 
 def _extract_web_results(web_result_block: dict[str, Any]) -> list[SearchResultItem] | None:
@@ -227,30 +526,30 @@ def _extract_web_results(web_result_block: dict[str, Any]) -> list[SearchResultI
 
     return [
         SearchResultItem(
-            title=result.get("name"),
-            snippet=result.get("snippet"),
-            url=result.get("url"),
+            title=result.get("name") if isinstance(result.get("name"), str) else None,
+            snippet=result.get("snippet") if isinstance(result.get("snippet"), str) else None,
+            url=result.get("url") if isinstance(result.get("url"), str) else None,
         )
-        for result in raw_results
+        for result in raw_results[:50]
         if isinstance(result, dict)
     ]
 
 
 def _extract_workflow_text(
     workflow_block: dict[str, Any],
-    citation_mode: CitationMode,
+    citation_mode: Literal["default", "markdown", "clean"],
     search_results: list[SearchResultItem],
 ) -> tuple[str | None, list[str], list[SearchResultItem]] | None:
     """Extract answer text and chunks from a schematized workflow block."""
     steps = workflow_block.get("steps", [])
 
-    for step in steps if isinstance(steps, list) else []:
+    for step in steps[:100] if isinstance(steps, list) else []:
         if not isinstance(step, dict):
             continue
 
         items = step.get("items", [])
 
-        for item in items if isinstance(items, list) else []:
+        for item in items[:100] if isinstance(items, list) else []:
             if not isinstance(item, dict):
                 continue
 
@@ -260,10 +559,20 @@ def _extract_workflow_text(
             if not isinstance(text_payload, dict):
                 continue
 
+            if item.get("type") not in {None, "WORKFLOW_ITEM_TEXT"} or text_payload.get("variant") not in {
+                None,
+                "answer",
+            }:
+                continue
+
             raw_chunks = text_payload.get("chunks", [])
-            chunks = [str(chunk) for chunk in raw_chunks if chunk is not None] if isinstance(raw_chunks, list) else []
+            chunks = (
+                [str(chunk)[:65_536] for chunk in raw_chunks[:100] if chunk is not None]
+                if isinstance(raw_chunks, list)
+                else []
+            )
             text = text_payload.get("text")
-            answer_text = text if isinstance(text, str) and text else None
+            answer_text = text[:1_048_576] if isinstance(text, str) and text else None
             answer_text = _prefer_longer_text(answer_text, chunks)
             answer = format_citations(answer_text, citation_mode, search_results)
 
@@ -274,6 +583,28 @@ def _extract_workflow_text(
                 return answer, chunks, search_results
 
     return None
+
+
+def _parse_sse_payload(payload: bytes | str) -> dict[str, Any]:
+    """Decode a bounded SSE JSON payload and require a JSON object."""
+    if not payload:
+        raise ResponseParsingError("SSE data frame is empty.")
+
+    parsed: Any = None
+    malformed = False
+
+    try:
+        parsed = loads(payload)
+    except JSONDecodeError:
+        malformed = True
+
+    if malformed:
+        raise ResponseParsingError("SSE frame contains malformed JSON.")
+
+    if not isinstance(parsed, dict):
+        raise ResponseParsingError("SSE data frame must be a JSON object.")
+
+    return parsed
 
 
 def parse_sse_line(line: str | bytes) -> dict[str, Any] | None:
@@ -288,6 +619,10 @@ def parse_sse_line(line: str | bytes) -> dict[str, Any] | None:
 
     Returns:
         Deserialized JSON dict, or ``None`` if the line is not a data line.
+
+    Raises:
+        ResponseParsingError: If the payload exceeds the frame size limit, is
+            malformed JSON, or does not decode to a JSON object.
     """
     if isinstance(line, bytes):
         if line.startswith(b"data:"):
@@ -296,14 +631,20 @@ def parse_sse_line(line: str | bytes) -> dict[str, Any] | None:
             if payload == b"[DONE]":
                 return None
 
-            return loads(payload)
+            if len(payload) > MAX_SSE_FRAME_BYTES:
+                raise ResponseParsingError("SSE frame exceeds the 2 MiB maximum allowed size.") from None
+
+            return _parse_sse_payload(payload)
     elif line.startswith("data:"):
         payload = line[5:].lstrip()
 
         if payload == "[DONE]":
             return None
 
-        return loads(payload)
+        if len(payload) > MAX_SSE_FRAME_BYTES or len(payload.encode("utf-8")) > MAX_SSE_FRAME_BYTES:
+            raise ResponseParsingError("SSE frame exceeds the 2 MiB maximum allowed size.") from None
+
+        return _parse_sse_payload(payload)
 
     return None
 
@@ -311,13 +652,13 @@ def parse_sse_line(line: str | bytes) -> dict[str, Any] | None:
 def process_sse_data(
     data: dict[str, Any],
     search_results: list[SearchResultItem],
-    citation_mode: CitationMode,
+    citation_mode: Literal["default", "markdown", "clean"],
     schematized_state: SchematizedStreamState | None = None,
 ) -> tuple[str | None, list[str], list[SearchResultItem], dict[str, Any]]:
     """Process a single SSE data chunk and extract state updates.
 
     Handles both the schematized block format (``blocks`` key) and the
-    plain text format (``text`` key).  Recognises ``FINAL`` and
+    plain text format (``text`` key).  Recognizes ``FINAL`` and
     ``RESEARCH_CLARIFYING_QUESTIONS`` step types.
 
     Args:
@@ -338,47 +679,46 @@ def process_sse_data(
         ResponseParsingError: If the response has an unexpected structure or
             signals a failure status.
     """
+    if not isinstance(data, dict):
+        raise ResponseParsingError("SSE data payload must be a JSON object.")
+
     status = str(data.get("status", "")).upper()
     error_code = data.get("error_code")
 
     if error_code is not None:
-        message = str(data.get("text") or error_code)
+        error_text = str(error_code)[:80]
+        if "RATE_LIMIT" in error_text.upper():
+            raise RateLimitError(error_text) from None
 
-        if "RATE_LIMIT" in str(error_code).upper():
-            raise RateLimitError(message)
-
-        raise ResponseParsingError(
-            f"Query processing failed: {message}",
-            raw_data=str(data),
-        )
+        raise ResponseParsingError("Query processing failed.") from None
 
     if status == "FAILED":
-        raise ResponseParsingError(
-            f"Query processing failed: {data.get('text', 'Unknown error')}",
-            raw_data=str(data),
-        )
+        raise ResponseParsingError(f"Query processing failed with status {status}.") from None
 
     if "blocks" in data:
         if schematized_state is None:
             schematized_state = SchematizedStreamState()
 
-        return _process_schematized_blocks(data, search_results, citation_mode, schematized_state)
+        try:
+            return _process_schematized_blocks(data, search_results, citation_mode, schematized_state)
+        except (ValueError, TypeError, IndexError, KeyError, ValidationError):
+            raise ResponseParsingError("Malformed schematized SSE event.") from None
 
     if "text" not in data:
         if schematized_state is not None and (
             data.get("text_completed") or data.get("final_sse_message") or data.get("final")
         ):
+            schematized_state.activity = _complete_activity(schematized_state.activity)
             return schematized_state.answer, list(schematized_state.chunks), search_results, {}
 
         return None, [], search_results, {}
 
     try:
         json_data = loads(data["text"])
-    except KeyError as error:
-        raise ValueError("Missing 'text' field in SSE data chunk") from error
     except JSONDecodeError:
         json_data = dict(data)
-        json_data["answer"] = data.get("text")
+        text = data.get("text")
+        json_data["answer"] = text[:1_048_576] if isinstance(text, str) else text
 
     if isinstance(json_data, list):
         return _process_block_list(json_data, search_results, citation_mode)
@@ -388,10 +728,7 @@ def process_sse_data(
 
         return answer, chunks, updated_results, raw
 
-    raise ResponseParsingError(
-        "Unexpected JSON structure in 'text' field",
-        raw_data=str(json_data),
-    )
+    raise ResponseParsingError("Unexpected JSON structure in 'text' field") from None
 
 
 def extract_clarifying_questions(item: dict[str, Any]) -> list[str]:
@@ -439,20 +776,10 @@ def extract_clarifying_questions(item: dict[str, Any]) -> list[str]:
 
 def format_citations(
     text: str | None,
-    citation_mode: CitationMode,
+    citation_mode: Literal["default", "markdown", "clean"],
     search_results: list[SearchResultItem],
 ) -> str | None:
-    """Apply citation formatting to response text.
-
-    Args:
-        text: The raw answer text (may contain ``[1]``, ``[2]`` … markers).
-        citation_mode: Controls rendering behaviour.
-        search_results: Current search result list for URL lookup.
-
-    Returns:
-        Formatted text, or the original text if ``citation_mode == "default"``
-        or the text is ``None`` / empty.
-    """
+    """Format citation markers using the requested citation mode."""
     if not text or citation_mode == "default":
         return text
 
@@ -487,7 +814,7 @@ def format_citations(
 def _process_block_list(
     block_list: list[Any],
     search_results: list[SearchResultItem],
-    citation_mode: CitationMode,
+    citation_mode: Literal["default", "markdown", "clean"],
 ) -> tuple[str | None, list[str], list[SearchResultItem], dict[str, Any]]:
     """Process a list of step blocks, looking for FINAL or clarifying questions.
 
@@ -502,21 +829,42 @@ def _process_block_list(
     Raises:
         ResearchClarifyingQuestionsError: If a clarification step is found.
     """
+    if len(block_list) > 100:
+        raise ResponseParsingError("SSE block list contains more than 100 items.") from None
+
     for item in block_list:
+        if not isinstance(item, dict):
+            continue
+
         step_type = item.get("step_type")
 
         if step_type == "RESEARCH_CLARIFYING_QUESTIONS":
             questions = extract_clarifying_questions(item)
+
+            if len(questions) > 20:
+                questions = questions[:20]
+
             raise ResearchClarifyingQuestionsError(questions)
 
         if step_type == "FINAL":
-            raw_content: dict[str, Any] = item.get("content", {})
+            raw_content = item.get("content", {})
+
+            if not isinstance(raw_content, dict):
+                raise ResponseParsingError("Final answer content must be an object.") from None
+
             answer_content = raw_content.get("answer")
 
             answer_data: dict[str, Any]
 
             if isinstance(answer_content, str) and JSON_OBJECT_PATTERN.match(answer_content):
-                answer_data = loads(answer_content)
+                if len(answer_content) > MAX_SSE_FRAME_BYTES:
+                    raise ResponseParsingError("Final answer JSON exceeds the 2 MiB maximum allowed size.") from None
+                try:
+                    answer_data = loads(answer_content)
+                except JSONDecodeError:
+                    raise ResponseParsingError("Final answer JSON is malformed.") from None
+                if not isinstance(answer_data, dict):
+                    raise ResponseParsingError("Final answer JSON must be an object.") from None
             else:
                 answer_data = raw_content
 
@@ -530,7 +878,7 @@ def _process_block_list(
 def _extract_state(
     answer_data: dict[str, Any],
     current_results: list[SearchResultItem],
-    citation_mode: CitationMode,
+    citation_mode: Literal["default", "markdown", "clean"],
 ) -> tuple[list[SearchResultItem], str | None, list[str], dict[str, Any]]:
     """Extract answer, chunks, and search results from a parsed answer dict.
 
@@ -546,29 +894,80 @@ def _extract_state(
     updated_results = current_results
 
     if web_results:
-        updated_results = [
-            SearchResultItem(
-                title=r.get("name"),
-                snippet=r.get("snippet"),
-                url=r.get("url"),
-            )
-            for r in web_results
-            if isinstance(r, dict)
-        ]
+        if not isinstance(web_results, list):
+            raise ResponseParsingError("Web results must be a list.") from None
 
-    answer_text: str | None = answer_data.get("answer")
+        updated_results = _validated_search_results(
+            [
+                SearchResultItem(
+                    title=r.get("name") if isinstance(r.get("name"), str) else None,
+                    snippet=r.get("snippet") if isinstance(r.get("snippet"), str) else None,
+                    url=r.get("url") if isinstance(r.get("url"), str) else None,
+                )
+                for r in web_results[:50]
+                if isinstance(r, dict)
+            ]
+        )
+
+    raw_answer = answer_data.get("answer")
+    answer_text: str | None = raw_answer if isinstance(raw_answer, str) else None
+
+    if raw_answer is not None and answer_text is None:
+        raise ResponseParsingError("Answer must be text.") from None
+
+    if answer_text is not None:
+        answer_text = answer_text[:MAX_ANSWER_BYTES]
+
     formatted_answer = format_citations(answer_text, citation_mode, updated_results)
 
     raw_chunks: list[Any] = answer_data.get("chunks", [])
     formatted_chunks: list[str] = []
 
     if raw_chunks:
+        if not isinstance(raw_chunks, list):
+            raise ResponseParsingError("Answer chunks must be a list.") from None
+
         formatted_chunks = [
-            c
-            for chunk in raw_chunks
+            format_citations(str(chunk)[:65_536], citation_mode, updated_results) or ""
+            for chunk in raw_chunks[:100]
             if chunk is not None
-            for c in (format_citations(chunk, citation_mode, updated_results),)
-            if c is not None
         ]
 
-    return updated_results, formatted_answer, formatted_chunks, answer_data
+    bounded_raw = _bounded_answer_projection(answer_data)
+
+    return updated_results, formatted_answer, formatted_chunks, bounded_raw
+
+
+def _bounded_answer_projection(answer_data: dict[str, Any]) -> dict[str, Any]:
+    """Bound public answer/chunk/source projections while retaining final text."""
+    projected = dict(answer_data)
+    answer = projected.get("answer")
+
+    if isinstance(answer, str):
+        projected["answer"] = answer[:MAX_ANSWER_BYTES]
+    elif answer is not None:
+        raise ResponseParsingError("Answer must be text.") from None
+
+    chunks = projected.get("chunks", [])
+
+    if not isinstance(chunks, list):
+        raise ResponseParsingError("Answer chunks must be a list.") from None
+
+    projected["chunks"] = [str(chunk)[:65_536] for chunk in chunks[:100] if chunk is not None]
+
+    web_results = projected.get("web_results", [])
+
+    if not isinstance(web_results, list):
+        raise ResponseParsingError("Web results must be a list.") from None
+
+    projected["web_results"] = web_results[:50]
+    serialized = dumps(projected)
+
+    if len(serialized) > MAX_RAW_DATA_BYTES:
+        return {
+            "answer": projected.get("answer", ""),
+            "raw_data_truncated": True,
+            "original_size_bytes": len(serialized),
+        }
+
+    return projected

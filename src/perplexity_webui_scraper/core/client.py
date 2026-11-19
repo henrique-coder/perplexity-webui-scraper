@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from orjson import loads
+
 from perplexity_webui_scraper._internal.constants import ENDPOINT_AUTH_SESSION, ENDPOINT_USER_SETTINGS
 from perplexity_webui_scraper._internal.logging import configure_logging, get_logger
+from perplexity_webui_scraper.auth.cookies import parse_session_credential
 from perplexity_webui_scraper.config.client import ClientConfig
 from perplexity_webui_scraper.config.conversation import ConversationConfig
 from perplexity_webui_scraper.core.account import AccountProfile, AccountSession, AccountSettings
@@ -17,8 +20,7 @@ logger = get_logger(__name__)
 class Perplexity:
     """Web scraper client for Perplexity AI conversations.
 
-    The primary entry point. Create a single instance per session token and reuse it
-    to share the underlying HTTP session and rate limiter.
+    The primary entry point. Reuse a client for one account-scoped session credential.
 
     Example:
         ```python
@@ -29,12 +31,11 @@ class Perplexity:
         ```
 
     Args:
-        session_token: The ``__Secure-next-auth.session-token`` cookie value.
-            Obtained via the ``get-session-token`` CLI tool.
+        session_token: Full account-scoped UUID cookie pair in `__Secure-pplx.session.<account UUID>=value` format.
         config: Optional client settings (timeouts, retries, logging).
 
     Raises:
-        ValueError: If ``session_token`` is empty.
+        ValueError: If ``session_token`` is not a UUID-suffixed cookie pair.
     """
 
     __slots__ = ("_http",)
@@ -44,8 +45,7 @@ class Perplexity:
         session_token: str,
         config: ClientConfig | None = None,
     ) -> None:
-        if not session_token or not session_token.strip():
-            raise ValueError("session_token cannot be empty")
+        parse_session_credential(session_token)
 
         cfg = config or ClientConfig()
         configure_logging(level=cfg.logging_level, log_file=cfg.log_file)
@@ -90,13 +90,13 @@ class Perplexity:
         """
         response = self._http.get(ENDPOINT_AUTH_SESSION)
 
-        return AccountSession.model_validate(response.json())
+        return AccountSession.model_validate(loads(response.content))
 
     def get_account_settings(self) -> AccountSettings:
         """Return typed user settings for the current token."""
         response = self._http.get(ENDPOINT_USER_SETTINGS)
 
-        return AccountSettings.model_validate(response.json())
+        return AccountSettings.model_validate(loads(response.content))
 
     def get_account_profile(self) -> AccountProfile:
         """Return combined account data, using settings when session tier is incomplete."""
