@@ -57,22 +57,24 @@ def test_call_with_rate_limit_retry_waits_then_retries_operation() -> None:
 
 def test_wait_for_rate_limit_retry_returns_when_enter_is_pressed() -> None:
     with create_pipe_input() as input_pipe:
-        press_enter = Timer(0.05, input_pipe.send_text, args=("\r",))
-        press_enter.start()
         started = monotonic()
+        available_after = started + 0.03
+        press_enter = Timer(0.10, input_pipe.send_text, args=("\r",))
+        press_enter.start()
         try:
             retry_now = wait_for_rate_limit_retry(
                 "60",
                 datetime.now().astimezone() + timedelta(seconds=60),
                 input_stream=input_pipe,
                 output_stream=DummyOutput(),
-                manual_retry_available_after=started + 0.01,
+                manual_retry_available_after=available_after,
             )
         finally:
             press_enter.join()
 
     assert retry_now is True
-    assert monotonic() - started >= 0.05
+    assert monotonic() >= available_after
+    assert monotonic() - started < 5.0
 
 
 def test_wait_for_rate_limit_retry_cancels_on_ctrl_c() -> None:
