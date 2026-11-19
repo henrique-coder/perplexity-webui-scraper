@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
+from hashlib import sha256
+from json import load
 from os import environ
 from pathlib import Path
 from sys import argv
@@ -15,7 +15,11 @@ def missing_artifact_paths(artifacts: list[Path], published_files: dict[str, str
     """Return unpublished files, rejecting same-name files with mismatched hashes."""
     missing_files = []
     for artifact in artifacts:
-        hash_bytes = hashlib.sha256(artifact.read_bytes()).hexdigest()
+        digest = sha256()
+        with artifact.open("rb") as file:
+            for block in iter(lambda: file.read(1024 * 1024), b""):
+                digest.update(block)
+        hash_bytes = digest.hexdigest()
         published_hash = published_files.get(artifact.name)
         if published_hash is None:
             missing_files.append(artifact)
@@ -30,7 +34,7 @@ def fetch_published_files(package_name: str, version: str) -> dict[str, str]:
     request = Request(url, method="GET")
     try:
         with urlopen(request, timeout=20) as response:
-            return {item["filename"]: item["digests"]["sha256"] for item in json.load(response)["urls"]}
+            return {item["filename"]: item["digests"]["sha256"] for item in load(response)["urls"]}
     except HTTPError as error:
         if error.code == 404:
             return {}
@@ -41,6 +45,7 @@ def main(arguments: list[str] | None = None) -> int:
     """Check PyPI state and report whether any release artifact needs uploading."""
     package_name = environ["PACKAGE_NAME"]
     version = environ["VERSION"]
+
     artifacts = sorted((*Path("dist").glob("*.whl"), *Path("dist").glob("*.tar.gz")))
     if not artifacts:
         raise ValueError("No wheel or source distribution found in dist/.")

@@ -27,8 +27,6 @@ def validate_artifacts(artifact_paths: list[Path], expected_version: str) -> Non
         raise ValueError(
             f"Artifact versions must match {expected_version}; wheel={wheel_version}, sdist={sdist_version}."
         )
-    if wheel_version != sdist_version:
-        raise ValueError(f"Wheel and sdist versions differ: wheel={wheel_version}, sdist={sdist_version}.")
 
     wheel_digest = _sha256(wheels[0])
     sdist_digest = _sha256(sdists[0])
@@ -40,7 +38,9 @@ def _wheel_version(path: Path) -> str:
     """Read and validate the wheel's package metadata version."""
     try:
         with ZipFile(path) as wheel:
-            metadata_files = [name for name in wheel.namelist() if name.endswith(".dist-info/METADATA")]
+            metadata_files = [
+                name for name in wheel.namelist() if name.count("/") == 1 and name.endswith(".dist-info/METADATA")
+            ]
             if len(metadata_files) != 1:
                 raise ValueError(f"Expected one wheel METADATA file in {path.name}.")
             metadata = wheel.read(metadata_files[0]).decode("utf-8")
@@ -53,7 +53,9 @@ def _sdist_version(path: Path) -> str:
     """Read and validate the sdist's package metadata version."""
     try:
         with open_tar(path, "r:gz") as archive:
-            metadata_files = [name for name in archive.getnames() if name.endswith("/PKG-INFO")]
+            metadata_files = [
+                name for name in archive.getnames() if name.count("/") == 1 and name.endswith("/PKG-INFO")
+            ]
             if len(metadata_files) != 1:
                 raise ValueError(f"Expected one PKG-INFO file in {path.name}.")
             member = archive.extractfile(metadata_files[0])
@@ -66,8 +68,15 @@ def _sdist_version(path: Path) -> str:
 
 
 def _metadata_version(metadata: str, artifact_name: str) -> str:
-    """Extract the unique Version field from core package metadata."""
-    versions = [line.partition(":")[2].strip() for line in metadata.splitlines() if line.lower().startswith("version:")]
+    """Extract the unique Version field from core package metadata headers."""
+    header_lines: list[str] = []
+
+    for line in metadata.splitlines():
+        if not line.strip():
+            break
+        header_lines.append(line)
+
+    versions = [line.partition(":")[2].strip() for line in header_lines if line.lower().startswith("version:")]
     if len(versions) != 1:
         raise ValueError(f"Expected one Version field in {artifact_name} metadata.")
     if not versions[0]:

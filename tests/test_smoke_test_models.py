@@ -26,6 +26,7 @@ def test_unknown_tier_model_is_not_classified_unavailable() -> None:
 
 def test_max_tier_model_is_blocked_by_pro_account() -> None:
     model = _MODEL.model_copy(update={"min_tier": "max"})
+
     assert _account_tier_gate(model, "pro") == "requires_max_tier"
 
 
@@ -36,6 +37,7 @@ def test_probe_retries_rate_limit_once_and_records_pass() -> None:
     client.__exit__ = Mock(return_value=False)
     client.create_conversation.return_value = conversation
     rate_limit = HTTPError("rate limited", status_code=429)
+
     with (
         patch("scripts.smoke_test_models.Perplexity", return_value=client),
         patch("scripts.smoke_test_models.sleep") as sleep,
@@ -55,6 +57,8 @@ def test_write_report_stores_utc_timestamps_without_token(tmp_path: Path) -> Non
     report_path = tmp_path / "report.json"
     timestamp = datetime.now(UTC).isoformat()
     report = {"tested_at": timestamp, "status": "running", "models": []}
+
     _write_report(report_path, report)
+
     assert report_path.is_file()
     assert "synthetic-test-token" not in report_path.read_text()

@@ -6,7 +6,7 @@ build-backend = "uv_build"
 
 [project]
 name = "perplexity-webui-scraper"
-version = "1.2.1"
+version = "2.0.0"
 description = "Python client, CLI, MCP server, and OpenAI-compatible REST API for Perplexity's WebUI."
 authors = [
     { name = "Henrique Moreira", email = "78804989+henrique-coder@users.noreply.github.com" },
@@ -63,6 +63,7 @@ all = [
     "perplexity-webui-scraper[token,api,mcp]",
 ]
 token = [
+    "prompt-toolkit>=3.0.30",
     "pyperclip>=1.9.0",
     "rich>=13.0.0",
 ]
@@ -100,6 +101,8 @@ test = [
     "fastapi>=0.120.0",
     "fastmcp>=3.0.0",
     "httpx2>=2.14.0",
+    "openai>=2.0.0,<3.0.0",
+    "prompt-toolkit>=3.0.30",
     "pyperclip>=1.9.0",
     "pytest>=8.0.0",
     "rich>=13.0.0",
@@ -198,12 +201,12 @@ convention = "google"
 division-by-zero = "warn"
 index-out-of-bounds = "warn"
 invalid-argument-type = "error"
-invalid-return-type = "error"
+invalid-explicit-return = "error"
 missing-argument = "error"
 possibly-missing-attribute = "warn"
 redundant-cast = "warn"
 too-many-positional-arguments = "error"
-unresolved-attribute = "error"
-unresolved-import = "error"
+missing-attribute = "error"
+import-not-found = "error"
 unused-ignore-comment = "warn"
 unsupported-operator = "error"

@@ -320,14 +320,8 @@ jobs:
 
       - name: Validate Release Version
         run: |
-          CHANGELOG_VERSION=$(grep -oP '(?<=^## \[)\d+\.\d+\.\d+(?=\])' CHANGELOG.md | head -n 1)
-          PROJECT_VERSION=$(grep -oP '(?<=^version = ")[^"]+' pyproject.toml | head -n 1)
-          LOCK_VERSION=$(awk '/name = "perplexity-webui-scraper"/{found=1; next} found && /^version = /{gsub(/[" ]/, "", $3); print $3; exit}' uv.lock)
-
-          if [ -z "$CHANGELOG_VERSION" ] || [ "$CHANGELOG_VERSION" != "$PROJECT_VERSION" ] || [ "$PROJECT_VERSION" != "$LOCK_VERSION" ]; then
-            echo "::error::CHANGELOG.md, pyproject.toml, and uv.lock must contain the same release version."
-            exit 1
-          fi
+          python3 scripts/validate_release_policy.py
+          PROJECT_VERSION=$(python3 -c 'from pathlib import Path; from tomllib import load; f = Path("pyproject.toml").open("rb"); print(load(f)["project"]["version"]); f.close()')
 
           if git ls-remote --exit-code --tags origin "refs/tags/v$PROJECT_VERSION" >/dev/null; then
             echo "::error::Release tag v$PROJECT_VERSION already exists. Bump the version before promoting to prod."
@@ -337,6 +331,7 @@ jobs:
   required:
     name: Code Quality & Tests
     if: always()
+    timeout-minutes: 5
     needs:
       - changes
       - python_quality
@@ -360,6 +355,11 @@ jobs:
           TESTS_RESULT: ${{ needs.tests.result }}
           BUILD_RESULT: ${{ needs.build.result }}
           RELEASE_POLICY_RESULT: ${{ needs.release_policy.result }}
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           for result in \
             "$CHANGES_RESULT" \
@@ -369,7 +369,8 @@ jobs:
             "$WORKFLOW_LINT_RESULT" \
             "$CONTAINERS_RESULT" \
             "$TESTS_RESULT" \
-            "$BUILD_RESULT"; do
+            "$BUILD_RESULT" \
+            "$RELEASE_POLICY_RESULT"; do
             if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
               echo "::error::One or more required CI jobs failed."
               exit 1
@@ -381,9 +382,11 @@ jobs:
             exit 1
           fi
 
-          if [ "$RELEASE_POLICY_RESULT" != "success" ] && [ "$RELEASE_POLICY_RESULT" != "skipped" ]; then
-            echo "::error::The production release policy failed."
-            exit 1
+          if [ "$EVENT_NAME" = "pull_request" ] && [ "$BASE_REF" = "prod" ] && [ "$HEAD_REF" = "dev" ] && [ "$HEAD_REPOSITORY" = "$REPOSITORY" ]; then
+            if [ "$RELEASE_POLICY_RESULT" != "success" ]; then
+              echo "::error::The production release policy must pass on dev-to-prod pull requests."
+              exit 1
+            fi
           fi
 
           echo "All required checks passed."

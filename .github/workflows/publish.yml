@@ -54,6 +54,7 @@ jobs:
       - name: Validate Immutable Release Inputs
         id: version
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REQUESTED_VERSION: ${{ inputs.version }}
           RELEASE_MODE: ${{ inputs.mode }}
           GITHUB_SHA: ${{ github.sha }}
@@ -68,19 +69,8 @@ jobs:
             exit 1
           fi
 
-          PROJECT_VERSION=$(uv run --python 3.14 --no-project python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
-          LOCK_VERSION=$(awk '/name = "perplexity-webui-scraper"/{found=1; next} found && /^version = /{gsub(/[" ]/, "", $3); print $3; exit}' uv.lock)
-          CHANGELOG_HEADING=$(grep -F "## [$REQUESTED_VERSION] - " CHANGELOG.md | head -n 1)
-
-          if [ "$REQUESTED_VERSION" != "$PROJECT_VERSION" ] || [ "$PROJECT_VERSION" != "$LOCK_VERSION" ]; then
-            echo "::error::Requested version, pyproject.toml, and uv.lock must match."
-            exit 1
-          fi
-
-          if [ -z "$CHANGELOG_HEADING" ] || [[ "$CHANGELOG_HEADING" = *"Unreleased" ]]; then
-            echo "::error::CHANGELOG.md must contain a dated section for $REQUESTED_VERSION before publication."
-            exit 1
-          fi
+          uv run --python 3.14 --no-project python scripts/validate_release_policy.py --expected-version "$REQUESTED_VERSION"
+          PROJECT_VERSION="$REQUESTED_VERSION"
 
           TAG="v$REQUESTED_VERSION"
           TAG_EXISTS=false
