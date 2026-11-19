@@ -12,11 +12,14 @@ from typing import Final
 
 
 # ---------------------------------------------------------------------------
-# API coordinates
+# WebUI request metadata
 # ---------------------------------------------------------------------------
 
 API_VERSION: Final[str] = "2.18"
 """Current API version used by Perplexity WebUI."""
+
+API_SOURCE: Final[str] = "default"
+"""WebUI API source/client identifier observed in current requests."""
 
 API_BASE_URL: Final[str] = "https://www.perplexity.ai"
 """Base URL for all API requests."""
@@ -56,8 +59,29 @@ ENDPOINT_AUTH_TOTP_CHALLENGE_VERIFY: Final[str] = "/api/auth/totp/challenge-veri
 # Authentication
 # ---------------------------------------------------------------------------
 
-SESSION_COOKIE_NAME: Final[str] = "__Secure-next-auth.session-token"
-"""Name of the session cookie used for authentication."""
+SESSION_COOKIE_PREFIX: Final[str] = "__Secure-pplx.session."
+"""Prefix of Perplexity's account-scoped session-cookie name."""
+
+SESSION_TOKEN_PREFIX: Final[str] = "wsk_"
+"""Prefix for compact session tokens."""
+
+SESSION_TOKEN_VERSION: Final[int] = 1
+"""Current compact session-token protocol version."""
+
+SESSION_TOKEN_BASE62_ALPHABET: Final[str] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+"""Alphabet used for compact-token integer encoding."""
+
+SESSION_TOKEN_SHAKE_SALT: Final[bytes] = b"pplx-shake-v1"
+"""Public domain-separation salt for the v1 SHAKE mask."""
+
+SESSION_TOKEN_BLAKE2S_PERSON: Final[bytes] = b"pplx-v1"
+"""BLAKE2s personalization prefix for the compact-token checksum."""
+
+SESSION_TOKEN_SENTINEL: Final[int] = 0b1000
+"""Sentinel bit in the high nibble of compact-token headers."""
+
+SESSION_TOKEN_JWE_HEADER: Final[str] = "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0"
+"""Encoded protected header for direct A256GCM JWE values."""
 
 AUTH_BEARER_PREFIX: Final[str] = "Bearer "
 """Prefix for Authorization: Bearer header values."""

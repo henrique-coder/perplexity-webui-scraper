@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from sys import stderr
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 from loguru import logger
 
@@ -19,7 +19,8 @@ if TYPE_CHECKING:
 
     from loguru import Logger
 
-    from perplexity_webui_scraper._internal.types import LogLevel
+
+_E = TypeVar("_E", bound=BaseException)
 
 
 # Remove any default handlers so the library does not emit noise unless
@@ -30,7 +31,7 @@ _logging_configured: bool = False
 
 
 def configure_logging(
-    level: LogLevel = "disabled",
+    level: Literal["disabled", "debug", "info", "warning", "error", "critical"] = "disabled",
     log_file: str | PathLike[str] | None = None,
 ) -> None:
     """Configure loguru for the ``perplexity_webui_scraper`` namespace.
@@ -44,6 +45,7 @@ def configure_logging(
     global _logging_configured  # noqa: PLW0603
 
     logger.remove()
+
     level_str = level.upper()
 
     if level_str == "DISABLED":
@@ -168,16 +170,20 @@ def log_retry(
     )
 
 
+def _sanitized_error(error: _E) -> _E:
+    """Drop original exception references before exposing a translated error."""
+    error.__cause__ = None
+    error.__context__ = None
+    error.__suppress_context__ = True
+
+    return error
+
+
 def log_error(error: Exception, context: str = "") -> None:
-    """Log an exception with full traceback at ERROR level.
+    """Log an exception type and caller-provided context without raw details.
 
     Args:
         error: The exception to log.
         context: Optional context string prepended to the log message.
     """
-    logger.exception(
-        "Error | context={} type={} message={}",
-        context,
-        type(error).__name__,
-        error,
-    )
+    logger.error("Error | context={} type={}", context, type(error).__name__)
