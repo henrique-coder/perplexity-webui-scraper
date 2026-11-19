@@ -4,8 +4,10 @@ from os import environ
 from pathlib import Path
 from re import search
 from subprocess import run
-from sys import executable
+from sys import executable, platform
 from textwrap import dedent
+
+from pytest import mark
 
 from scripts.classify_ci_paths import _changed_paths, classify_paths
 
@@ -105,6 +107,7 @@ def test_release_policy_checks_run_only_for_internal_dev_to_prod_pull_requests()
     )
 
 
+@mark.skipif(platform == "win32", reason="Tests POSIX shell script in ubuntu-latest CI workflow")
 def test_required_gate_rejects_skipped_release_policy_on_internal_promotion_pr() -> None:
     workflow = (REPOSITORY / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     required_job = workflow.split("  required:\n", maxsplit=1)[1]
@@ -133,6 +136,7 @@ def test_required_gate_rejects_skipped_release_policy_on_internal_promotion_pr()
     assert "production release policy must pass" in result.stdout
 
 
+@mark.skipif(platform == "win32", reason="Tests POSIX shell script in ubuntu-latest CI workflow")
 def test_required_gate_allows_skipped_release_policy_on_unrelated_push() -> None:
     workflow = (REPOSITORY / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     required_job = workflow.split("  required:\n", maxsplit=1)[1]

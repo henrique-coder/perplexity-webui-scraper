@@ -317,6 +317,7 @@ def test_token_authentication_uses_full_screen_until_enter(monkeypatch: Any) -> 
         file=output,
         color_system="standard",
         force_terminal=True,
+        legacy_windows=False,
         soft_wrap=True,
         _environ={"TERM": "xterm"},
     )

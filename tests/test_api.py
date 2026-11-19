@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from base64 import b64encode
 from hashlib import sha256
+from time import monotonic
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, call, patch
 
@@ -504,7 +505,7 @@ def test_account_tier_cache_hashes_tokens_expires_entries_and_caps_capacity() ->
     assert cache.get(TOKEN_SECOND) == "max"
 
     key = cache._key(TOKEN_SECOND)
-    cache._entries[key] = ("max", 0.0)
+    cache._entries[key] = ("max", monotonic() - cache._ttl_seconds - 1.0)
     assert cache.get(TOKEN_SECOND) is None
 
 
@@ -562,7 +563,7 @@ def test_client_pool_expires_idle_clients() -> None:
     with patch("perplexity_webui_scraper.api.auth.Perplexity", return_value=client_instance):
         pool = ClientPool(max_clients=2, ttl_seconds=0.001)
         assert pool.get_or_create(TOKEN) is client_instance
-        pool._clients[TOKEN] = (client_instance, 0.0)
+        pool._clients[TOKEN] = (client_instance, monotonic() - pool._ttl_seconds - 1.0)
         pool.get_or_create(TOKEN_SECOND)
 
     client_instance.close.assert_called_once()
