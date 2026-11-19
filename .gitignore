@@ -16,7 +16,6 @@ node_modules/
 .superpowers/
 build/
 dist/
-docs/superpowers/
 site/
 
 # Named files and file patterns

@@ -1,6 +1,5 @@
 # Directories: generated API documentation
 docs/api/
-docs/superpowers/
 
 # Directories: generated output
 .superpowers/
