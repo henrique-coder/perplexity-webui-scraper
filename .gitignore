@@ -13,6 +13,7 @@ __pycache__/
 node_modules/
 
 # Directories: generated content and distribution artifacts
+.cache/
 .superpowers/
 build/
 dist/

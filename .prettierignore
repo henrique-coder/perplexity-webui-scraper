@@ -1,4 +1,5 @@
 # Directories: generated output
+.cache/
 .superpowers/
 site/
 
