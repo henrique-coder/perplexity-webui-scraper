@@ -4,7 +4,7 @@
 
 Create one client per account-scoped session credential and reuse it across conversations. Pass either the raw `__Secure-pplx.session.<UUIDv4>=<JWE>` cookie pair or the compact `wsk_` token produced by `token`. Both forms resolve to the same account cookie.
 
-The compact `wsk_` v1 representation is reversible obfuscation. It is not encryption and its checksum is not authenticated integrity; keep it private as an account credential. Use `perplexity-webui-scraper token --convert` to convert raw cookies or validate compact tokens offline.
+The compact `wsk_` v1 representation is reversible obfuscation. It is not encryption and its checksum is not authenticated integrity; keep it private as an account credential. Use `perplexity-webui-scraper token convert` to convert raw cookies or validate compact tokens offline, or `token deconvert` to restore raw cookie form.
 
 | Parameter       | Type           | Description                                                         |
 | --------------- | -------------- | ------------------------------------------------------------------- |
@@ -37,8 +37,6 @@ client = Perplexity(
 
 The client supports a context manager and closes its HTTP session on exit.
 
----
-
 ## Account profile
 
 `client.get_account_session()` reads Perplexity's `/api/auth/session` endpoint and returns a typed Pydantic object. `client.get_account_settings()` reads `/rest/user/settings`. `client.get_account_profile()` combines both, using settings only when the session response does not expose enough subscription data.
@@ -52,8 +50,6 @@ print(profile.account_tier)
 print(profile.session.user.email if profile.session.user else None)
 ```
 
----
-
 ## `client.create_conversation(config?)`
 
 Returns a `Conversation` object. Each conversation maintains its own context for follow-up questions.
@@ -63,8 +59,6 @@ from perplexity_webui_scraper import ConversationConfig
 
 conversation = client.create_conversation(ConversationConfig(model="perplexity/best"))
 ```
-
----
 
 ## `Conversation.ask(query, model?, files?, citation_mode?, stream?)`
 
@@ -86,13 +80,12 @@ Before every prompt request, the library performs a fast `/api/auth/session` che
 
 ### Conversation properties
 
-| Property         | Type                    | Description                      |
-| ---------------- | ----------------------- | -------------------------------- |
-| `answer`         | `str \| None`            | Full response text               |
-| `search_results` | `list[SearchResultItem]` | Source URLs used in the response |
-| `uuid`           | `str \| None`            | Conversation backend UUID        |
-
----
+| Property         | Type                    | Description                                  |
+| ---------------- | ----------------------- | -------------------------------------------- |
+| `answer`         | `str \| None`            | Full response text                           |
+| `search_results` | `list[SearchResultItem]` | Source URLs used in the response             |
+| `activity`       | `list[ActivityEvent]`    | Allowlisted user-visible activity summaries  |
+| `uuid`           | `str \| None`            | Conversation backend UUID                    |
 
 ## Models
 
@@ -257,8 +250,6 @@ for model in MODELS.list_all():
     print(f"{model.id!r:35} → {model.name} [{model.min_tier}]")
 ```
 
----
-
 ## `citation_mode`
 
 Controls how `[1]`-style citation markers are formatted in response text.
@@ -274,8 +265,6 @@ from perplexity_webui_scraper import ConversationConfig
 
 config = ConversationConfig(citation_mode="markdown")
 ```
-
----
 
 ## Configurations
 
@@ -315,8 +304,6 @@ The Space URL slug is not its UUID. To find the UUID, submit a query in the Spac
 | `max_init_query_length` | `int`                     | `2000`       | Truncate init query to avoid HTTP 414       |
 | `logging_level`         | `str`                     | `"disabled"` | Log verbosity (`disabled`, `debug`, etc.)   |
 | `log_file`              | `str \| PathLike \| None` | `None`       | Write logs to file instead of stderr        |
-
----
 
 ## Parameter values
 
@@ -358,21 +345,24 @@ The Space URL slug is not its UUID. To find the UUID, submit a query in the Spac
 | `"error"`    | Errors only                  |
 | `"critical"` | Critical/fatal errors only   |
 
----
-
 ## Exceptions
 
-| Exception                          | Description                                    |
-| ---------------------------------- | ---------------------------------------------- |
-| `PerplexityError`                  | Base exception for all library errors          |
-| `HTTPError`                        | HTTP error with status code and response body  |
-| `AuthenticationError`              | Session token is invalid or expired (HTTP 403) |
-| `RateLimitError`                   | Rate limit exceeded (HTTP 429)                 |
-| `FileUploadError`                  | File upload to Perplexity's S3 failed          |
-| `FileValidationError`              | File validation failed (size, type, not found) |
-| `ResearchClarifyingQuestionsError` | Research mode requires clarifying questions    |
-| `ResponseParsingError`             | API response could not be parsed               |
-| `StreamingError`                   | Error during streaming response                |
+| Exception                          | Description                                                 |
+| ---------------------------------- | ----------------------------------------------------------- |
+| `PerplexityError`                  | Base exception for all library errors                       |
+| `SessionTokenError`                | Base error for malformed raw cookies or compact tokens      |
+| `CredentialError`                  | Base error for malformed raw cookie credentials             |
+| `HTTPError`                        | HTTP error with optional numeric status code                |
+| `AuthenticationError`              | Session token is invalid or expired (HTTP 403)              |
+| `RateLimitError`                   | Rate limit exceeded (HTTP 429) with optional `retry_after`  |
+| `ModelAccessError`                 | Account subscription tier cannot access selected model      |
+| `ModelStatusError`                 | Non-available model used without `allow_risky_model=True`   |
+| `FileAccessError`                  | Account subscription tier cannot upload file attachments    |
+| `FileUploadError`                  | File upload to Perplexity's S3 failed                       |
+| `FileValidationError`              | File validation failed (size, type, not found)              |
+| `ResearchClarifyingQuestionsError` | Research mode requires clarifying questions                 |
+| `ResponseParsingError`             | API response could not be parsed                            |
+| `StreamingError`                   | Error during streaming response                             |
 
 ```python
 from perplexity_webui_scraper import (
@@ -390,8 +380,6 @@ except AuthenticationError:
 except PerplexityError as e:
     print(f"Library error: {e}")
 ```
-
----
 
 ## OpenAI-compatible API
 
@@ -478,7 +466,9 @@ Returns `HTTP 401` if the header is missing or malformed.
 
 ### `POST /v1/chat/completions`
 
-**Request body:** Requires `model` and `messages`. Each message has a `role` (`system`, `user`, or `assistant`) and `content` (text or supported text/image parts). Optional fields include `stream` and `perplexity`. Unsupported OpenAI fields may be ignored; this is a partial compatibility layer.
+**Request body:** Requires `model` and `messages`. Each message has a `role` (`system`, `developer`, `user`, or `assistant`) and `content` (text or supported text/image parts). Optional fields include `stream` and `perplexity`. Unsupported OpenAI fields (such as `tools` or `tool_choice`) may be ignored; this is a partial compatibility layer.
+
+When initializing a new thread, the server automatically prepends a master `[System]` instruction stating that `/v1/chat/completions` is strictly a read-only Perplexity WebUI mirror for direct question answering and web research, preventing agent harnesses from triggering autonomous agent or tool-call roleplay.
 
 ```json
 {

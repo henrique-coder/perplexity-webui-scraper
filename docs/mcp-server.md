@@ -61,7 +61,7 @@ podman pull ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
 podman run --rm -it -e PERPLEXITY_SESSION_TOKEN="__Secure-pplx.session.<account UUID>=YOUR_VALUE" ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
 ```
 
-The MCP server accepts raw and compact credentials. The token CLI retrieves the account cookie through email OTP/magic-link and optional TOTP, then emits compact form. Use `perplexity-webui-scraper token --convert` to convert or validate an existing credential offline.
+The MCP server accepts raw and compact credentials. The token CLI retrieves the account cookie through email OTP/magic-link and optional TOTP, then emits compact form. Use `perplexity-webui-scraper token convert` to convert or validate an existing credential offline, or `perplexity-webui-scraper token deconvert` to restore the raw cookie pair.
 
 Use `uvx` for standard MCP client configurations. The container image runs the server over stdio and does not expose an HTTP endpoint.
 
@@ -202,4 +202,20 @@ Tools for models with `available` status can be called without acknowledgement. 
 
 <!-- END GENERATED MODEL CATALOG -->
 
-**All tools support `source_focus`:** `web`, `academic`, `social`, `finance`, `all`
+### Tool parameters and response
+
+Every registered model tool accepts the following parameters (`pplx_custom` also requires `model` and accepts `model_mode`: `"copilot"`, `"search"`, or `"research"`):
+
+| Parameter              | Type      | Default   | Description                                                                 |
+| ---------------------- | --------- | --------- | --------------------------------------------------------------------------- |
+| `query`                | `str`     | required  | Search query or question                                                    |
+| `search_focus`         | `str`     | `"web"`   | `"web"` (with sources) or `"writing"` (pure generation)                     |
+| `source_focus`         | `str`     | `"web"`   | `"web"`, `"academic"`, `"social"`, `"finance"`, or `"all"`                  |
+| `time_range`           | `str`     | `"all"`   | `"all"`, `"day"`, `"week"`, `"month"`, or `"year"`                          |
+| `language`             | `str`     | `"en-US"` | BCP-47 response language tag                                                |
+| `latitude`             | `float?`  | `None`    | Latitude (-90 to 90), required together with `longitude`                    |
+| `longitude`            | `float?`  | `None`    | Longitude (-180 to 180), required together with `latitude`                  |
+| `allow_risky_model`    | `bool`    | `False`   | Explicitly acknowledge `unknown` or `unavailable` model status              |
+| `research_interaction` | `str`     | `"auto"`  | Deep Research clarification handling (`"auto"` or `"manual"`)               |
+
+Each tool returns a dictionary with `answer`, `search_results` (`title`, `url`, `snippet`), and `conversation_uuid` (or a structured `error` / `error_type` object when access or model status confirmation fails).

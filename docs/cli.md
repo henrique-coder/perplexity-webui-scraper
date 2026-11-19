@@ -40,7 +40,7 @@ perplexity-webui-scraper token --email user@example.com
 
 The token CLI retrieves the UUID-suffixed account session cookie after email OTP/magic-link and optional TOTP verification, then prints it in compact `wsk_` v1 form. Email codes must be exactly six ASCII digits. Magic links must be HTTPS `www.perplexity.ai/api/auth/callback/email` links for the selected account; additional query parameters are allowed. Malformed codes and links are rejected locally without another authentication request. Invalid server responses prompt for a fresh code while retaining the current login session, and do not resend the email.
 
-The library accepts raw `__Secure-pplx.session.<UUIDv4>=<JWE>` pairs and compact `wsk_` tokens. `convert` and `deconvert` prompt for masked input and repeat the prompt when validation fails. `convert` emits a compact token; `deconvert` restores its raw cookie pair. `token -c` opens the convert prompt. Both commands show the result and ask before copying it to the clipboard. The default is no. Do not pass credentials as positional command-line arguments; shells may retain them in history or expose them through process listings.
+The library accepts raw `__Secure-pplx.session.<UUIDv4>=<JWE>` pairs and compact `wsk_` tokens. `convert` and `deconvert` prompt for masked input and repeat the prompt when validation fails. `convert` emits a compact token; `deconvert` restores its raw cookie pair. Both commands show the result and ask before copying it to the clipboard. The default is no. Do not pass credentials as positional command-line arguments or combine `--email` with `convert` or `deconvert`; shells may retain positional credentials in history or expose them through process listings.
 
 ```bash
 perplexity-webui-scraper token convert

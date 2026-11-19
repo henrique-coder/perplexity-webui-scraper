@@ -91,4 +91,4 @@ uv run perplexity-webui-scraper token --email user@example.com
 uvx --from 'perplexity-webui-scraper[token]' perplexity-webui-scraper token --email user@example.com
 ```
 
-The token command offers clipboard copy. To convert a copied raw cookie or validate a compact token entirely offline, run `perplexity-webui-scraper token --convert`; the input prompt is masked. This conversion does not encrypt the cookie or improve its security.
+The token command offers clipboard copy. To convert a copied raw cookie or validate a compact token entirely offline, run `perplexity-webui-scraper token convert`; to restore a compact token back to its raw cookie pair, run `perplexity-webui-scraper token deconvert`. Both prompts mask pasted input. This conversion does not encrypt the cookie or improve its security.
