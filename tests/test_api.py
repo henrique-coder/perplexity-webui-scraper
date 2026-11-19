@@ -135,6 +135,7 @@ def test_missing_auth_header_returns_401(client: TestClient) -> None:
     assert response.status_code == 401
     assert "Missing or invalid Authorization header" in response.json()["error"]["message"]
     assert "[MASKED_SENSITIVE_DATA]" not in response.text
+    assert "wsk_" in response.json()["error"]["message"]
     assert "__Secure-pplx.session.<account UUID>=value" in response.json()["error"]["message"]
 
 
@@ -162,80 +163,46 @@ def test_chat_request_body_limit_rejects_large_body(client: TestClient) -> None:
     assert response.status_code == 413
 
 
-def test_configured_upstream_credential_requires_gateway_key(client: TestClient) -> None:
+def test_api_key_without_session_token_is_misconfigured(client: TestClient) -> None:
     with (
-        patch.dict("os.environ", {"PERPLEXITY_SESSION_TOKEN": "not-a-token", "PERPLEXITY_API_KEY": "gateway"}),
-        patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create") as get_client,
+        patch.dict("os.environ", {"PERPLEXITY_API_KEY": "custom-secret"}, clear=True),
+        patch("perplexity_webui_scraper.api.auth.client_pool.get_or_create") as get_client,
     ):
         response = client.post(
             "/v1/chat/completions",
             json={"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello"}]},
-        )
-
-    assert response.status_code == 401
-    assert "not-a-token" not in response.text
-    get_client.assert_not_called()
-
-
-def test_server_default_credential_requires_gateway_key_configuration(client: TestClient) -> None:
-    with (
-        patch.dict("os.environ", {"PERPLEXITY_SESSION_TOKEN": TOKEN}, clear=True),
-        patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create") as get_client,
-    ):
-        response = client.post(
-            "/v1/chat/completions",
-            json={"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello"}]},
+            headers={"Authorization": "Bearer custom-secret"},
         )
 
     assert response.status_code == 503
     get_client.assert_not_called()
 
 
-def test_gateway_key_uses_server_default_credential(client: TestClient) -> None:
+def test_server_default_token_without_api_key_runs_passwordless(client: TestClient) -> None:
     conversation = _mock_conversation()
-    upstream = MagicMock()
+    upstream = _mock_profile_client("pro")
     upstream.create_conversation.return_value = conversation
 
     with (
-        patch.dict("os.environ", {"PERPLEXITY_SESSION_TOKEN": TOKEN, "PERPLEXITY_API_KEY": "gateway-key"}, clear=True),
-        patch(
-            "perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=upstream
-        ) as get_client,
+        patch.dict("os.environ", {"PERPLEXITY_SESSION_TOKEN": TOKEN}, clear=True),
+        patch("perplexity_webui_scraper.api.auth.client_pool.get_or_create", return_value=upstream) as get_client,
     ):
-        response = client.post(
+        models_no_auth = client.get("/v1/models")
+        models_dummy = client.get("/v1/models", headers={"Authorization": "Bearer placeholder"})
+        chat_no_auth = client.post(
             "/v1/chat/completions",
             json={"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello"}]},
-            headers={"X-API-Key": "gateway-key"},
         )
 
-    assert response.status_code == 200
-    get_client.assert_called_once_with(TOKEN)
-    assert response.json()["choices"][0]["message"]["content"] == "Mock answer"
+    assert models_no_auth.status_code == 200
+    assert models_dummy.status_code == 200
+    assert chat_no_auth.status_code == 200
+    assert chat_no_auth.json()["choices"][0]["message"]["content"] == "Mock answer"
+    assert get_client.call_args_list == [call(TOKEN), call(TOKEN)]
+    upstream.get_account_profile.assert_called_once()
 
 
-def test_gateway_key_rejects_wrong_key_before_client_creation(client: TestClient) -> None:
-    with (
-        patch.dict("os.environ", {"PERPLEXITY_SESSION_TOKEN": TOKEN, "PERPLEXITY_API_KEY": "expected"}, clear=True),
-        patch("perplexity_webui_scraper.api.auth.client_pool.get_or_create") as get_client,
-    ):
-        response = client.post(
-            "/v1/chat/completions",
-            json={"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello"}]},
-            headers={"X-API-Key": "wrong"},
-        )
-        bearer_rejected = client.get("/v1/models", headers={"Authorization": "Bearer wrong"})
-        mixed_rejected = client.get(
-            "/v1/models",
-            headers={"X-API-Key": "wrong", "Authorization": "Bearer expected"},
-        )
-
-    assert response.status_code == 401
-    assert bearer_rejected.status_code == 401
-    assert mixed_rejected.status_code == 401
-    get_client.assert_not_called()
-
-
-def test_gateway_key_accepts_authorization_bearer_for_models_and_completions(client: TestClient) -> None:
+def test_server_default_token_and_api_key_require_bearer_api_key(client: TestClient) -> None:
     conversation = _mock_conversation()
     upstream = _mock_profile_client("pro")
     upstream.create_conversation.return_value = conversation
@@ -258,7 +225,25 @@ def test_gateway_key_accepts_authorization_bearer_for_models_and_completions(cli
     upstream.create_conversation.assert_called_once()
 
 
-def test_direct_auth_accepts_case_insensitive_bearer_compact_and_x_api_key(client: TestClient) -> None:
+def test_gateway_key_rejects_missing_wrong_or_x_api_key_before_client_creation(client: TestClient) -> None:
+    with (
+        patch.dict("os.environ", {"PERPLEXITY_SESSION_TOKEN": TOKEN, "PERPLEXITY_API_KEY": "expected"}, clear=True),
+        patch("perplexity_webui_scraper.api.auth.client_pool.get_or_create") as get_client,
+    ):
+        missing_auth = client.post(
+            "/v1/chat/completions",
+            json={"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello"}]},
+        )
+        wrong_bearer = client.get("/v1/models", headers={"Authorization": "Bearer wrong"})
+        x_api_only = client.get("/v1/models", headers={"X-API-Key": "expected"})
+
+    assert missing_auth.status_code == 401
+    assert wrong_bearer.status_code == 401
+    assert x_api_only.status_code == 401
+    get_client.assert_not_called()
+
+
+def test_direct_auth_accepts_compact_and_raw_bearer_and_rejects_x_api_key_only(client: TestClient) -> None:
     compact = pack_session_token(TOKEN)
     upstream = _mock_profile_client("free")
     conversation = _mock_conversation()
@@ -268,48 +253,19 @@ def test_direct_auth_accepts_case_insensitive_bearer_compact_and_x_api_key(clien
         patch.dict("os.environ", {}, clear=True),
         patch("perplexity_webui_scraper.api.auth.client_pool.get_or_create", return_value=upstream),
     ):
-        lower_bearer = client.get("/v1/models", headers={"Authorization": f"bearer   {compact} "})
-        x_api_models = client.get("/v1/models", headers={"X-API-Key": f" {compact} "})
-        x_api_chat = client.post(
+        lower_compact = client.get("/v1/models", headers={"Authorization": f"bearer   {compact} "})
+        raw_chat = client.post(
             "/v1/chat/completions",
             json={"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello"}]},
-            headers={"X-API-Key": TOKEN},
+            headers={"Authorization": f"Bearer {TOKEN}"},
         )
-        invalid_x_api = client.get("/v1/models", headers={"X-API-Key": "private-invalid-x-api-key"})
+        x_api_only = client.get("/v1/models", headers={"X-API-Key": compact})
 
-    assert lower_bearer.status_code == 200
-    assert x_api_models.status_code == 200
-    assert x_api_chat.status_code == 200
+    assert lower_compact.status_code == 200
+    assert raw_chat.status_code == 200
+    assert x_api_only.status_code == 401
     upstream.get_account_profile.assert_called_once()
     upstream.create_conversation.assert_called_once()
-    assert invalid_x_api.status_code == 401
-    assert "private-invalid-x-api-key" not in invalid_x_api.text
-
-
-def test_caller_credential_overrides_server_default(client: TestClient) -> None:
-    conversation = _mock_conversation()
-    upstream = MagicMock()
-    upstream.create_conversation.return_value = conversation
-
-    with (
-        patch.dict(
-            "os.environ",
-            {"PERPLEXITY_SESSION_TOKEN": TOKEN_SECOND, "PERPLEXITY_API_KEY": "gateway-key"},
-            clear=True,
-        ),
-        patch(
-            "perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=upstream
-        ) as get_client,
-    ):
-        response = client.post(
-            "/v1/chat/completions",
-            json={"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello"}]},
-            headers={"X-API-Key": "gateway-key", "Authorization": f"Bearer {TOKEN}"},
-        )
-
-    assert response.status_code == 200
-    get_client.assert_called_once_with(TOKEN)
-    assert TOKEN not in response.text
 
 
 def test_invalid_caller_credential_is_not_reflected(client: TestClient) -> None:
@@ -468,7 +424,7 @@ def test_model_catalog_exposes_registry_metadata(client: TestClient) -> None:
 
 def test_models_route_filters_models_by_account_tier(client: TestClient) -> None:
     unknown_min_tier_ids = {
-        model.id for model in MODELS.list_all() if model.status != "unavailable" and model.min_tier is None
+        model.id for model in MODELS.list_all() if model.status != "unavailable" and model.min_tier == "unknown"
     }
     assert unknown_min_tier_ids
 
@@ -479,7 +435,7 @@ def test_models_route_filters_models_by_account_tier(client: TestClient) -> None
         "pro": {
             model.id
             for model in MODELS.list_all()
-            if model.status != "unavailable" and (model.min_tier in {"free", "pro"} or model.min_tier is None)
+            if model.status != "unavailable" and model.min_tier in {"free", "pro", "unknown"}
         },
         "max": {model.id for model in MODELS.list_all() if model.status != "unavailable"},
     }
@@ -508,8 +464,8 @@ def test_models_route_caches_account_tier_and_supports_gateway_auth(client: Test
         patch.dict("os.environ", {"PERPLEXITY_SESSION_TOKEN": TOKEN, "PERPLEXITY_API_KEY": "gateway-key"}, clear=True),
         patch("perplexity_webui_scraper.api.routes.models.client_pool.get_or_create", return_value=upstream),
     ):
-        first = client.get("/v1/models", headers={"X-API-Key": "gateway-key"})
-        second = client.get("/v1/models", headers={"X-API-Key": "gateway-key"})
+        first = client.get("/v1/models", headers={"Authorization": "Bearer gateway-key"})
+        second = client.get("/v1/models", headers={"Authorization": "Bearer gateway-key"})
 
     assert first.status_code == 200
     assert second.status_code == 200
@@ -522,7 +478,7 @@ def test_models_route_caches_account_tier_and_supports_gateway_auth(client: Test
         patch.dict("os.environ", {"PERPLEXITY_SESSION_TOKEN": TOKEN, "PERPLEXITY_API_KEY": "gateway-key"}, clear=True),
         patch("perplexity_webui_scraper.api.routes.models.client_pool.get_or_create", return_value=upstream),
     ):
-        rejected = client.get("/v1/models", headers={"X-API-Key": "gateway-key"})
+        rejected = client.get("/v1/models", headers={"Authorization": "Bearer gateway-key"})
 
     assert rejected.status_code == 401
     assert account_tier_cache.get(TOKEN) is None

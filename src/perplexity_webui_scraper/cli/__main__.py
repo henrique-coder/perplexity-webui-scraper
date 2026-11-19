@@ -163,11 +163,22 @@ def api(
     log_level: Annotated[str, Option("--log-level", help="Uvicorn log level.")] = "info",
     session_token: Annotated[
         str | None,
-        Option("--session-token", envvar="PERPLEXITY_SESSION_TOKEN", help="Optional server-default Perplexity token."),
+        Option(
+            "--session-token",
+            envvar="PERPLEXITY_SESSION_TOKEN",
+            help=(
+                "Optional server-default Perplexity token (compact wsk_ or raw cookie). "
+                "Runs without a password unless --api-key is also set."
+            ),
+        ),
     ] = None,
     api_key: Annotated[
         str | None,
-        Option("--api-key", envvar="PERPLEXITY_API_KEY", help="Gateway key required on each request."),
+        Option(
+            "--api-key",
+            envvar="PERPLEXITY_API_KEY",
+            help="Optional custom Bearer API key required on every request when --session-token is set.",
+        ),
     ] = None,
 ) -> None:
     """Start the OpenAI-compatible REST API server."""

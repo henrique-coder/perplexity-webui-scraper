@@ -91,7 +91,6 @@ async def _run_sync_safely(function: Any) -> Any:
 async def chat_completions(
     raw_request: Request,
     authorization: Annotated[str | None, Header(alias="Authorization")] = None,
-    x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
 ) -> JSONResponse | StreamingResponse:
     """Handle a chat completion request (streaming and non-streaming).
 
@@ -105,7 +104,7 @@ async def chat_completions(
     except Exception:
         raise HTTPException(status_code=422, detail="Invalid chat completion request body") from None
 
-    token = resolve_upstream_token(authorization, x_api_key)
+    token = resolve_upstream_token(authorization)
 
     return await _execute_chat_completion(request, token)
 

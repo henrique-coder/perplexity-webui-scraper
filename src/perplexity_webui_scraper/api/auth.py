@@ -1,8 +1,9 @@
 """Authentication helpers for the API server.
 
-``extract_token()`` validates the ``Authorization`` header containing a session-cookie pair.
-``ClientPool`` maintains a per-credential cache of ``Perplexity`` client instances
-to avoid recreating HTTP sessions on every request.
+``extract_token()`` validates the ``Authorization: Bearer`` header containing a
+compact ``wsk_`` token or raw session-cookie pair. ``ClientPool`` maintains a
+per-credential cache of ``Perplexity`` client instances to avoid recreating
+HTTP sessions on every request.
 """
 
 from __future__ import annotations
@@ -33,8 +34,15 @@ _logger = getLogger("uvicorn.error")
 _BEARER_SCHEME = AUTH_BEARER_PREFIX.strip().casefold()
 _MISSING_AUTH_DETAIL = (
     "Missing or invalid Authorization header. "
-    "Pass the full account-scoped cookie pair as: "
-    "Authorization: Bearer __Secure-pplx.session.<account UUID>=value"
+    "Pass a compact wsk_ token or raw __Secure-pplx.session.<account UUID>=value cookie pair as: "
+    "Authorization: Bearer <token>"
+)
+_INVALID_CREDENTIAL_DETAIL = (
+    "Invalid Perplexity session credential. "
+    "Pass a valid compact wsk_ token or raw __Secure-pplx.session.<account UUID>=value cookie pair."
+)
+_INVALID_API_KEY_DETAIL = (
+    "Missing or invalid API key. Pass the configured server API key as: Authorization: Bearer <api_key>"
 )
 
 
@@ -98,71 +106,47 @@ def extract_token(authorization: str | None) -> str:
         return _canonical_session_token(token)
     except SessionTokenError:
         _logger.warning("Rejected API request (401): malformed Perplexity session credential")
-        raise HTTPException(status_code=401, detail="Invalid Perplexity session credential.") from None
+        raise HTTPException(status_code=401, detail=_INVALID_CREDENTIAL_DETAIL) from None
 
 
 def resolve_session_token(
     authorization: str | None,
-    api_key: str | None,
     default_session_token: str | None,
     configured_api_key: str | None,
 ) -> str:
-    """Authenticate a request and resolve its upstream Perplexity credential.
+    """Resolve the upstream Perplexity credential using pure Bearer authentication.
 
-    When the server has a configured upstream token, a separate gateway key is
-    mandatory on every request via ``X-API-Key`` or ``Authorization: Bearer``.
-    Combined with a valid ``X-API-Key``, ``Authorization: Bearer`` supplies a
-    caller-specific Perplexity credential that overrides the server default.
+    Three modes are supported:
+    1. No server configuration: callers pass a compact ``wsk_`` token or raw
+       session-cookie pair via ``Authorization: Bearer <token>``.
+    2. Server ``--session-token`` only: requests require no password and use the
+       configured server-default credential directly.
+    3. Server ``--session-token`` + ``--api-key``: callers pass the configured
+       key via ``Authorization: Bearer <api_key>``, and the server authenticates
+       upstream with its configured session credential.
     """
-    if default_session_token and not configured_api_key:
+    if configured_api_key and not default_session_token:
         raise HTTPException(status_code=503, detail="Server default credentials are misconfigured.")
 
-    if configured_api_key:
-        if api_key:
-            if not compare_digest(api_key, configured_api_key):
-                _logger.warning("Rejected API request (401): invalid gateway API key in X-API-Key")
-                raise HTTPException(status_code=401, detail="Missing or invalid gateway API key.")
-
-            if authorization:
-                return extract_token(authorization)
-
-            if default_session_token:
-                return _validate_default_token(default_session_token)
-
-            _logger.warning("Rejected API request (401): missing upstream Perplexity credential")
-            raise HTTPException(status_code=401, detail=_MISSING_AUTH_DETAIL)
-
+    if default_session_token and configured_api_key:
         is_bearer, bearer_value = _parse_bearer_header(authorization)
 
-        if is_bearer and bearer_value and compare_digest(bearer_value, configured_api_key):
-            if default_session_token:
-                return _validate_default_token(default_session_token)
+        if not is_bearer or not bearer_value or not compare_digest(bearer_value, configured_api_key):
+            _logger.warning("Rejected API request (401): missing or invalid Bearer API key")
+            raise HTTPException(status_code=401, detail=_INVALID_API_KEY_DETAIL)
 
-            _logger.warning("Rejected API request (401): missing upstream Perplexity credential")
-            raise HTTPException(status_code=401, detail=_MISSING_AUTH_DETAIL)
+        return _validate_default_token(default_session_token)
 
-        _logger.warning("Rejected API request (401): missing or invalid gateway API key")
-        raise HTTPException(status_code=401, detail="Missing or invalid gateway API key.")
+    if default_session_token:
+        return _validate_default_token(default_session_token)
 
-    if authorization:
-        return extract_token(authorization)
-
-    if api_key:
-        try:
-            return _canonical_session_token(api_key.strip())
-        except SessionTokenError:
-            _logger.warning("Rejected API request (401): malformed Perplexity session credential in X-API-Key")
-            raise HTTPException(status_code=401, detail="Invalid Perplexity session credential.") from None
-
-    _logger.warning("Rejected API request (401): missing Authorization or X-API-Key header")
-    raise HTTPException(status_code=401, detail=_MISSING_AUTH_DETAIL) from None
+    return extract_token(authorization)
 
 
-def resolve_upstream_token(authorization: str | None, x_api_key: str | None) -> str:
-    """Require gateway auth when configured, then resolve caller or server-default token."""
+def resolve_upstream_token(authorization: str | None) -> str:
+    """Resolve the active authentication mode against server environment settings."""
     return resolve_session_token(
         authorization,
-        x_api_key,
         environ.get("PERPLEXITY_SESSION_TOKEN"),
         environ.get("PERPLEXITY_API_KEY"),
     )

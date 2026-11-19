@@ -68,7 +68,7 @@ def _is_model_visible_for_tier(model: Model, account_tier: AccountTier) -> bool:
         return model.min_tier == "free"
 
     if account_tier == "pro":
-        return model.min_tier in ("free", "pro") or model.min_tier is None
+        return model.min_tier in ("free", "pro", "unknown")
 
     return True
 
@@ -76,10 +76,9 @@ def _is_model_visible_for_tier(model: Model, account_tier: AccountTier) -> bool:
 @router.get("/v1/models", response_model=None)
 async def list_models(
     authorization: Annotated[str | None, Header(alias="Authorization")] = None,
-    x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
 ) -> Response:
     """List Perplexity models accessible to the authenticated account's subscription tier."""
-    token = resolve_upstream_token(authorization, x_api_key)
+    token = resolve_upstream_token(authorization)
     account_tier = await _resolve_account_tier(token)
 
     data = ModelList(
