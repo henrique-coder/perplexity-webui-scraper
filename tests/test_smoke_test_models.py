@@ -4,6 +4,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+from orjson import dumps, loads
+
 from perplexity_webui_scraper._internal.constants import SESSION_COOKIE_PREFIX, SESSION_TOKEN_JWE_HEADER
 from perplexity_webui_scraper._internal.exceptions import HTTPError
 from perplexity_webui_scraper.auth.session_token import pack_session_token
@@ -13,6 +15,7 @@ from scripts.probe_model_availability import (
     _probe_model,
     _read_session_token,
     _write_report,
+    apply_report_to_catalog,
 )
 
 
@@ -83,3 +86,33 @@ def test_scripts_read_session_token_accepts_raw_and_compact_credentials(tmp_path
 
     env_file.write_text(f"PERPLEXITY_SESSION_TOKEN={compact_token}\n", encoding="utf-8")
     assert _read_session_token(env_file) == compact_token
+
+
+def test_apply_report_to_catalog_updates_conclusive_results_only(tmp_path: Path) -> None:
+    catalog_path = tmp_path / "models.json"
+    old_timestamp = "2026-10-05T20:16:12.021045Z"
+    catalog = [
+        {"id": "test/passed", "status": "unknown", "last_tested_at": None},
+        {"id": "test/rejected", "status": "available", "last_tested_at": old_timestamp},
+        {"id": "test/blocked", "status": "unknown", "last_tested_at": None},
+        {"id": "test/rate-limited", "status": "available", "last_tested_at": old_timestamp},
+    ]
+    catalog_path.write_bytes(dumps(catalog))
+
+    report = {
+        "models": [
+            {"id": "test/passed", "status": "passed", "completed_at": "2026-11-19T21:10:01Z"},
+            {"id": "test/rejected", "status": "model_rejected", "completed_at": "2026-11-19T21:10:05Z"},
+            {"id": "test/blocked", "status": "blocked_by_account_tier", "tested_at": "2026-11-19T21:10:06Z"},
+            {"id": "test/rate-limited", "status": "rate_limited", "completed_at": "2026-11-19T21:10:09Z"},
+        ]
+    }
+
+    updated, unchanged = apply_report_to_catalog(report, catalog_path)
+    saved = loads(catalog_path.read_bytes())
+
+    assert (updated, unchanged) == (2, 2)
+    assert saved[0] == {"id": "test/passed", "status": "available", "last_tested_at": "2026-11-19T21:10:01Z"}
+    assert saved[1] == {"id": "test/rejected", "status": "unavailable", "last_tested_at": "2026-11-19T21:10:05Z"}
+    assert saved[2] == {"id": "test/blocked", "status": "unknown", "last_tested_at": None}
+    assert saved[3] == {"id": "test/rate-limited", "status": "available", "last_tested_at": old_timestamp}

@@ -19,7 +19,7 @@ uv run --isolated --python 3.11 --no-dev --group scripts python scripts/sync_mod
 uv run --isolated --python 3.11 --no-dev --group scripts python scripts/sync_model_catalog.py --check
 uv run --no-dev python scripts/generate_model_docs.py
 uv run --no-dev python scripts/generate_model_docs.py --check
-uv run --no-sync python scripts/probe_model_availability.py --workers 4
+uv run --no-dev --group scripts python scripts/probe_model_availability.py --workers 1 --apply
 ```
 
 `sync_model_catalog.py` and `probe_model_availability.py` read `PERPLEXITY_SESSION_TOKEN` from `.env` or the environment without printing or saving credentials. `sync_model_catalog.py` uses `pydoll-python` (`>=3.11, <3.15`) to inspect Perplexity's model picker.
