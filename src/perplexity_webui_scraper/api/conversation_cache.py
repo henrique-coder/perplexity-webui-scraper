@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from time import time
 from typing import TYPE_CHECKING
 
+from perplexity_webui_scraper.auth.cookies import parse_session_credential, serialize_session_credential
+
 
 if TYPE_CHECKING:
     from perplexity_webui_scraper.core.conversation import Conversation
@@ -45,8 +47,9 @@ class ConversationCache:
 
     def get(self, token: str, thread_uuid: str) -> Conversation | None:
         """Look up a conversation.  Must be called while ``self.lock`` is held."""
+        canonical_token = serialize_session_credential(parse_session_credential(token))
         self._evict_stale()
-        cached = self._store.get((token, thread_uuid))
+        cached = self._store.get((canonical_token, thread_uuid))
 
         if cached is None:
             return None
@@ -57,17 +60,25 @@ class ConversationCache:
 
     def get_entry(self, token: str, thread_uuid: str) -> _CachedConversation | None:
         """Look up a cached entry and refresh its TTL. Must hold ``self.lock``."""
+        canonical_token = serialize_session_credential(parse_session_credential(token))
         self._evict_stale()
-        cached = self._store.get((token, thread_uuid))
+        cached = self._store.get((canonical_token, thread_uuid))
 
         if cached is not None:
             cached.last_access = time()
 
         return cached
 
-    def set(self, token: str, thread_uuid: str, conversation: Conversation, model_id: str | None = None) -> None:
+    def set(
+        self,
+        token: str,
+        thread_uuid: str,
+        conversation: Conversation,
+        model_id: str | None = None,
+    ) -> None:
         """Store or update a conversation.  Must be called while ``self.lock`` is held."""
-        key = (token, thread_uuid)
+        canonical_token = serialize_session_credential(parse_session_credential(token))
+        key = (canonical_token, thread_uuid)
         existing = self._store.get(key)
 
         if existing is not None:
@@ -84,7 +95,8 @@ class ConversationCache:
 
     def remove(self, token: str, thread_uuid: str) -> None:
         """Remove one conversation entry. Must be called while ``self.lock`` is held."""
-        self._store.pop((token, thread_uuid), None)
+        canonical_token = serialize_session_credential(parse_session_credential(token))
+        self._store.pop((canonical_token, thread_uuid), None)
 
     def _evict_stale(self) -> None:
         """Remove all entries exceeding the TTL."""

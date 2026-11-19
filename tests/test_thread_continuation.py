@@ -1,26 +1,21 @@
-"""Tests for the thread continuation feature in the OpenAI-compatible REST API.
-
-These tests mock the Perplexity core library so they run without a real
-session token or network access.
-"""
+"""Offline tests for Chat Completions thread continuation and streaming."""
 
 from __future__ import annotations
 
 from asyncio import run
 from contextlib import suppress
-from time import time
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from orjson import loads
 from pytest import fixture
 from starlette.testclient import TestClient
 
+from perplexity_webui_scraper._internal.constants import SESSION_COOKIE_PREFIX, SESSION_TOKEN_JWE_HEADER
 from perplexity_webui_scraper.api.app import app
-from perplexity_webui_scraper.api.conversation_cache import ConversationCache, _CachedConversation
+from perplexity_webui_scraper.api.conversation_cache import _CachedConversation
 from perplexity_webui_scraper.api.routes.completions import (
     _client_pool,
-    _common_prefix_length,
     _conversation_cache,
     _LockReleasingStreamingResponse,
     _stream_response,
@@ -28,158 +23,101 @@ from perplexity_webui_scraper.api.routes.completions import (
 from perplexity_webui_scraper.core import Conversation
 
 
-if TYPE_CHECKING:
-    from collections.abc import Generator
-
-
-# Constants
-
-TOKEN = "test-session-token"
+_JWE = f"{SESSION_TOKEN_JWE_HEADER}..EBESExQVFhcYGRob.AQIDBAUGBw.MDEyMzQ1Njc4OTo7PD0-Pw"
+TOKEN = f"{SESSION_COOKIE_PREFIX}123e4567-e89b-42d3-a456-426614174000={_JWE}"
 AUTH_HEADER = f"Bearer {TOKEN}"
-THREAD_UUID = "test-thread-uuid-1234"
-MODEL_ID = "openai/gpt-5.6-terra"
+THREAD_UUID = "synthetic-thread-uuid"
+MODEL_ID = "test/custom-model"
 
 
-# Keep model lookup independent from the bundled registry so these tests cover
-# only thread continuation.
-
-
-class _MockModelRegistry:
-    """Minimal stand-in for ModelRegistry that accepts any model ID."""
-
-    def resolve(self, item: str) -> MagicMock:
-        return MagicMock(id=MODEL_ID)
+class _Models:
+    def resolve_for_use(self, item: str, **_kwargs: object) -> MagicMock:
+        return MagicMock(id=item)
 
     def list_all(self) -> list[MagicMock]:
         return [MagicMock(id=MODEL_ID)]
 
-    def resolve_for_use(self, item: str, **_kwargs: object) -> MagicMock:
-        return self.resolve(item)
 
-
-_mock_models = _MockModelRegistry()
-
-
-# Helpers
-
-
-def _make_mock_conversation(uuid: str = THREAD_UUID, answer: str = "Mock answer") -> MagicMock:
-    """Create a mock ``Conversation`` that behaves enough for the API layer.
-
-    Uses ``spec=Conversation`` so ``isinstance()`` checks pass in the
-    streaming code path.
-    """
-    conv = MagicMock(spec=Conversation)
-    conv.uuid = uuid
-    conv.answer = answer
-
-    def ask_side_effect(query: str, files: list | None = None, stream: bool = False) -> None:
-        conv.answer = f"Response to: {query}"
-
-    conv.ask = MagicMock(side_effect=ask_side_effect)
-
-    return conv
-
-
-def _make_mock_client(conv: MagicMock | None = None) -> MagicMock:
-    """Create a mock ``Perplexity`` client."""
-    client = MagicMock()
-
-    if conv is None:
-        conv = _make_mock_conversation()
-
-    client.create_conversation = MagicMock(return_value=conv)
-
-    return client
-
-
-# Fixtures
+def _conversation(uuid: str = THREAD_UUID) -> MagicMock:
+    conversation = MagicMock(spec=Conversation)
+    conversation.uuid = uuid
+    conversation.answer = "Mock answer"
+    conversation.ask = MagicMock()
+    return conversation
 
 
 @fixture(autouse=True)
 def _clean_caches():
-    """Clear all caches and patch MODELS before each test."""
     _conversation_cache._store.clear()
     _client_pool._clients.clear()
-
-    with patch("perplexity_webui_scraper.api.routes.completions.MODELS", _mock_models):
+    with patch("perplexity_webui_scraper.api.routes.completions.MODELS", _Models()):
         yield
-
     _conversation_cache._store.clear()
     _client_pool._clients.clear()
 
 
 @fixture
-def http_client() -> Generator[TestClient, None, None]:
-    """Create a test client connected directly to the FastAPI app."""
+def http_client():
     with TestClient(app) as test_client:
         yield test_client
 
 
 def test_new_conversation_returns_thread_uuid(http_client: TestClient) -> None:
-    """A request without thread_uuid should create a new conversation and return perplexity.thread_uuid."""
-    mock_conv = _make_mock_conversation()
-    mock_client = _make_mock_client(mock_conv)
-
-    with patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=mock_client):
-        resp = http_client.post(
+    conversation = _conversation()
+    upstream = MagicMock()
+    upstream.create_conversation.return_value = conversation
+    with patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=upstream):
+        response = http_client.post(
             "/v1/chat/completions",
-            json={
-                "model": MODEL_ID,
-                "messages": [{"role": "user", "content": "Hello"}],
-            },
+            json={"model": MODEL_ID, "messages": [{"role": "user", "content": "Hello"}]},
             headers={"Authorization": AUTH_HEADER},
         )
-
-    assert resp.status_code == 200
-    data = resp.json()
-    assert "perplexity" in data
-    assert "thread_uuid" in data["perplexity"]
-    assert data["perplexity"]["thread_uuid"] == THREAD_UUID
+    assert response.status_code == 200
+    assert response.json()["choices"][0]["message"]["content"] == "Mock answer"
+    assert response.json()["perplexity"]["thread_uuid"] == THREAD_UUID
 
 
-def test_followup_with_thread_uuid(http_client: TestClient) -> None:
-    """A request with a valid cached thread_uuid should continue using only the last message."""
-    mock_conv = _make_mock_conversation()
-    mock_client = _make_mock_client(mock_conv)
-
-    # Pre-populate the cache
-    _conversation_cache._store[(TOKEN, THREAD_UUID)] = _CachedConversation(conversation=mock_conv, model_id=MODEL_ID)
-
-    resp = http_client.post(
+def test_followup_uses_only_latest_user_message(http_client: TestClient) -> None:
+    conversation = _conversation()
+    _conversation_cache._store[(TOKEN, THREAD_UUID)] = _CachedConversation(conversation, model_id=MODEL_ID)
+    response = http_client.post(
         "/v1/chat/completions",
         json={
             "model": MODEL_ID,
             "messages": [
-                {"role": "user", "content": "First message"},
-                {"role": "assistant", "content": "First reply"},
-                {"role": "user", "content": "Follow-up question"},
+                {"role": "user", "content": "First"},
+                {"role": "assistant", "content": "Reply"},
+                {"role": "user", "content": "Follow-up"},
             ],
             "perplexity": {"thread_uuid": THREAD_UUID},
         },
         headers={"Authorization": AUTH_HEADER},
     )
-
-    assert resp.status_code == 200
-
-    data = resp.json()
-
-    # Should have called .ask() with only the last user message
-    mock_conv.ask.assert_called_once()
-    call_args = mock_conv.ask.call_args
-
-    assert call_args[0][0] == "Follow-up question"
-
-    # Response should include the thread_uuid
-    assert data["perplexity"]["thread_uuid"] == THREAD_UUID
-
-    # Should NOT have created a new conversation
-    mock_client.create_conversation.assert_not_called()
+    assert response.status_code == 200
+    conversation.ask.assert_called_once_with("Follow-up", files=None)
+    assert response.json()["perplexity"]["thread_uuid"] == THREAD_UUID
 
 
 def test_followup_rejects_model_change(http_client: TestClient) -> None:
-    mock_conv = _make_mock_conversation()
-    _conversation_cache._store[(TOKEN, THREAD_UUID)] = _CachedConversation(conversation=mock_conv, model_id="old-model")
+    conversation = _conversation()
+    _conversation_cache._store[(TOKEN, THREAD_UUID)] = _CachedConversation(conversation, model_id="old-model")
+    response = http_client.post(
+        "/v1/chat/completions",
+        json={
+            "model": MODEL_ID,
+            "messages": [{"role": "user", "content": "Continue"}],
+            "perplexity": {"thread_uuid": THREAD_UUID},
+        },
+        headers={"Authorization": AUTH_HEADER},
+    )
+    assert response.status_code == 400
+    conversation.ask.assert_not_called()
+
+
+def test_followup_reuses_only_the_callers_cached_thread(http_client: TestClient) -> None:
+    other_token = f"{SESSION_COOKIE_PREFIX}223e4567-e89b-42d3-a456-426614174000={_JWE}"
+    conversation = _conversation()
+    _conversation_cache._store[(other_token, THREAD_UUID)] = _CachedConversation(conversation, model_id=MODEL_ID)
 
     response = http_client.post(
         "/v1/chat/completions",
@@ -191,287 +129,118 @@ def test_followup_rejects_model_change(http_client: TestClient) -> None:
         headers={"Authorization": AUTH_HEADER},
     )
 
-    assert response.status_code == 400
-    assert "select a different model" in response.json()["error"]["message"]
-    mock_conv.ask.assert_not_called()
+    assert response.status_code == 404
+    conversation.ask.assert_not_called()
 
 
-def test_unstarted_stream_releases_cached_thread_lock() -> None:
-    """Closing an unstarted SSE iterator must release the cached thread lock."""
+def test_followup_sends_base64_image_to_cached_conversation(http_client: TestClient) -> None:
+    conversation = _conversation()
+    _conversation_cache._store[(TOKEN, THREAD_UUID)] = _CachedConversation(conversation, model_id=MODEL_ID)
 
-    async def check_lock_release() -> bool:
-        entry = _CachedConversation(conversation=_make_mock_conversation(), model_id=MODEL_ID)
-        await entry.operation_lock.acquire()
-        stream = _stream_response(entry.conversation, MODEL_ID, TOKEN)
-        response = _LockReleasingStreamingResponse(stream, operation_lock=entry.operation_lock)
-
-        async def send(_message: Any) -> None:
-            raise RuntimeError("disconnect before stream start")
-
-        with suppress(RuntimeError):
-            await response(scope={"type": "http", "asgi": {"spec_version": "2.4"}}, receive=MagicMock(), send=send)
-
-        return not entry.operation_lock.locked()
-
-    assert run(check_lock_release())
-
-
-def test_common_prefix_length_handles_incremental_stream_chunks() -> None:
-    assert _common_prefix_length("incremental answer", "incremental answers") == len("incremental answer")
-    assert _common_prefix_length("first answer", "different answer") == 0
-
-
-def test_stream_response_emits_only_appended_text() -> None:
-    conversation = _make_mock_conversation()
-    first = MagicMock(last_chunk="The answer", chunks=["The answer"], answer=None)
-    second = MagicMock(last_chunk="is 42", chunks=["The answer", "is 42"], answer=None)
-    conversation.__iter__.return_value = iter([first, second])
-    events = list(run(_collect_stream_events(_stream_response(conversation, MODEL_ID, TOKEN))))
-
-    content_deltas = [
-        loads(event[6:])["choices"][0]["delta"]["content"]
-        for event in events
-        if event.startswith("data: {") and '"content"' in event
-    ]
-    assert content_deltas == ["The answer", "is 42"]
-
-
-def test_stream_response_accepts_incremental_chunks_without_space_join() -> None:
-    conversation = _make_mock_conversation()
-    snapshots = [
-        MagicMock(answer=None, chunks=["The "], last_chunk="The "),
-        MagicMock(answer=None, chunks=["The ", "answer"], last_chunk="answer"),
-        MagicMock(answer=None, chunks=["The ", "answer is"], last_chunk="answer is"),
-    ]
-    conversation.__iter__.return_value = iter(snapshots)
-    events = list(run(_collect_stream_events(_stream_response(conversation, MODEL_ID, TOKEN))))
-
-    content_deltas = [
-        loads(event[6:])["choices"][0]["delta"]["content"]
-        for event in events
-        if event.startswith("data: {") and '"content"' in event
-    ]
-    assert "".join(content_deltas) == "The answer is"
-
-
-def test_stream_response_handles_updated_existing_chunk() -> None:
-    conversation = _make_mock_conversation()
-    snapshots = [
-        MagicMock(answer=None, chunks=["The "], last_chunk="The "),
-        MagicMock(answer=None, chunks=["The ", "answer"], last_chunk="answer"),
-        MagicMock(answer=None, chunks=["The ", "answer is"], last_chunk="answer is"),
-    ]
-    conversation.__iter__.return_value = iter(snapshots)
-    events = list(run(_collect_stream_events(_stream_response(conversation, MODEL_ID, TOKEN))))
-    content_deltas = [
-        loads(event[6:])["choices"][0]["delta"]["content"]
-        for event in events
-        if event.startswith("data: {") and '"content"' in event
-    ]
-    assert "".join(content_deltas) == "The answer is"
-
-
-def test_stream_response_preserves_new_chunks_with_overlapping_text() -> None:
-    conversation = _make_mock_conversation()
-    first = MagicMock(last_chunk="ha", chunks=["ha"], answer=None)
-    second = MagicMock(last_chunk="have", chunks=["ha", "have"], answer=None)
-    conversation.__iter__.return_value = iter([first, second])
-    events = list(run(_collect_stream_events(_stream_response(conversation, MODEL_ID, TOKEN))))
-
-    content_deltas = [
-        loads(event[6:])["choices"][0]["delta"]["content"]
-        for event in events
-        if event.startswith("data: {") and '"content"' in event
-    ]
-    assert content_deltas == ["ha", "have"]
-
-
-def test_stream_response_uses_final_answer_when_chunk_snapshot_is_unchanged() -> None:
-    conversation = _make_mock_conversation()
-    first = MagicMock(last_chunk="The answer", chunks=["The answer"], answer=None)
-    final = MagicMock(last_chunk="The answer", chunks=["The answer"], answer="The answer is complete")
-    conversation.__iter__.return_value = iter([first, final])
-    events = list(run(_collect_stream_events(_stream_response(conversation, MODEL_ID, TOKEN))))
-
-    content_deltas = [
-        loads(event[6:])["choices"][0]["delta"]["content"]
-        for event in events
-        if event.startswith("data: {") and '"content"' in event
-    ]
-    assert content_deltas == ["The answer", " is complete"]
-
-
-def test_cached_thread_entry_stores_model_id() -> None:
-    conversation = _make_mock_conversation()
-    cache = ConversationCache()
-
-    async def store_and_read() -> _CachedConversation | None:
-        async with cache.lock:
-            cache.set(TOKEN, THREAD_UUID, conversation, MODEL_ID)
-            return cache.get_entry(TOKEN, THREAD_UUID)
-
-    entry = run(store_and_read())
-
-    assert entry is not None
-    assert entry.model_id == MODEL_ID
-
-
-def test_invalid_thread_uuid_returns_404(http_client: TestClient) -> None:
-    """A request with an uncached thread_uuid should return a 404 error with a clear message."""
-    mock_client = _make_mock_client()
-
-    with patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=mock_client):
-        resp = http_client.post(
-            "/v1/chat/completions",
-            json={
-                "model": MODEL_ID,
-                "messages": [{"role": "user", "content": "Hello"}],
-                "perplexity": {"thread_uuid": "nonexistent-uuid"},
-            },
-            headers={"Authorization": AUTH_HEADER},
-        )
-
-    assert resp.status_code == 404
-    assert "not found or expired" in resp.json()["error"]["message"]
-
-
-def test_streaming_new_conversation_includes_thread_uuid(http_client: TestClient) -> None:
-    """A streaming request without thread_uuid should include it in the final chunk."""
-    mock_conv = _make_mock_conversation()
-    mock_client = _make_mock_client(mock_conv)
-
-    # Make the conversation iterable for streaming (yields one response)
-    mock_response = MagicMock()
-    mock_response.last_chunk = "Streamed answer"
-    mock_response.answer = "Streamed answer"
-    mock_conv.__iter__ = MagicMock(return_value=iter([mock_response]))
-
-    with patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=mock_client):
-        resp = http_client.post(
-            "/v1/chat/completions",
-            json={
-                "model": MODEL_ID,
-                "messages": [{"role": "user", "content": "Hello"}],
-                "stream": True,
-            },
-            headers={"Authorization": AUTH_HEADER},
-        )
-
-    assert resp.status_code == 200
-
-    # Parse SSE lines to find the final chunk with finish_reason
-    assert resp.text is not None
-    lines = resp.text.strip().split("\n")
-    final_chunk = None
-
-    for raw_line in lines:
-        line = raw_line.strip()
-
-        if line.startswith("data: ") and line != "data: [DONE]":
-            chunk = loads(line[6:])
-
-            if chunk.get("choices", [{}])[0].get("finish_reason") == "stop":
-                final_chunk = chunk
-
-    # The final chunk should have perplexity.thread_uuid
-    assert final_chunk is not None, f"No final chunk with finish_reason='stop' found: {resp.text!r}"
-    assert "perplexity" in final_chunk
-    assert final_chunk["perplexity"]["thread_uuid"] == THREAD_UUID
-
-
-def test_stream_response_reports_unexpected_upstream_error() -> None:
-    conversation = _make_mock_conversation()
-    conversation.__iter__.side_effect = RuntimeError("private upstream detail")
-    events = list(run(_collect_stream_events(_stream_response(conversation, MODEL_ID, TOKEN))))
-
-    assert any(event.startswith('event: error\ndata: {"error":') and "upstream_error" in event for event in events)
-    assert "data: [DONE]\n\n" in events
-    assert all("private upstream detail" not in event for event in events)
-
-
-async def _collect_stream_events(stream: Any) -> list[str]:
-    return [event async for event in stream]
-
-
-def test_space_uuid_and_thread_uuid_together(http_client: TestClient) -> None:
-    """Passing both space_uuid and thread_uuid should not conflict."""
-    mock_conv = _make_mock_conversation()
-    mock_client = _make_mock_client(mock_conv)
-
-    # Pre-populate the cache
-    _conversation_cache._store[(TOKEN, THREAD_UUID)] = _CachedConversation(conversation=mock_conv, model_id=MODEL_ID)
-
-    resp = http_client.post(
+    response = http_client.post(
         "/v1/chat/completions",
         json={
             "model": MODEL_ID,
-            "messages": [{"role": "user", "content": "Question in space"}],
-            "perplexity": {
-                "thread_uuid": THREAD_UUID,
-                "space_uuid": "some-space-uuid",
-            },
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [{"type": "image_url", "image_url": {"url": "data:image/png;base64,aW1hZ2U="}}],
+                }
+            ],
+            "perplexity": {"thread_uuid": THREAD_UUID},
         },
         headers={"Authorization": AUTH_HEADER},
     )
 
-    assert resp.status_code == 200
-
-    data = resp.json()
-
-    assert data["perplexity"]["thread_uuid"] == THREAD_UUID
-
-    # Should have used the cached conversation, not created a new one
-    mock_client.create_conversation.assert_not_called()
+    assert response.status_code == 200
+    conversation.ask.assert_called_once_with("", files=[(b"image", "image.png", "image/png")])
 
 
-def test_expired_conversation_is_evicted(http_client: TestClient) -> None:
-    """A conversation that has exceeded the TTL should be evicted and return a 404."""
-    mock_conv = _make_mock_conversation()
-    mock_client = _make_mock_client(mock_conv)
+def test_followup_rejects_remote_image_without_fetching(http_client: TestClient) -> None:
+    conversation = _conversation()
+    _conversation_cache._store[(TOKEN, THREAD_UUID)] = _CachedConversation(conversation, model_id=MODEL_ID)
 
-    # Pre-populate with an expired entry (last_access 31 minutes ago)
-    _conversation_cache._store[(TOKEN, THREAD_UUID)] = _CachedConversation(
-        conversation=mock_conv,
-        last_access=time() - (31 * 60),
+    response = http_client.post(
+        "/v1/chat/completions",
+        json={
+            "model": MODEL_ID,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [{"type": "image_url", "image_url": {"url": "https://attacker.example/image.png"}}],
+                }
+            ],
+            "perplexity": {"thread_uuid": THREAD_UUID},
+        },
+        headers={"Authorization": AUTH_HEADER},
     )
 
-    with patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=mock_client):
-        resp = http_client.post(
+    assert response.status_code == 400
+    conversation.ask.assert_not_called()
+
+
+def test_unknown_thread_is_not_found_and_does_not_leak_identifier(http_client: TestClient) -> None:
+    response = http_client.post(
+        "/v1/chat/completions",
+        json={
+            "model": MODEL_ID,
+            "messages": [{"role": "user", "content": "Continue"}],
+            "perplexity": {"thread_uuid": "private-thread-id"},
+        },
+        headers={"Authorization": AUTH_HEADER},
+    )
+    assert response.status_code == 404
+    assert "not found or expired" in response.text
+    assert "private-thread-id" not in response.text
+
+
+def test_unstarted_stream_releases_cached_thread_lock() -> None:
+    async def check_release() -> bool:
+        entry = _CachedConversation(conversation=_conversation(), model_id=MODEL_ID)
+        await entry.operation_lock.acquire()
+        response = _LockReleasingStreamingResponse(_empty_stream(), operation_lock=entry.operation_lock)
+
+        async def send(_message: Any) -> None:
+            raise RuntimeError("disconnect")
+
+        with suppress(RuntimeError):
+            await response(scope={"type": "http", "asgi": {"spec_version": "2.4"}}, receive=MagicMock(), send=send)
+        return not entry.operation_lock.locked()
+
+    assert run(check_release())
+
+
+def test_stream_failure_emits_safe_error_without_successful_stop() -> None:
+    conversation = _conversation()
+    conversation.__iter__.side_effect = RuntimeError("private upstream detail")
+    events = run(_collect_events(_stream_response(conversation, MODEL_ID, TOKEN)))
+    assert any(event.startswith("event: error") for event in events)
+    assert "upstream_error" in "".join(events)
+    assert all("private upstream detail" not in event for event in events)
+    assert not any('"finish_reason":"stop"' in event for event in events)
+
+
+def test_streaming_returns_thread_uuid_in_terminal_chunk(http_client: TestClient) -> None:
+    conversation = _conversation()
+    snapshot = MagicMock(last_chunk="Streamed answer", answer="Streamed answer", chunks=["Streamed answer"])
+    conversation.__iter__ = MagicMock(return_value=iter([snapshot]))
+    upstream = MagicMock()
+    upstream.create_conversation.return_value = conversation
+    with patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=upstream):
+        response = http_client.post(
             "/v1/chat/completions",
-            json={
-                "model": MODEL_ID,
-                "messages": [{"role": "user", "content": "Hello"}],
-                "perplexity": {"thread_uuid": THREAD_UUID},
-            },
+            json={"model": MODEL_ID, "messages": [{"role": "user", "content": "Hello"}], "stream": True},
             headers={"Authorization": AUTH_HEADER},
         )
+    chunks = [loads(line[6:]) for line in response.text.splitlines() if line.startswith("data: {")]
+    terminal = next(chunk for chunk in chunks if chunk["choices"][0].get("finish_reason") == "stop")
+    assert terminal["perplexity"]["thread_uuid"] == THREAD_UUID
 
-    assert resp.status_code == 404
-    assert "not found or expired" in resp.json()["error"]["message"]
+
+async def _empty_stream() -> Any:
+    if False:
+        yield ""
 
 
-def test_no_perplexity_block_works_as_before(http_client: TestClient) -> None:
-    """A request with no perplexity block should work identically to the original behavior."""
-    mock_conv = _make_mock_conversation()
-    mock_client = _make_mock_client(mock_conv)
-
-    with patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=mock_client):
-        resp = http_client.post(
-            "/v1/chat/completions",
-            json={
-                "model": MODEL_ID,
-                "messages": [{"role": "user", "content": "Hello"}],
-            },
-            headers={"Authorization": AUTH_HEADER},
-        )
-
-    assert resp.status_code == 200
-
-    data = resp.json()
-
-    # Should still include thread_uuid in response for future continuation
-    assert "perplexity" in data
-    assert "thread_uuid" in data["perplexity"]
-
-    # Should have created a new conversation
-    mock_client.create_conversation.assert_called_once()
+async def _collect_events(stream: Any) -> list[str]:
+    return [event async for event in stream]

@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from perplexity_webui_scraper.api.schemas.errors import ErrorDetail, ErrorResponse
+from perplexity_webui_scraper.api.schemas.models import ModelCatalogMetadata, ModelList, ModelObject
 from perplexity_webui_scraper.api.schemas.request import (
     ChatCompletionRequest,
     ChatMessage,
     ContentPart,
     ContentPartImageUrl,
     ContentPartText,
-    CoordinatesInput,
     PerplexityExtensions,
 )
 from perplexity_webui_scraper.api.schemas.response import (
@@ -20,8 +20,6 @@ from perplexity_webui_scraper.api.schemas.response import (
     ChatCompletionMessage,
     ChatCompletionResponse,
     ChatCompletionUsage,
-    ModelList,
-    ModelObject,
     PerplexityResponseExtensions,
 )
 
@@ -39,9 +37,9 @@ __all__: list[str] = [
     "ContentPart",
     "ContentPartImageUrl",
     "ContentPartText",
-    "CoordinatesInput",
     "ErrorDetail",
     "ErrorResponse",
+    "ModelCatalogMetadata",
     "ModelList",
     "ModelObject",
     "PerplexityExtensions",

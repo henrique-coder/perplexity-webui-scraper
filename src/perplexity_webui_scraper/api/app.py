@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response
+from orjson import dumps
 
 from perplexity_webui_scraper import __version__
 from perplexity_webui_scraper._internal.exceptions import (
@@ -33,7 +34,7 @@ class _RequestBodyLimitMiddleware:
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Enforce a bounded body size for chat completion requests."""
-        if scope["type"] != "http" or scope["path"] not in {"/v1/chat/completions", "/v1/responses"}:
+        if scope["type"] != "http" or scope["path"] != "/v1/chat/completions":
             await self.app(scope, receive, send)
 
             return
@@ -44,12 +45,12 @@ class _RequestBodyLimitMiddleware:
         if content_length is not None:
             try:
                 if int(content_length) > _MAX_REQUEST_BODY_BYTES:
-                    response = JSONResponse(status_code=413, content={"detail": "Request body exceeds 10 MiB limit"})
+                    response = _json_response({"detail": "Request body exceeds 10 MiB limit"}, status_code=413)
                     await response(scope, receive, send)
 
                     return
             except ValueError:
-                response = JSONResponse(status_code=400, content={"detail": "Invalid Content-Length header"})
+                response = _json_response({"detail": "Invalid Content-Length header"}, status_code=400)
                 await response(scope, receive, send)
 
                 return
@@ -65,7 +66,7 @@ class _RequestBodyLimitMiddleware:
             chunk = message.get("body", b"")
 
             if len(body) + len(chunk) > _MAX_REQUEST_BODY_BYTES:
-                response = JSONResponse(status_code=413, content={"detail": "Request body exceeds 10 MiB limit"})
+                response = _json_response({"detail": "Request body exceeds 10 MiB limit"}, status_code=413)
                 await response(scope, receive, send)
 
                 return
@@ -95,7 +96,7 @@ def create_app() -> FastAPI:
 
     The application includes:
 
-    - ``GET /v1/models``, ``POST /v1/responses``, and legacy Chat Completions routes.
+    - ``GET /v1/models`` and ``POST /v1/chat/completions`` routes.
     - OpenAI-compatible error objects for HTTP exceptions.
 
     Returns:
@@ -104,7 +105,7 @@ def create_app() -> FastAPI:
     application = FastAPI(
         title="Perplexity WebUI Scraper: OpenAI-compatible API",
         description=(
-            "OpenAI Responses and legacy Chat Completions backed by Perplexity's WebUI. "
+            "OpenAI Chat Completions backed by Perplexity's WebUI. "
             "Pass the Perplexity session token as **Authorization: Bearer <token>**."
         ),
         version=__version__,
@@ -120,73 +121,78 @@ def create_app() -> FastAPI:
     async def _http_exception_handler(
         _request: Request,
         exc: HTTPException,
-    ) -> JSONResponse:
+    ) -> Response:
         """Return all HTTP errors in OpenAI-compatible format."""
-        return JSONResponse(
-            status_code=exc.status_code,
-            content=ErrorResponse(
+        return _json_response(
+            ErrorResponse(
                 error=ErrorDetail(
                     message=str(exc.detail),
                     type="invalid_request_error",
                     code=str(exc.status_code),
                 )
             ).model_dump(),
+            status_code=exc.status_code,
         )
 
     @application.exception_handler(ModelAccessError)
     async def _model_access_exception_handler(
         _request: Request,
         exc: ModelAccessError,
-    ) -> JSONResponse:
+    ) -> Response:
         """Return model-tier denials in OpenAI-compatible format."""
-        return JSONResponse(
-            status_code=403,
-            content=ErrorResponse(
+        return _json_response(
+            ErrorResponse(
                 error=ErrorDetail(
                     message=str(exc),
                     type="invalid_request_error",
                     code="model_access_denied",
                 )
             ).model_dump(),
+            status_code=403,
         )
 
     @application.exception_handler(FileAccessError)
     async def _file_access_exception_handler(
         _request: Request,
         exc: FileAccessError,
-    ) -> JSONResponse:
+    ) -> Response:
         """Return file-attachment denials in OpenAI-compatible format."""
-        return JSONResponse(
-            status_code=403,
-            content=ErrorResponse(
+        return _json_response(
+            ErrorResponse(
                 error=ErrorDetail(
                     message=str(exc),
                     type="invalid_request_error",
                     code="file_access_denied",
                 )
             ).model_dump(),
+            status_code=403,
         )
 
     @application.exception_handler(ModelStatusError)
     async def _model_status_exception_handler(
         _request: Request,
         exc: ModelStatusError,
-    ) -> JSONResponse:
+    ) -> Response:
         """Require explicit acknowledgement before risky model use."""
-        return JSONResponse(
-            status_code=400,
-            content=ErrorResponse(
+        return _json_response(
+            ErrorResponse(
                 error=ErrorDetail(
                     message=str(exc),
                     type="invalid_request_error",
                     code="model_status_confirmation_required",
                 )
             ).model_dump(),
+            status_code=400,
         )
 
     return application
 
 
-#: Module-level ``app`` instance for uvicorn compatibility:
+#: Module-level ASGI application for Uvicorn and ASGI server imports:
 #: ``uvicorn perplexity_webui_scraper.api.app:app``
 app: FastAPI = create_app()
+
+
+def _json_response(content: Any, status_code: int = 200) -> Response:
+    """Serialize JSON directly to UTF-8 bytes with orjson."""
+    return Response(content=dumps(content), status_code=status_code, media_type="application/json")

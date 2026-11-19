@@ -42,17 +42,20 @@ def main(
     ] = "info",
     default_session_token: Annotated[
         str | None,
-        Option("--session-token", envvar="PERPLEXITY_SESSION_TOKEN", help="Optional server-default Perplexity token."),
+        Option(
+            "--session-token",
+            envvar="PERPLEXITY_SESSION_TOKEN",
+            help="Optional server-default account session-cookie pair.",
+        ),
     ] = None,
     gateway_api_key: Annotated[
         str | None,
         Option("--api-key", envvar="PERPLEXITY_API_KEY", help="Gateway key required on each request when configured."),
     ] = None,
 ) -> None:
-    """Start the OpenAI-compatible Perplexity API server.
+    """Start the API server; callers authenticate with account cookie pairs.
 
-    Authentication is done per-request via the ``Authorization: Bearer`` header.
-    Pass your Perplexity session token as the API key in every request.
+    Requests use the full UUID-suffixed session-cookie pair in ``Authorization``.
     """
     if default_session_token:
         environ["PERPLEXITY_SESSION_TOKEN"] = default_session_token
@@ -72,9 +75,9 @@ def main(
         (f"http://{host}:{port}/redoc\n", "white"),
         ("🔑  Auth:  ", "bold cyan"),
         (
-            "X-API-Key + server session token"
+            "X-API-Key + server session-cookie pair"
             if environ.get("PERPLEXITY_SESSION_TOKEN")
-            else "Authorization: Bearer <Perplexity token>",
+            else "Authorization: Bearer <account session-cookie pair>",
             "dim white",
         ),
     )
