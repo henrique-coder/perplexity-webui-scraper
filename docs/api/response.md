@@ -1,6 +1,6 @@
 # Response models
 
-Response and source data models exposed by the Python client.
+The Python client exposes response snapshots and source records.
 
 ## Response
 
@@ -11,9 +11,3 @@ Response and source data models exposed by the Python client.
 ## SearchResultItem
 
 ::: perplexity_webui_scraper.core.response.SearchResultItem
-
----
-
-## Coordinates
-
-::: perplexity_webui_scraper._internal.types.Coordinates

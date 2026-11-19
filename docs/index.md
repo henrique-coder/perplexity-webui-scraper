@@ -2,7 +2,7 @@
 
 Unofficial Python client for Perplexity's WebUI-backed conversation endpoints.
 
-The client uses undocumented endpoints and requires a Perplexity session token. It includes file uploads and response streaming. Optional extras install the MCP server and local REST API.
+The client accepts raw UUID session-cookie pairs and compact `wsk_` credentials; email authentication emits compact form. `wsk_` is reversible obfuscation, not encryption or authenticated integrity. Install optional extras for token retrieval, the API server, or MCP.
 
 ## Features
 
@@ -11,7 +11,7 @@ The client uses undocumented endpoints and requires a Perplexity session token. 
 - Document and image attachments
 - Synchronous response streaming
 - MCP server with one tool per registered model
-- REST API with a supported subset of Responses and Chat Completions
+- REST API with OpenAI-compatible Chat Completions
 
 ## Disclaimer
 

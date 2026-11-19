@@ -1,13 +1,13 @@
 # Usage guide
 
-Create a client with your stored `session_token` to start a conversation.
+Create a client with a raw `__Secure-pplx.session.<UUIDv4>=<JWE>` cookie pair or a compact `wsk_` session token. Both forms resolve to the same session cookie. The compact format is reversible obfuscation, not encryption or authenticated integrity; keep it private as an account credential.
 
 ## Quick Start
 
 ```python
 from perplexity_webui_scraper import Perplexity
 
-client = Perplexity(session_token="YOUR_TOKEN")
+client = Perplexity(session_token="__Secure-pplx.session.<account UUID>=YOUR_VALUE")
 conversation = client.create_conversation()
 
 conversation.ask("What is quantum computing?")
@@ -41,17 +41,17 @@ for response in conversation.ask("Explain AI", stream=True):
 Pass a `ConversationConfig` when creating a conversation:
 
 ```python
-from perplexity_webui_scraper import (
-    ConversationConfig,
-    Coordinates,
-)
+from perplexity_webui_scraper import ConversationConfig, Perplexity
+
+client = Perplexity(session_token="__Secure-pplx.session.<account UUID>=YOUR_VALUE")
 
 config = ConversationConfig(
     model="perplexity/best",
     citation_mode="markdown",
     source_focus=["web", "academic"],
     language="en-US",
-    coordinates=Coordinates(latitude=12.3456, longitude=-98.7654),
+    latitude=-23.5,
+    longitude=-46.6,
 )
 
 conversation = client.create_conversation(config)
@@ -59,17 +59,16 @@ conversation.ask("Latest AI research", files=["paper.pdf"])
 print(conversation.answer)
 ```
 
-## File attachments (`FileInput`)
+## File attachments
 
 File attachments require a paid Perplexity account. Free accounts can use text prompts, but file uploads are blocked before any upload request is attempted.
 
-The `ask()` method accepts the forms covered by the `FileInput` type:
+The `ask()` method accepts local paths, raw bytes, `(bytes, filename)` tuples, and `(bytes, filename, mimetype)` tuples.
 
 ```python
 from pathlib import Path
 
 from curl_cffi.requests import get
-from perplexity_webui_scraper import FileInput  # for type annotations
 
 # 1. Local file path (str or Path)
 conversation.ask("Describe this image", files=["photo.jpg"])
@@ -97,7 +96,7 @@ Pass a [Space](https://www.perplexity.ai/spaces) UUID through `space_uuid` to st
 ```python
 from perplexity_webui_scraper import ConversationConfig, Perplexity
 
-client = Perplexity(session_token="YOUR_TOKEN")
+client = Perplexity(session_token="__Secure-pplx.session.<account UUID>=YOUR_VALUE")
 
 conversation = client.create_conversation(
     ConversationConfig(
@@ -112,4 +111,4 @@ print(conversation.answer)
 
 The URL slug, such as `questions-abcdef123456`, is not the Space UUID. To find the UUID, submit a query inside the Space, inspect the `perplexity_ask` request in the browser Network panel, and copy `target_collection_uuid` from its JSON payload.
 
-The client accepts at most 30 files per prompt and rejects files larger than 50 MB before upload.
+The client accepts at most 30 files per prompt and rejects files larger than 50 MB before upload. The accepted input shapes are listed in the [configuration values reference](api/types.md#file-inputs).

@@ -4,7 +4,7 @@
 
 # Perplexity WebUI Scraper
 
-Python scraper to extract AI responses from [Perplexity's](https://www.perplexity.ai) web interface.
+Unofficial Python client for [Perplexity's](https://www.perplexity.ai) WebUI-backed endpoints. It does not scrape page HTML.
 
 [![PyPI](https://img.shields.io/pypi/v/perplexity-webui-scraper?color=blue)](https://pypi.org/project/perplexity-webui-scraper)
 [![Python](https://img.shields.io/pypi/pyversions/perplexity-webui-scraper)](https://pypi.org/project/perplexity-webui-scraper)
@@ -16,11 +16,11 @@ Documentation: [perplexity-webui-scraper.readthedocs.io](https://perplexity-webu
 
 ## About
 
-This unofficial library uses undocumented Perplexity WebUI endpoints with a browser session token. It supports conversations, file uploads, and streaming; optional extras provide the MCP server and OpenAI-compatible REST API.
+This unofficial client uses undocumented Perplexity WebUI endpoints for conversations, file uploads, and streaming; it does not scrape page HTML. The `token` command emits a compact `wsk_` session credential after email login. The library also accepts the raw `__Secure-pplx.session.<UUIDv4>=<JWE>` cookie pair. The compact representation is reversible obfuscation, not encryption or authenticated integrity; treat it as a password.
 
-A Perplexity account and its browser session token are required. Free accounts support text prompts; paid tiers are required for Pro/Max models and file uploads.
+A Perplexity account and its account-scoped session credential are required. Provide either the raw UUID cookie pair or a compact `wsk_` token. Free accounts support text prompts; paid tiers are required for Pro/Max models and file uploads.
 
-Python 3.11 through 3.15 are supported. Python 3.15 is the primary runtime for direct end-user installations, API/MCP containers, and the local `.python-version` pin. CI quality, documentation, and package build jobs use Python 3.14. The unit-test matrix covers Python 3.11 through 3.15 across Linux, macOS, and Windows.
+Python `>=3.11, <3.16` is supported. `.python-version` and API/MCP containers use Python 3.15; CI quality, documentation, and package-build jobs use Python 3.14. The test matrix covers every supported minor version across Linux, macOS, and Windows.
 
 ## Community
 
@@ -66,14 +66,22 @@ uv add 'perplexity-webui-scraper[token]'
 uv run perplexity-webui-scraper token --email user@example.com
 ```
 
-The token command accepts an optional `--email` argument and prompts for an address when omitted. You can also retrieve `__Secure-next-auth.session-token` manually from your browser cookies on `perplexity.ai`.
+The token command accepts an optional `--email` argument and prompts when omitted. It retrieves the UUID-suffixed session cookie and prints a compact `wsk_` credential. Email verification accepts exactly six ASCII digits or an HTTPS Perplexity email callback link for the requested account. Malformed inputs are rejected locally; invalid codes prompt again without resending the email or discarding the current session. Treat the resulting credential as a password.
+
+To convert an existing raw cookie or validate an existing compact credential without network access, run:
+
+```bash
+uv run perplexity-webui-scraper token --convert
+```
+
+The CLI masks the pasted input and prints the canonical compact token. Conversion does not encrypt the cookie or improve its security.
 
 ### 2. Basic usage
 
 ```python
 from perplexity_webui_scraper import Perplexity
 
-client = Perplexity(session_token="YOUR_TOKEN")
+client = Perplexity(session_token="__Secure-pplx.session.<account UUID>=YOUR_VALUE")
 conversation = client.create_conversation()
 
 print(client.get_account_profile().account_tier)
@@ -128,22 +136,25 @@ for model in MODELS.list_all():
 
 Use `-h` or `--help` with the root command or any subcommand. The token command accepts `-e` or `--email`.
 
-| Command                                           | Extra   | Description                                                            |
-| ------------------------------------------------- | ------- | ---------------------------------------------------------------------- |
-| `perplexity-webui-scraper token -e/--email EMAIL` | `token` | Generate a session token through email authentication (including TOTP) |
-| `perplexity-webui-scraper api`                    | `api`   | Start the OpenAI-compatible REST API server                            |
-| `perplexity-webui-scraper mcp`                    | `mcp`   | Start the MCP server                                                   |
+| Command                                           | Extra   | Description                                                                                          |
+| ------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------- |
+| `perplexity-webui-scraper token -e/--email EMAIL` | `token` | Authenticate and print a compact `wsk_` account session credential                                   |
+| `perplexity-webui-scraper token -c/--convert`     | `token` | Open the masked offline converter; `token convert` and `token deconvert` provide explicit operations |
+| `perplexity-webui-scraper api`                    | `api`   | Start the OpenAI-compatible REST API server                                                          |
+| `perplexity-webui-scraper mcp`                    | `mcp`   | Start the MCP server                                                                                 |
 
-## OpenAI-compatible API
+## API
 
-Run a local server that accepts the supported subset of OpenAI Responses and legacy Chat Completions requests. Both routes use the same Perplexity conversation core. The Responses route accepts text and base64 data-URL images, supports streaming and process-local `previous_response_id` continuation, and rejects unsupported request fields. Tool execution, durable response retrieval, and remote image fetching are not implemented.
+### Chat Completions API
+
+`POST /v1/chat/completions` is the only text-generation endpoint. It supports streaming, validated base64 image Data URLs, and account-scoped thread continuation with `perplexity.thread_uuid`. Responses contain final assistant text. `GET /v1/models` lists registered model identifiers. The API does not expose hidden chain-of-thought, execute client tools, or fetch remote image URLs.
 
 ```bash
-# Start with clients supplying their Perplexity token per request
+# Start with clients supplying the Perplexity account session-cookie pair per request
 perplexity-webui-scraper api
 
-# Optional server-default upstream token, protected by a separate gateway key
-PERPLEXITY_SESSION_TOKEN="$PPLX_TOKEN" PERPLEXITY_API_KEY="$GATEWAY_KEY" perplexity-webui-scraper api
+# Optional server-default account session-cookie pair, protected by a separate gateway key
+PERPLEXITY_SESSION_TOKEN="__Secure-pplx.session.<account UUID>=YOUR_VALUE" PERPLEXITY_API_KEY="$GATEWAY_KEY" perplexity-webui-scraper api
 
 # Custom host and port
 perplexity-webui-scraper api --host 0.0.0.0 --port 8080
@@ -195,19 +206,19 @@ podman run --rm -it -e PERPLEXITY_SESSION_TOKEN=your_token perplexity-mcp
 
 ### Authentication
 
-Without a server-default token, send your Perplexity token as `Authorization: Bearer $PERPLEXITY_SESSION_TOKEN`. When `PERPLEXITY_SESSION_TOKEN` is configured on the server, requests may omit `Authorization` but must include the separate gateway key in `X-API-Key`. A caller Bearer token overrides the server default, but gateway authentication is still required.
+Without a server-default credential, send either the raw `__Secure-pplx.session.<UUIDv4>=<JWE>` pair or compact `wsk_` token in `Authorization: Bearer`. When `PERPLEXITY_SESSION_TOKEN` is configured on the server, requests may omit `Authorization` but must include the separate gateway key in `X-API-Key`. A caller credential can override the server default after gateway authentication.
 
 ```bash
 # curl
-export PERPLEXITY_SESSION_TOKEN='your_session_token'
+export PERPLEXITY_SESSION_TOKEN='YOUR_TOKEN'
 curl http://localhost:8000/v1/chat/completions \
-  -H 'Authorization: Bearer $PERPLEXITY_SESSION_TOKEN' \
+  -H "Authorization: Bearer $PERPLEXITY_SESSION_TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello!"}]}'
 
 # Streaming
 curl -N http://localhost:8000/v1/chat/completions \
-  -H 'Authorization: Bearer $PERPLEXITY_SESSION_TOKEN' \
+  -H "Authorization: Bearer $PERPLEXITY_SESSION_TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello!"}], "stream": true}'
 ```
@@ -217,7 +228,7 @@ from openai import OpenAI
 
 client = OpenAI(
     base_url="http://localhost:8000/v1",
-    api_key="YOUR_SESSION_TOKEN",  # sent as Authorization: Bearer automatically
+    api_key="__Secure-pplx.session.<account UUID>=YOUR_VALUE",
 )
 
 response = client.chat.completions.create(
@@ -227,30 +238,25 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-Responses API request with server-configured upstream credentials:
+Chat Completions request with server-configured upstream credentials:
 
 ```bash
-curl http://localhost:8000/v1/responses \
-  -H 'X-API-Key: $GATEWAY_KEY' \
+curl http://localhost:8000/v1/chat/completions \
+  -H 'X-API-Key: YOUR_GATEWAY_KEY' \
   -H 'Content-Type: application/json' \
-  -d '{"model":"perplexity/best","input":"Hello!"}'
+  -d '{"model":"perplexity/best","messages":[{"role":"user","content":"Hello!"}]}'
 ```
 
 ### API endpoints
 
-| Method | Path                   | Description                                                         |
-| ------ | ---------------------- | ------------------------------------------------------------------- |
-| `GET`  | `/v1/models`           | List registered models                                              |
-| `POST` | `/v1/responses`        | Responses text and base64 image input (streaming and non-streaming) |
-| `POST` | `/v1/chat/completions` | Legacy Chat Completions (streaming and non-streaming)               |
-| `GET`  | `/docs`                | Interactive Swagger UI                                              |
-| `GET`  | `/redoc`               | ReDoc API documentation                                             |
+| Method | Path                   | Description                                        |
+| ------ | ---------------------- | -------------------------------------------------- |
+| `GET`  | `/v1/models`           | List registered models                             |
+| `POST` | `/v1/chat/completions` | Chat Completions API (streaming and non-streaming) |
+| `GET`  | `/docs`                | Interactive Swagger UI                             |
+| `GET`  | `/redoc`               | ReDoc API documentation                            |
 
-> Chat Completions accepts and ignores some unsupported OpenAI fields. Responses rejects unknown request fields. Neither route implements the full OpenAI API.
-
-### `POST /v1/responses`
-
-The Responses route accepts `model`, `input`, `instructions`, `stream`, `previous_response_id`, and the `perplexity` extension object. It accepts a string input or supported text and base64 image items. Unknown request fields and unsupported input item types return `422`. Tool execution, durable response retrieval, and token-usage accounting are not implemented. Continuation IDs map to an in-memory conversation thread and expire with the process-local cache.
+> Chat Completions implements a documented subset of the OpenAI contract. Unsupported fields may be ignored. The API returns final text, not hidden reasoning or client-executable tools.
 
 ## MCP server
 
