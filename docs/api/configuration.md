@@ -29,7 +29,7 @@ config = ClientConfig(
 | `requests_per_second`   | `float`                                                                | `0.5`        | Maximum request rate (`0` disables client-side throttling).       |
 | `max_init_query_length` | `int`                                                                  | `2000`       | Maximum search-init query length (`0` disables truncation).       |
 | `logging_level`         | `Literal["disabled", "debug", "info", "warning", "error", "critical"]` | `"disabled"` | Library log verbosity (`"disabled"` suppresses library logs).     |
-| `log_file`              | `str \| PathLike[str] \| None`                                         | `None`       | Optional file path to append logs to instead of `stderr`.         |
+| `log_file`              | <code>str &#124; PathLike[str] &#124; None</code>                      | `None`       | Optional file path to append logs to instead of `stderr`.         |
 
 ## `ConversationConfig`
 
@@ -48,22 +48,22 @@ config = ConversationConfig(
 )
 ```
 
-| Field                  | Type                                             | Default     | Description                                                                                                 |
-| ---------------------- | ------------------------------------------------ | ----------- | ----------------------------------------------------------------------------------------------------------- |
-| `model`                | `str \| None`                                    | `None`      | Model ID string (defaults to `"perplexity/best"` when `None`).                                              |
-| `search_focus`         | `Literal["web", "writing"]`                      | `"web"`     | `"web"` enables web search and citations; `"writing"` generates without web search.                         |
-| `source_focus`         | `SourceFocus \| list[SourceFocus]`               | `"web"`     | One or more of `"web"`, `"academic"`, `"social"`, `"finance"`, or `"all"`.                                  |
-| `time_range`           | `Literal["all", "day", "week", "month", "year"]` | `"all"`     | Recency filter for web search results.                                                                      |
-| `citation_mode`        | `Literal["default", "markdown", "clean"]`        | `"clean"`   | `"default"` keeps `[1]` markers, `"markdown"` links them, and `"clean"` removes them.                       |
-| `language`             | `str`                                            | `"en-US"`   | BCP-47 response language tag (e.g. `"en-US"`, `"pt-BR"`).                                                   |
-| `timezone`             | `str \| None`                                    | `None`      | Optional IANA timezone identifier (e.g. `"America/Sao_Paulo"`).                                             |
-| `latitude`             | `float \| None`                                  | `None`      | Latitude in degrees (`-90` to `90`). Must be provided together with `longitude`.                            |
-| `longitude`            | `float \| None`                                  | `None`      | Longitude in degrees (`-180` to `180`). Must be provided together with `latitude`.                          |
-| `save_to_library`      | `bool`                                           | `False`     | Save the conversation thread to the Perplexity account library.                                             |
-| `space_uuid`           | `str \| None`                                    | `None`      | Target Perplexity Space UUID (`target_collection_uuid`).                                                    |
-| `allow_risky_model`    | `bool`                                           | `False`     | Acknowledge models with `"unknown"` or `"unavailable"` status.                                              |
-| `custom_model_mode`    | `Literal["copilot", "search", "research"]`       | `"copilot"` | Request mode used when `model` is a `custom:<identifier>` string.                                           |
-| `research_interaction` | `Literal["auto", "manual"]`                      | `"auto"`    | `"auto"` answers Deep Research clarification prompts; `"manual"` raises `ResearchClarifyingQuestionsError`. |
+| Field                  | Type                                              | Default     | Description                                                                                                 |
+| ---------------------- | ------------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------- |
+| `model`                | <code>str &#124; None</code>                      | `None`      | Model ID string (defaults to `"perplexity/best"` when `None`).                                              |
+| `search_focus`         | `Literal["web", "writing"]`                       | `"web"`     | `"web"` enables web search and citations; `"writing"` generates without web search.                         |
+| `source_focus`         | <code>SourceFocus &#124; list[SourceFocus]</code> | `"web"`     | One or more of `"web"`, `"academic"`, `"social"`, `"finance"`, or `"all"`.                                  |
+| `time_range`           | `Literal["all", "day", "week", "month", "year"]`  | `"all"`     | Recency filter for web search results.                                                                      |
+| `citation_mode`        | `Literal["default", "markdown", "clean"]`         | `"clean"`   | `"default"` keeps `[1]` markers, `"markdown"` links them, and `"clean"` removes them.                       |
+| `language`             | `str`                                             | `"en-US"`   | BCP-47 response language tag (e.g. `"en-US"`, `"pt-BR"`).                                                   |
+| `timezone`             | <code>str &#124; None</code>                      | `None`      | Optional IANA timezone identifier (e.g. `"America/Sao_Paulo"`).                                             |
+| `latitude`             | <code>float &#124; None</code>                    | `None`      | Latitude in degrees (`-90` to `90`). Must be provided together with `longitude`.                            |
+| `longitude`            | <code>float &#124; None</code>                    | `None`      | Longitude in degrees (`-180` to `180`). Must be provided together with `latitude`.                          |
+| `save_to_library`      | `bool`                                            | `False`     | Save the conversation thread to the Perplexity account library.                                             |
+| `space_uuid`           | <code>str &#124; None</code>                      | `None`      | Target Perplexity Space UUID (`target_collection_uuid`).                                                    |
+| `allow_risky_model`    | `bool`                                            | `False`     | Acknowledge models with `"unknown"` or `"unavailable"` status.                                              |
+| `custom_model_mode`    | `Literal["copilot", "search", "research"]`        | `"copilot"` | Request mode used when `model` is a `custom:<identifier>` string.                                           |
+| `research_interaction` | `Literal["auto", "manual"]`                       | `"auto"`    | `"auto"` answers Deep Research clarification prompts; `"manual"` raises `ResearchClarifyingQuestionsError`. |
 
 ## Location values
 

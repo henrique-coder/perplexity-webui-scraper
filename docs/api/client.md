@@ -19,10 +19,10 @@ with Perplexity(session_token="YOUR_TOKEN", config=ClientConfig()) as client:
 
 ### Constructor parameters
 
-| Parameter       | Type                   | Default | Description                                                                                     |
-| --------------- | ---------------------- | ------- | ----------------------------------------------------------------------------------------------- |
-| `session_token` | `str`                  | —       | Raw `__Secure-pplx.session.<UUIDv4>=<JWE>` cookie pair or compact `wsk_` v1 session token.      |
-| `config`        | `ClientConfig \| None` | `None`  | Optional transport, retry, rate-limit, and logging configuration (`ClientConfig()` if omitted). |
+| Parameter       | Type                                  | Default | Description                                                                                     |
+| --------------- | ------------------------------------- | ------- | ----------------------------------------------------------------------------------------------- |
+| `session_token` | `str`                                 | —       | Raw `__Secure-pplx.session.<UUIDv4>=<JWE>` cookie pair or compact `wsk_` v1 session token.      |
+| `config`        | <code>ClientConfig &#124; None</code> | `None`  | Optional transport, retry, rate-limit, and logging configuration (`ClientConfig()` if omitted). |
 
 Raises `SessionTokenError` (a subclass of `PerplexityError` and `ValueError`) if `session_token` is malformed.
 
@@ -42,54 +42,54 @@ Raises `SessionTokenError` (a subclass of `PerplexityError` and `ValueError`) if
 
 ### `AccountProfile`
 
-| Attribute      | Type                      | Description                                                     |
-| -------------- | ------------------------- | --------------------------------------------------------------- |
-| `session`      | `AccountSession`          | Typed `/api/auth/session` payload.                              |
-| `settings`     | `AccountSettings \| None` | Typed `/rest/user/settings` payload when queried as a fallback. |
-| `account_tier` | `AccountTier`             | Normalized tier (`"free"`, `"pro"`, `"max"`, or `"unknown"`).   |
+| Attribute      | Type                                     | Description                                                     |
+| -------------- | ---------------------------------------- | --------------------------------------------------------------- |
+| `session`      | `AccountSession`                         | Typed `/api/auth/session` payload.                              |
+| `settings`     | <code>AccountSettings &#124; None</code> | Typed `/rest/user/settings` payload when queried as a fallback. |
+| `account_tier` | `AccountTier`                            | Normalized tier (`"free"`, `"pro"`, `"max"`, or `"unknown"`).   |
 
 ### `AccountSession`
 
-| Attribute                   | Type                  | Description                                         |
-| --------------------------- | --------------------- | --------------------------------------------------- |
-| `expires`                   | `str \| None`         | Session expiration timestamp string.                |
-| `prevent_username_redirect` | `bool \| None`        | Upstream redirect flag (`preventUsernameRedirect`). |
-| `user`                      | `AccountUser \| None` | Authenticated user details.                         |
-| `account_tier`              | `AccountTier`         | Normalized tier derived from `user`.                |
+| Attribute                   | Type                                 | Description                                         |
+| --------------------------- | ------------------------------------ | --------------------------------------------------- |
+| `expires`                   | <code>str &#124; None</code>         | Session expiration timestamp string.                |
+| `prevent_username_redirect` | <code>bool &#124; None</code>        | Upstream redirect flag (`preventUsernameRedirect`). |
+| `user`                      | <code>AccountUser &#124; None</code> | Authenticated user details.                         |
+| `account_tier`              | `AccountTier`                        | Normalized tier derived from `user`.                |
 
 ### `AccountUser`
 
-| Attribute             | Type          | Description                                                |
-| --------------------- | ------------- | ---------------------------------------------------------- |
-| `id`                  | `str \| None` | Account UUID.                                              |
-| `email`               | `str \| None` | Account email address.                                     |
-| `username`            | `str \| None` | Public username.                                           |
-| `name`                | `str \| None` | Display name.                                              |
-| `image`               | `str \| None` | Avatar URL.                                                |
-| `org_uuid`            | `str \| None` | Organization UUID, if any.                                 |
-| `org_role`            | `str \| None` | Organization role, if any.                                 |
-| `subscription_tier`   | `str \| None` | Raw upstream subscription tier.                            |
-| `subscription_status` | `str \| None` | Raw upstream subscription status.                          |
-| `subscription_source` | `str \| None` | Raw upstream subscription source.                          |
-| `payment_tier`        | `str \| None` | Raw upstream payment tier.                                 |
-| `account_tier`        | `AccountTier` | Normalized tier (`"free"`, `"pro"`, `"max"`, `"unknown"`). |
+| Attribute             | Type                         | Description                                                   |
+| --------------------- | ---------------------------- | ------------------------------------------------------------- |
+| `id`                  | <code>str &#124; None</code> | Account UUID.                                                 |
+| `email`               | <code>str &#124; None</code> | Account email address.                                        |
+| `username`            | <code>str &#124; None</code> | Public username.                                              |
+| `name`                | <code>str &#124; None</code> | Display name.                                                 |
+| `image`               | <code>str &#124; None</code> | Avatar URL.                                                   |
+| `org_uuid`            | <code>str &#124; None</code> | Organization UUID, if any.                                    |
+| `org_role`            | <code>str &#124; None</code> | Organization role, if any.                                    |
+| `subscription_tier`   | <code>str &#124; None</code> | Raw upstream subscription tier.                               |
+| `subscription_status` | <code>str &#124; None</code> | Raw upstream subscription status.                             |
+| `subscription_source` | <code>str &#124; None</code> | Raw upstream subscription source.                             |
+| `payment_tier`        | <code>str &#124; None</code> | Raw upstream payment tier.                                    |
+| `account_tier`        | `AccountTier`                | Normalized tier (`"free"`, `"pro"`, `"max"`, or `"unknown"`). |
 
 ### `AccountSettings`
 
-| Attribute             | Type           | Description                                                |
-| --------------------- | -------------- | ---------------------------------------------------------- |
-| `subscription_tier`   | `str \| None`  | Raw subscription tier from user settings.                  |
-| `subscription_status` | `str \| None`  | Raw subscription status.                                   |
-| `subscription_source` | `str \| None`  | Raw subscription source.                                   |
-| `stripe_status`       | `str \| None`  | Stripe subscription state.                                 |
-| `revenuecat_status`   | `str \| None`  | RevenueCat subscription state.                             |
-| `revenuecat_source`   | `str \| None`  | RevenueCat subscription source.                            |
-| `default_model`       | `str \| None`  | Account default model identifier.                          |
-| `query_count`         | `int \| None`  | Total query count.                                         |
-| `query_count_copilot` | `int \| None`  | Copilot query count.                                       |
-| `query_count_mobile`  | `int \| None`  | Mobile query count.                                        |
-| `is_verified`         | `bool \| None` | Account verification status.                               |
-| `account_tier`        | `AccountTier`  | Normalized tier (`"free"`, `"pro"`, `"max"`, `"unknown"`). |
+| Attribute             | Type                          | Description                                                   |
+| --------------------- | ----------------------------- | ------------------------------------------------------------- |
+| `subscription_tier`   | <code>str &#124; None</code>  | Raw subscription tier from user settings.                     |
+| `subscription_status` | <code>str &#124; None</code>  | Raw subscription status.                                      |
+| `subscription_source` | <code>str &#124; None</code>  | Raw subscription source.                                      |
+| `stripe_status`       | <code>str &#124; None</code>  | Stripe subscription state.                                    |
+| `revenuecat_status`   | <code>str &#124; None</code>  | RevenueCat subscription state.                                |
+| `revenuecat_source`   | <code>str &#124; None</code>  | RevenueCat subscription source.                               |
+| `default_model`       | <code>str &#124; None</code>  | Account default model identifier.                             |
+| `query_count`         | <code>int &#124; None</code>  | Total query count.                                            |
+| `query_count_copilot` | <code>int &#124; None</code>  | Copilot query count.                                          |
+| `query_count_mobile`  | <code>int &#124; None</code>  | Mobile query count.                                           |
+| `is_verified`         | <code>bool &#124; None</code> | Account verification status.                                  |
+| `account_tier`        | `AccountTier`                 | Normalized tier (`"free"`, `"pro"`, `"max"`, or `"unknown"`). |
 
 ## Session credential helpers
 

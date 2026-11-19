@@ -37,15 +37,15 @@ Raised when validating raw `__Secure-pplx.session.<UUIDv4>=<JWE>` cookies or com
 
 ## HTTP & account access
 
-| Symbol                | Kind / Parent     | Attributes                                                 | Description                                                                                     |
-| --------------------- | ----------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `HTTPError`           | `PerplexityError` | `status_code: int \| None`, `message: str`                 | Upstream HTTP request returned an unexpected status code or transport failure.                  |
-| `AuthenticationError` | `HTTPError`       | `status_code = 403`, `message: str`                        | Session credential was rejected by Perplexity (HTTP 403).                                       |
-| `RateLimitError`      | `HTTPError`       | `status_code = 429`, `retry_after: str \| None`            | Perplexity rate limit exceeded (HTTP 429).                                                      |
-| `ModelAccessError`    | `PerplexityError` | `model_id: str`, `required_tier: str`, `account_tier: str` | Authenticated account tier is below the selected available model's `min_tier`.                  |
-| `ModelStatusError`    | `PerplexityError` | `model_id: str`, `status: str`                             | Model with `"unknown"` or `"unavailable"` status was selected without `allow_risky_model=True`. |
-| `ModelRiskWarning`    | `UserWarning`     | —                                                          | Warning emitted when a non-available model is used with `allow_risky_model=True`.               |
-| `FileAccessError`     | `PerplexityError` | `account_tier: str`                                        | File attachments were requested on a `"free"` Perplexity account.                               |
+| Symbol                | Kind / Parent     | Attributes                                                     | Description                                                                                     |
+| --------------------- | ----------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `HTTPError`           | `PerplexityError` | <code>status_code: int &#124; None</code>, `message: str`      | Upstream HTTP request returned an unexpected status code or transport failure.                  |
+| `AuthenticationError` | `HTTPError`       | `status_code = 403`, `message: str`                            | Session credential was rejected by Perplexity (HTTP 403).                                       |
+| `RateLimitError`      | `HTTPError`       | `status_code = 429`, <code>retry_after: str &#124; None</code> | Perplexity rate limit exceeded (HTTP 429).                                                      |
+| `ModelAccessError`    | `PerplexityError` | `model_id: str`, `required_tier: str`, `account_tier: str`     | Authenticated account tier is below the selected available model's `min_tier`.                  |
+| `ModelStatusError`    | `PerplexityError` | `model_id: str`, `status: str`                                 | Model with `"unknown"` or `"unavailable"` status was selected without `allow_risky_model=True`. |
+| `ModelRiskWarning`    | `UserWarning`     | —                                                              | Warning emitted when a non-available model is used with `allow_risky_model=True`.               |
+| `FileAccessError`     | `PerplexityError` | `account_tier: str`                                            | File attachments were requested on a `"free"` Perplexity account.                               |
 
 ## Files, streaming & parsing
 

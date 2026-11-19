@@ -148,7 +148,7 @@ Use `-h` or `--help` with the root command or any subcommand. The token command 
 
 ### Chat Completions API
 
-`POST /v1/chat/completions` is the only text-generation endpoint. It is a read-only question-answering mirror of Perplexity's WebUI and automatically prepends a master system instruction rejecting autonomous agent loops and tool execution. It supports streaming, validated base64 image Data URLs, and account-scoped thread continuation with `perplexity.thread_uuid`. Responses contain final assistant text. `GET /v1/models` lists registered model identifiers. The API does not expose hidden chain-of-thought, execute client tools, or fetch remote image URLs.
+`POST /v1/chat/completions` is the only text-generation endpoint. It is a read-only question-answering mirror of Perplexity's WebUI and automatically prepends a master system instruction rejecting autonomous agent loops and tool execution. It supports streaming, validated base64 image Data URLs, and account-scoped thread continuation with `perplexity.thread_uuid`. Responses contain final assistant text. `GET /v1/models` requires authentication (`Authorization: Bearer` or gateway `X-API-Key`), checks the account tier (with a 10-minute in-memory cache), and returns only models accessible to that account tier. The API does not expose hidden chain-of-thought, execute client tools, or fetch remote image URLs.
 
 ```bash
 # Start with clients supplying the Perplexity account session-cookie pair per request
@@ -254,7 +254,7 @@ curl http://localhost:8000/v1/chat/completions \
 
 | Method | Path                   | Description                                        |
 | ------ | ---------------------- | -------------------------------------------------- |
-| `GET`  | `/v1/models`           | List registered models                             |
+| `GET`  | `/v1/models`           | List models available to the authenticated account |
 | `POST` | `/v1/chat/completions` | Chat Completions API (streaming and non-streaming) |
 | `GET`  | `/docs`                | Interactive Swagger UI                             |
 | `GET`  | `/redoc`               | ReDoc API documentation                            |

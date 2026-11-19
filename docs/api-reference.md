@@ -62,15 +62,15 @@ conversation = client.create_conversation(ConversationConfig(model="perplexity/b
 
 ## `Conversation.ask(query, model?, files?, citation_mode?, stream?)`
 
-| Parameter       | Type                      | Default                      | Description                  |
-| --------------- | ------------------------- | ---------------------------- | ---------------------------- |
-| `query`         | `str`                     | _(required)_                 | The question to ask          |
-| `model`         | `str \| None`             | `None` → `"perplexity/best"` | Model ID string              |
-| `files`         | `list[FileInput] \| None` | `None`                       | File attachments             |
-| `citation_mode` | `Literal["default", "markdown", "clean"] \| None` | `None` | Keep markers, link them, or remove them |
-| `stream`        | `bool`                    | `False`                      | Yield chunks as they arrive  |
-| `allow_risky_model` | `bool \| None` | `None` | Acknowledge any non-available model status |
-| `custom_model_mode` | `Literal["copilot", "search", "research"] \| None` | `None` | Mode for `custom:<identifier>` |
+| Parameter       | Type                                                            | Default                      | Description                  |
+| --------------- | --------------------------------------------------------------- | ---------------------------- | ---------------------------- |
+| `query`         | `str`                                                           | _(required)_                 | The question to ask          |
+| `model`         | <code>str &#124; None</code>                                    | `None` → `"perplexity/best"` | Model ID string              |
+| `files`         | <code>list[FileInput] &#124; None</code>                        | `None`                       | File attachments             |
+| `citation_mode` | <code>Literal["default", "markdown", "clean"] &#124; None</code> | `None`                       | Keep markers, link them, or remove them |
+| `stream`        | `bool`                                                          | `False`                      | Yield chunks as they arrive  |
+| `allow_risky_model` | <code>bool &#124; None</code>                               | `None`                       | Acknowledge any non-available model status |
+| `custom_model_mode` | <code>Literal["copilot", "search", "research"] &#124; None</code> | `None`                     | Mode for `custom:<identifier>` |
 
 Returns `self` (the `Conversation`) for method chaining or streaming iteration.
 
@@ -80,12 +80,12 @@ Before every prompt request, the library performs a fast `/api/auth/session` che
 
 ### Conversation properties
 
-| Property         | Type                    | Description                                  |
-| ---------------- | ----------------------- | -------------------------------------------- |
-| `answer`         | `str \| None`            | Full response text                           |
-| `search_results` | `list[SearchResultItem]` | Source URLs used in the response             |
-| `activity`       | `list[ActivityEvent]`    | Allowlisted user-visible activity summaries  |
-| `uuid`           | `str \| None`            | Conversation backend UUID                    |
+| Property         | Type                         | Description                                  |
+| ---------------- | ---------------------------- | -------------------------------------------- |
+| `answer`         | <code>str &#124; None</code> | Full response text                           |
+| `search_results` | `list[SearchResultItem]`     | Source URLs used in the response             |
+| `activity`       | `list[ActivityEvent]`        | Allowlisted user-visible activity summaries  |
+| `uuid`           | <code>str &#124; None</code> | Conversation backend UUID                    |
 
 ## Models
 
@@ -272,17 +272,17 @@ config = ConversationConfig(citation_mode="markdown")
 
 | Parameter         | Type                                             | Default                      | Description                                        |
 | ----------------- | ------------------------------------------------ | ---------------------------- | -------------------------------------------------- |
-| `model`           | `str \| None`                                    | `None` (`"perplexity/best"`) | Model ID string                                    |
+| `model`           | <code>str &#124; None</code>                     | `None` (`"perplexity/best"`) | Model ID string                                    |
 | `citation_mode`   | `Literal["default", "markdown", "clean"]`        | `"clean"`                    | Citation format                                    |
 | `save_to_library` | `bool`                                           | `False`                      | Save conversation to Perplexity library            |
 | `search_focus`    | `Literal["web", "writing"]`                      | `"web"`                      | Search type                                        |
-| `source_focus`    | `str \| list[str]`                               | `"web"`                      | `"web"`, `"academic"`, `"social"`, `"finance"`, or `"all"` |
+| `source_focus`    | <code>str &#124; list[str]</code>                | `"web"`                      | `"web"`, `"academic"`, `"social"`, `"finance"`, or `"all"` |
 | `time_range`      | `Literal["all", "day", "week", "month", "year"]` | `"all"`                      | Recency filter for results                         |
 | `language`        | `str`                                            | `"en-US"`                    | Language for the response                          |
-| `timezone`        | `str \| None`                                    | `None`                       | IANA timezone (e.g. `"America/Sao_Paulo"`)         |
-| `latitude`        | `float \| None`  | `None` | Latitude from -90 through 90; set with longitude |
-| `longitude`       | `float \| None`  | `None` | Longitude from -180 through 180; set with latitude |
-| `space_uuid`      | `str \| None`                                    | `None`                       | UUID of the Perplexity Space to post the thread to |
+| `timezone`        | <code>str &#124; None</code>                     | `None`                       | IANA timezone (e.g. `"America/Sao_Paulo"`)         |
+| `latitude`        | <code>float &#124; None</code>                   | `None` | Latitude from -90 through 90; set with longitude |
+| `longitude`       | <code>float &#124; None</code>                   | `None` | Longitude from -180 through 180; set with latitude |
+| `space_uuid`      | <code>str &#124; None</code>                     | `None`                       | UUID of the Perplexity Space to post the thread to |
 | `allow_risky_model` | `bool` | `False` | Acknowledge any non-available model status |
 | `custom_model_mode` | `Literal["copilot", "search", "research"]` | `"copilot"` | Mode for `custom:<identifier>` |
 | `research_interaction` | `Literal["auto", "manual"]` | `"auto"` | Deep Research clarification handling |
@@ -303,7 +303,7 @@ The Space URL slug is not its UUID. To find the UUID, submit a query in the Spac
 | `rotate_fingerprint`    | `bool`                    | `True`       | Recreate the HTTP session after a retry while retaining its browser fingerprint |
 | `max_init_query_length` | `int`                     | `2000`       | Truncate init query to avoid HTTP 414       |
 | `logging_level`         | `str`                     | `"disabled"` | Log verbosity (`disabled`, `debug`, etc.)   |
-| `log_file`              | `str \| PathLike \| None` | `None`       | Write logs to file instead of stderr        |
+| `log_file`              | <code>str &#124; PathLike &#124; None</code> | `None`       | Write logs to file instead of stderr        |
 
 ## Parameter values
 
@@ -383,7 +383,7 @@ except PerplexityError as e:
 
 ## OpenAI-compatible API
 
-`POST /v1/chat/completions` is the only text-generation endpoint. It returns final assistant text and supports conversation continuation through `perplexity.thread_uuid`. `GET /v1/models` lists registered model identifiers.
+`POST /v1/chat/completions` is the only text-generation endpoint. It returns final assistant text and supports conversation continuation through `perplexity.thread_uuid`. `GET /v1/models` requires authentication, checks the account's Perplexity tier (cached in memory for 10 minutes), and lists only models usable on that tier.
 
 Install with the `api` extra:
 
@@ -393,7 +393,7 @@ uv add 'perplexity-webui-scraper[api]'
 
 ### `perplexity-webui-scraper api`
 
-Starts the server without a configured credential. Each request may supply the raw UUIDv4 cookie pair or compact `wsk_` token through `Authorization`.
+Starts the server without a configured credential. Each request may supply the raw UUIDv4 cookie pair or compact `wsk_` token through `Authorization: Bearer` or `X-API-Key`.
 
 | Option               | Short | Default     | Description                                                               |
 | -------------------- | ----- | ----------- | ------------------------------------------------------------------------- |
@@ -417,6 +417,8 @@ For a server-default upstream cookie pair, configure both `PERPLEXITY_SESSION_TO
 ```bash
 PERPLEXITY_SESSION_TOKEN="__Secure-pplx.session.<account UUID>=YOUR_VALUE" PERPLEXITY_API_KEY="$GATEWAY_KEY" perplexity-webui-scraper api
 ```
+
+With a gateway key configured, clients can pass the gateway key in `Authorization: Bearer` (standard OpenAI SDK behavior) or `X-API-Key` to use the server default. Sending `X-API-Key` with the gateway key plus `Authorization: Bearer` with a caller session token overrides the server default for that request.
 
 ### Container deployment with Podman
 
@@ -444,7 +446,7 @@ podman run --rm -e PERPLEXITY_SESSION_TOKEN=your_token perplexity-mcp
 
 ### Authentication
 
-Use either a raw `__Secure-pplx.session.<UUIDv4>=<JWE>` pair or a compact `wsk_` token in the `Authorization` header. Compact tokens are reversible obfuscation, not encryption or authenticated integrity.
+Use either a raw `__Secure-pplx.session.<UUIDv4>=<JWE>` pair or a compact `wsk_` token in `Authorization: Bearer` (or `X-API-Key`). Compact tokens are reversible obfuscation, not encryption or authenticated integrity.
 
 ```bash
 curl http://localhost:8000/v1/chat/completions \
@@ -453,13 +455,13 @@ curl http://localhost:8000/v1/chat/completions \
   -d '{"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello!"}]}'
 ```
 
-Returns `HTTP 401` if the header is missing or malformed.
+Returns `HTTP 401` if credentials are missing or malformed.
 
 ### Endpoints
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/v1/models` | List registered models |
+| `GET`  | `/v1/models`           | List models available to the authenticated account |
 | `POST` | `/v1/chat/completions` | Chat Completions API (streaming and non-streaming) |
 | `GET` | `/docs` | Interactive Swagger UI |
 | `GET` | `/redoc` | ReDoc API documentation |

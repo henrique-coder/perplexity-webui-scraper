@@ -6,25 +6,25 @@ The Python client exposes response snapshots, cited web sources, and allowlisted
 
 Snapshot yielded by `Conversation.ask(..., stream=True)` during SSE streaming.
 
-| Field               | Type                     | Default | Description                                                         |
-| ------------------- | ------------------------ | ------- | ------------------------------------------------------------------- |
-| `answer`            | `str \| None`            | `None`  | Accumulated answer text formatted according to `citation_mode`.     |
-| `chunks`            | `list[str]`              | `[]`    | Bounded list of incremental text chunks received so far.            |
-| `last_chunk`        | `str \| None`            | `None`  | Most recently received text chunk.                                  |
-| `search_results`    | `list[SearchResultItem]` | `[]`    | Web sources cited in the response so far.                           |
-| `activity`          | `list[ActivityEvent]`    | `[]`    | Allowlisted user-visible search activity events.                    |
-| `conversation_uuid` | `str \| None`            | `None`  | Backend conversation UUID assigned by Perplexity.                   |
-| `raw_data`          | `dict[str, Any]`         | `{}`    | Bounded projection of upstream SSE fields retained for diagnostics. |
+| Field               | Type                         | Default | Description                                                         |
+| ------------------- | ---------------------------- | ------- | ------------------------------------------------------------------- |
+| `answer`            | <code>str &#124; None</code> | `None`  | Accumulated answer text formatted according to `citation_mode`.     |
+| `chunks`            | `list[str]`                  | `[]`    | Bounded list of incremental text chunks received so far.            |
+| `last_chunk`        | <code>str &#124; None</code> | `None`  | Most recently received text chunk.                                  |
+| `search_results`    | `list[SearchResultItem]`     | `[]`    | Web sources cited in the response so far.                           |
+| `activity`          | `list[ActivityEvent]`        | `[]`    | Allowlisted user-visible search activity events.                    |
+| `conversation_uuid` | <code>str &#124; None</code> | `None`  | Backend conversation UUID assigned by Perplexity.                   |
+| `raw_data`          | `dict[str, Any]`             | `{}`    | Bounded projection of upstream SSE fields retained for diagnostics. |
 
 ## `SearchResultItem`
 
 Frozen Pydantic model representing one cited web source in `Conversation.search_results`, `Response.search_results`, or `ActivityEvent.results`.
 
-| Field     | Type          | Default | Description                                         |
-| --------- | ------------- | ------- | --------------------------------------------------- |
-| `url`     | `str \| None` | `None`  | Canonical `http`/`https` source URL.                |
-| `title`   | `str \| None` | `None`  | Source page or document title.                      |
-| `snippet` | `str \| None` | `None`  | Excerpt or summary snippet associated with the URL. |
+| Field     | Type                         | Default | Description                                         |
+| --------- | ---------------------------- | ------- | --------------------------------------------------- |
+| `url`     | <code>str &#124; None</code> | `None`  | Canonical `http`/`https` source URL.                |
+| `title`   | <code>str &#124; None</code> | `None`  | Source page or document title.                      |
+| `snippet` | <code>str &#124; None</code> | `None`  | Excerpt or summary snippet associated with the URL. |
 
 ## `ActivityEvent`
 

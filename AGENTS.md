@@ -24,7 +24,7 @@ The library uses an existing browser session; it does not automate a browser. Ra
 - `api/`: per-request authentication, client/conversation caches, schemas, request conversion helpers, routes, and launcher. `cli/` and `mcp/` are adapters to the core; avoid duplicating business rules there.
 - `scripts/`: CI path classification and generation/validation of derived documentation.
 - `tests/`: offline tests with synthetic fixtures and mocks. Tests requiring network access or an account must be opt-in and must not be required by the normal suite.
-- `docs/`, `README.md`, `CHANGELOG.md`: user documentation and release history. MkDocs builds the Read the Docs site. Catalog tables in `docs/api-reference.md` and `docs/mcp-server.md` are generated.
+- `docs/`, `README.md`, `CHANGELOG.md`: user documentation and release history. Zensical builds the Read the Docs site. Catalog tables in `docs/api-reference.md` and `docs/mcp-server.md` are generated.
 - Repository root: `pyproject.toml` holds Python configuration/dependencies; `uv.lock` is the lockfile; `Justfile` defines standard commands; `Containerfile*` build API/MCP images; `.github/workflows/` validate, secure, and publish releases.
 
 A request flows through an adapter (CLI/API/MCP), typed configuration and model resolution/acknowledgement, `Conversation` account/entitlement checks and optional upload, payload construction and search initialization, `HTTPClient` calls, then SSE parsing/state updates. The result is exposed as Python response objects, API JSON, or API SSE. Preserve this shared flow and its boundaries when refactoring.
@@ -50,7 +50,7 @@ A request flows through an adapter (CLI/API/MCP), typed configuration and model 
 - `is_official` means only that a model appears in the official picker. Operational status requires evidence: `available`, `unknown`, or `unavailable`. Insufficient account tier does not prove unavailability. New/custom identifiers start as `unknown`; `last_tested_at` is set only to the UTC time of a conclusive test.
 - `perplexity/best` selects an internal identifier based on account tier; preserve the behavior in `core/account.py`. Non-available models require `allow_risky_model=True`; do not locally deny those models based on potentially stale tier metadata—the backend makes the final entitlement decision.
 - Tests and generated docs derive IDs, counts, statuses, and timestamps from the loaded registry, never from copied catalog snapshots. Use synthetic registries for isolated behavior and reserve literal IDs for explicit public-compatibility tests.
-- Before changing `models.json`, also inspect `scripts/render_model_docs.py`, catalog tests, and both generated pages. Run `just model-docs` when updating tables and `just model-docs-check` (or `uv run --no-dev scripts/render_model_docs.py --check`) to verify them.
+- Before changing `models.json`, also inspect `scripts/generate_model_docs.py`, catalog tests, and both generated pages. Run `just model-docs` when updating tables and `just model-docs-check` (or `uv run --no-dev python scripts/generate_model_docs.py --check`) to verify them.
 
 ### Data, files, and security
 
@@ -84,7 +84,7 @@ A request flows through an adapter (CLI/API/MCP), typed configuration and model 
 - Before editing `CHANGELOG.md`, inspect its opening sections: `Unreleased` (if present) and the next release section. Add one entry per body of work, consolidate already-represented items, and do not rewrite dated history except to correct an explicitly identified factual error. The current file may have no `Unreleased` section; do not invent one for unrelated work.
 - Keep repository-authored documentation and comments in English, matching the existing project. When discussing the project with Henrique, use the language he used unless he asks otherwise.
 - For user-visible behavior changes, update relevant docs/README and the changelog when appropriate. Do not propagate stale examples across documents.
-- `scripts/render_model_docs.py` owns generated catalog sections. Do not hand-edit generated regions without first correcting the generator or its markers.
+- `scripts/generate_model_docs.py` owns generated catalog sections. Do not hand-edit generated regions without first correcting the generator or its markers.
 - Release builds may temporarily render the README for PyPI; the workflow restores the source. Do not commit generated output such as `site/`, `dist/`, `.venv/`, or `node_modules/`.
 
 ## Python quality and canonical commands
@@ -94,7 +94,7 @@ The supported Python range is `>=3.11, <3.16`; use `uv` and respect the lockfile
 - `just lint` runs Ruff, `ty`, Prettier, Taplo, `zizmor`, and the generated-catalog check.
 - `just format` applies mechanical Python formatting with Ruff, then formats Markdown, YAML, and TOML. Logical block spacing is reviewed and edited manually; do not add custom reformatting scripts or blanket Python rewrites.
 - `just test` runs `pytest`.
-- `uv run --no-dev --group docs mkdocs build --strict` builds docs.
+- `uv run --only-group docs zensical build --clean --strict` builds docs.
 - `uv build` builds the wheel and sdist; use it when packaging/static assets are affected.
 - Fast validation: `uv run --no-sync pytest -q` and `just lint`. For docs/package/build changes, include strict docs build and/or `uv build` as appropriate.
 - Re-run relevant checks after the final edit. Report environmental warnings (such as `zizmor` offline mode) separately from test results.

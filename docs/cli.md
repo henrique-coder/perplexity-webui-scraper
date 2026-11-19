@@ -53,7 +53,7 @@ The prompt masks the input. The compact format is reversible obfuscation, not en
 
 ## API server
 
-Without a server-default credential, clients can provide either a raw `__Secure-pplx.session.<UUIDv4>=<JWE>` pair or a compact `wsk_` token through `Authorization`. Use `perplexity-webui-scraper token convert` to convert or validate a credential offline. The compact format is reversible obfuscation, not encryption or authenticated integrity.
+Without a server-default credential, clients can provide either a raw `__Secure-pplx.session.<UUIDv4>=<JWE>` pair or a compact `wsk_` token through `Authorization: Bearer` (or `X-API-Key`). Use `perplexity-webui-scraper token convert` to convert or validate a credential offline. The compact format is reversible obfuscation, not encryption or authenticated integrity.
 
 ```bash
 perplexity-webui-scraper api
@@ -66,9 +66,9 @@ To configure a server-side upstream token, set both it and a separate gateway AP
 PERPLEXITY_SESSION_TOKEN="__Secure-pplx.session.<account UUID>=YOUR_VALUE" PERPLEXITY_API_KEY="$GATEWAY_KEY" perplexity-webui-scraper api
 ```
 
-Requests may omit `Authorization` and use the server-default token, but must include `X-API-Key`. A client Bearer token overrides the server default; it must still provide the gateway key.
+With a gateway key configured, clients may supply it through `Authorization: Bearer` (standard OpenAI SDK / Hermes behavior) or `X-API-Key` to use the server-default session credential. To override the server default for one request, send the gateway key in `X-API-Key` alongside the caller's session token in `Authorization: Bearer`.
 
-`POST /v1/chat/completions` is the only text-generation endpoint. It supports streaming, validated base64 image data URLs, and account-scoped thread continuation through `perplexity.thread_uuid`. Responses contain final assistant text, not hidden reasoning or client-executable tools. `GET /v1/models` remains available.
+`POST /v1/chat/completions` is the only text-generation endpoint. It supports streaming, validated base64 image data URLs, and account-scoped thread continuation through `perplexity.thread_uuid`. Responses contain final assistant text, not hidden reasoning or client-executable tools. `GET /v1/models` requires authentication and filters models to the caller's cached account tier (10-minute TTL).
 
 ```bash
 curl http://127.0.0.1:8000/v1/chat/completions \
