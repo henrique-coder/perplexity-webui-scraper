@@ -31,11 +31,14 @@ class Perplexity:
         ```
 
     Args:
-        session_token: Full account-scoped UUID cookie pair in `__Secure-pplx.session.<account UUID>=value` format.
+        session_token: Account-scoped credential as either a raw
+            ``__Secure-pplx.session.<UUIDv4>=<JWE>`` cookie pair or a compact
+            ``wsk_`` v1 session token.
         config: Optional client settings (timeouts, retries, logging).
 
     Raises:
-        ValueError: If ``session_token`` is not a UUID-suffixed cookie pair.
+        SessionTokenError: If ``session_token`` is neither a valid
+            UUIDv4 cookie pair nor a valid compact ``wsk_`` token.
     """
 
     __slots__ = ("_http",)
