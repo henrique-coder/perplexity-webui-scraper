@@ -76,9 +76,9 @@ def main(
         (f"http://{host}:{port}/redoc\n", "white"),
         ("🔑  Auth:  ", "bold cyan"),
         (
-            "X-API-Key + server session credential"
+            "X-API-Key or Authorization: Bearer <gateway key> + server session credential"
             if environ.get("PERPLEXITY_SESSION_TOKEN")
-            else "Authorization: Bearer <session credential>",
+            else "Authorization: Bearer <session credential> or X-API-Key",
             "dim white",
         ),
     )

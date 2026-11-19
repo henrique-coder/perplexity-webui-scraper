@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from asyncio import CancelledError, create_task, shield, to_thread
 from functools import partial
-from os import environ
 from time import time
 from typing import TYPE_CHECKING, Annotated, Any
 from uuid import uuid4
@@ -14,7 +13,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from loguru import logger
 from starlette.concurrency import iterate_in_threadpool
 
-from perplexity_webui_scraper.api.auth import ClientPool, resolve_session_token
+from perplexity_webui_scraper.api.auth import client_pool, resolve_upstream_token
 from perplexity_webui_scraper.api.conversation_cache import ConversationCache, _CachedConversation
 from perplexity_webui_scraper.api.helpers import build_conversation_config, build_query_and_files
 from perplexity_webui_scraper.api.schemas.request import ChatCompletionRequest
@@ -71,7 +70,7 @@ class _LockReleasingStreamingResponse(StreamingResponse):
 # Shared clients used by the application routes.
 # Using module-level singletons is acceptable here because the API server is
 # a single-process application; the cache is not shared across processes.
-_client_pool = ClientPool()
+_client_pool = client_pool
 _conversation_cache = ConversationCache()
 
 
@@ -92,7 +91,7 @@ async def _run_sync_safely(function: Any) -> Any:
 async def chat_completions(
     raw_request: Request,
     authorization: Annotated[str | None, Header(alias="Authorization")] = None,
-    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+    x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
 ) -> JSONResponse | StreamingResponse:
     """Handle a chat completion request (streaming and non-streaming).
 
@@ -106,19 +105,9 @@ async def chat_completions(
     except Exception:
         raise HTTPException(status_code=422, detail="Invalid chat completion request body") from None
 
-    token = _resolve_upstream_token(authorization, x_api_key)
+    token = resolve_upstream_token(authorization, x_api_key)
 
     return await _execute_chat_completion(request, token)
-
-
-def _resolve_upstream_token(authorization: str | None, x_api_key: str | None) -> str:
-    """Require gateway auth when configured, then resolve caller/default upstream token."""
-    return resolve_session_token(
-        authorization,
-        x_api_key,
-        environ.get("PERPLEXITY_SESSION_TOKEN"),
-        environ.get("PERPLEXITY_API_KEY"),
-    )
 
 
 async def _execute_chat_completion(

@@ -3,17 +3,23 @@
 from __future__ import annotations
 
 from base64 import b64encode
+from hashlib import sha256
 from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 from fastapi import HTTPException
 from pytest import fixture, mark, raises, warns
 from starlette.testclient import TestClient
 
 from perplexity_webui_scraper._internal.constants import MAX_FILES, SESSION_COOKIE_PREFIX, SESSION_TOKEN_JWE_HEADER
-from perplexity_webui_scraper._internal.exceptions import ModelAccessError, ModelRiskWarning, ModelStatusError
+from perplexity_webui_scraper._internal.exceptions import (
+    AuthenticationError,
+    ModelAccessError,
+    ModelRiskWarning,
+    ModelStatusError,
+)
 from perplexity_webui_scraper.api.app import app
-from perplexity_webui_scraper.api.auth import ClientPool
+from perplexity_webui_scraper.api.auth import AccountTierCache, ClientPool, account_tier_cache, client_pool
 from perplexity_webui_scraper.api.helpers import (
     _JSON_SYSTEM_PROMPT,
     _MASTER_REMINDER_PROMPT,
@@ -32,6 +38,8 @@ from perplexity_webui_scraper.models.registry import MODELS
 if TYPE_CHECKING:
     from collections.abc import Generator
 
+    from perplexity_webui_scraper.core.account import AccountTier
+
 
 _SYNTHETIC_JWE = f"{SESSION_TOKEN_JWE_HEADER}..EBESExQVFhcYGRob.AQIDBAUGBw.MDEyMzQ1Njc4OTo7PD0-Pw"
 TOKEN = f"{SESSION_COOKIE_PREFIX}123e4567-e89b-42d3-a456-426614174000={_SYNTHETIC_JWE}"
@@ -44,6 +52,24 @@ def _mock_conversation() -> MagicMock:
     conversation.answer = "Mock answer"
     conversation.ask = MagicMock()
     return conversation
+
+
+def _mock_profile_client(tier: AccountTier) -> MagicMock:
+    profile = MagicMock()
+    profile.account_tier = tier
+    upstream = MagicMock()
+    upstream.get_account_profile.return_value = profile
+
+    return upstream
+
+
+@fixture(autouse=True)
+def _clear_auth_caches() -> Generator[None, None, None]:
+    account_tier_cache.clear()
+    client_pool._clients.clear()
+    yield
+    account_tier_cache.clear()
+    client_pool._clients.clear()
 
 
 @fixture
@@ -74,15 +100,28 @@ def test_chat_completions_is_the_only_generation_route(client: TestClient) -> No
     assert client.post("/v1/responses", json={}).status_code == 404
 
 
-def test_models_route_remains_available(client: TestClient) -> None:
-    response = client.get("/v1/models")
+def test_models_route_requires_authentication_and_lists_usable_models(client: TestClient) -> None:
+    unauthenticated = client.get("/v1/models")
+
+    assert unauthenticated.status_code == 401
+
+    upstream = _mock_profile_client("max")
+
+    with patch("perplexity_webui_scraper.api.routes.models.client_pool.get_or_create", return_value=upstream):
+        response = client.get("/v1/models", headers={"Authorization": f"Bearer {TOKEN}"})
 
     assert response.status_code == 200
     assert response.json()["object"] == "list"
 
 
 def test_chat_request_body_limit_does_not_affect_model_listing(client: TestClient) -> None:
-    response = client.get("/v1/models", headers={"Content-Length": str(10 * 1024 * 1024 + 1)})
+    upstream = _mock_profile_client("max")
+
+    with patch("perplexity_webui_scraper.api.routes.models.client_pool.get_or_create", return_value=upstream):
+        response = client.get(
+            "/v1/models",
+            headers={"Authorization": f"Bearer {TOKEN}", "Content-Length": str(10 * 1024 * 1024 + 1)},
+        )
 
     assert response.status_code == 200
 
@@ -177,16 +216,74 @@ def test_gateway_key_uses_server_default_credential(client: TestClient) -> None:
 def test_gateway_key_rejects_wrong_key_before_client_creation(client: TestClient) -> None:
     with (
         patch.dict("os.environ", {"PERPLEXITY_SESSION_TOKEN": TOKEN, "PERPLEXITY_API_KEY": "expected"}, clear=True),
-        patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create") as get_client,
+        patch("perplexity_webui_scraper.api.auth.client_pool.get_or_create") as get_client,
     ):
         response = client.post(
             "/v1/chat/completions",
             json={"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello"}]},
             headers={"X-API-Key": "wrong"},
         )
+        bearer_rejected = client.get("/v1/models", headers={"Authorization": "Bearer wrong"})
+        mixed_rejected = client.get(
+            "/v1/models",
+            headers={"X-API-Key": "wrong", "Authorization": "Bearer expected"},
+        )
 
     assert response.status_code == 401
+    assert bearer_rejected.status_code == 401
+    assert mixed_rejected.status_code == 401
     get_client.assert_not_called()
+
+
+def test_gateway_key_accepts_authorization_bearer_for_models_and_completions(client: TestClient) -> None:
+    conversation = _mock_conversation()
+    upstream = _mock_profile_client("pro")
+    upstream.create_conversation.return_value = conversation
+
+    with (
+        patch.dict("os.environ", {"PERPLEXITY_SESSION_TOKEN": TOKEN, "PERPLEXITY_API_KEY": "gateway-key"}, clear=True),
+        patch("perplexity_webui_scraper.api.auth.client_pool.get_or_create", return_value=upstream) as get_client,
+    ):
+        models_response = client.get("/v1/models", headers={"Authorization": "Bearer gateway-key"})
+        chat_response = client.post(
+            "/v1/chat/completions",
+            json={"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello"}]},
+            headers={"Authorization": "bearer gateway-key"},
+        )
+
+    assert models_response.status_code == 200
+    assert chat_response.status_code == 200
+    assert get_client.call_args_list == [call(TOKEN), call(TOKEN)]
+    upstream.get_account_profile.assert_called_once()
+    upstream.create_conversation.assert_called_once()
+
+
+def test_direct_auth_accepts_case_insensitive_bearer_compact_and_x_api_key(client: TestClient) -> None:
+    compact = pack_session_token(TOKEN)
+    upstream = _mock_profile_client("free")
+    conversation = _mock_conversation()
+    upstream.create_conversation.return_value = conversation
+
+    with (
+        patch.dict("os.environ", {}, clear=True),
+        patch("perplexity_webui_scraper.api.auth.client_pool.get_or_create", return_value=upstream),
+    ):
+        lower_bearer = client.get("/v1/models", headers={"Authorization": f"bearer   {compact} "})
+        x_api_models = client.get("/v1/models", headers={"X-API-Key": f" {compact} "})
+        x_api_chat = client.post(
+            "/v1/chat/completions",
+            json={"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello"}]},
+            headers={"X-API-Key": TOKEN},
+        )
+        invalid_x_api = client.get("/v1/models", headers={"X-API-Key": "private-invalid-x-api-key"})
+
+    assert lower_bearer.status_code == 200
+    assert x_api_models.status_code == 200
+    assert x_api_chat.status_code == 200
+    upstream.get_account_profile.assert_called_once()
+    upstream.create_conversation.assert_called_once()
+    assert invalid_x_api.status_code == 401
+    assert "private-invalid-x-api-key" not in invalid_x_api.text
 
 
 def test_caller_credential_overrides_server_default(client: TestClient) -> None:
@@ -335,18 +432,27 @@ def test_model_access_errors_use_safe_openai_error_shape(client: TestClient) -> 
 
 
 def test_api_does_not_allow_cross_origin_requests(client: TestClient) -> None:
-    response = client.get("/v1/models", headers={"Origin": "https://attacker.example"})
+    upstream = _mock_profile_client("free")
+
+    with patch("perplexity_webui_scraper.api.routes.models.client_pool.get_or_create", return_value=upstream):
+        response = client.get(
+            "/v1/models",
+            headers={"Authorization": f"Bearer {TOKEN}", "Origin": "https://attacker.example"},
+        )
 
     assert response.status_code == 200
     assert "access-control-allow-origin" not in response.headers
 
 
 def test_model_catalog_exposes_registry_metadata(client: TestClient) -> None:
-    response = client.get("/v1/models")
+    upstream = _mock_profile_client("max")
+
+    with patch("perplexity_webui_scraper.api.routes.models.client_pool.get_or_create", return_value=upstream):
+        response = client.get("/v1/models", headers={"Authorization": f"Bearer {TOKEN}"})
 
     assert response.status_code == 200
     data = response.json()["data"]
-    expected = {model.id: model for model in MODELS.list_all()}
+    expected = {model.id: model for model in MODELS.list_all() if model.status != "unavailable"}
     assert {item["id"] for item in data} == set(expected)
 
     for item in data:
@@ -358,6 +464,92 @@ def test_model_catalog_exposes_registry_metadata(client: TestClient) -> None:
         assert metadata["is_official"] == model.is_official
         assert metadata["status"] == model.status
         assert metadata["last_tested_at"] == expected_tested_at
+
+
+def test_models_route_filters_models_by_account_tier(client: TestClient) -> None:
+    unknown_min_tier_ids = {
+        model.id for model in MODELS.list_all() if model.status != "unavailable" and model.min_tier is None
+    }
+    assert unknown_min_tier_ids
+
+    free_ids = {model.id for model in MODELS.list_all() if model.status != "unavailable" and model.min_tier == "free"}
+    tier_expectations: dict[AccountTier, set[str]] = {
+        "unknown": free_ids,
+        "free": free_ids,
+        "pro": {
+            model.id
+            for model in MODELS.list_all()
+            if model.status != "unavailable" and (model.min_tier in {"free", "pro"} or model.min_tier is None)
+        },
+        "max": {model.id for model in MODELS.list_all() if model.status != "unavailable"},
+    }
+
+    for tier, expected_ids in tier_expectations.items():
+        account_tier_cache.clear()
+        upstream = _mock_profile_client(tier)
+
+        with patch("perplexity_webui_scraper.api.routes.models.client_pool.get_or_create", return_value=upstream):
+            response = client.get("/v1/models", headers={"Authorization": f"Bearer {TOKEN}"})
+
+        assert response.status_code == 200
+        returned_ids = {item["id"] for item in response.json()["data"]}
+        assert returned_ids == expected_ids
+
+        if tier in {"unknown", "free"}:
+            assert returned_ids.isdisjoint(unknown_min_tier_ids)
+        else:
+            assert unknown_min_tier_ids <= returned_ids
+
+
+def test_models_route_caches_account_tier_and_supports_gateway_auth(client: TestClient) -> None:
+    upstream = _mock_profile_client("pro")
+
+    with (
+        patch.dict("os.environ", {"PERPLEXITY_SESSION_TOKEN": TOKEN, "PERPLEXITY_API_KEY": "gateway-key"}, clear=True),
+        patch("perplexity_webui_scraper.api.routes.models.client_pool.get_or_create", return_value=upstream),
+    ):
+        first = client.get("/v1/models", headers={"X-API-Key": "gateway-key"})
+        second = client.get("/v1/models", headers={"X-API-Key": "gateway-key"})
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    upstream.get_account_profile.assert_called_once()
+
+    account_tier_cache.clear()
+    upstream.get_account_profile.side_effect = AuthenticationError("expired")
+
+    with (
+        patch.dict("os.environ", {"PERPLEXITY_SESSION_TOKEN": TOKEN, "PERPLEXITY_API_KEY": "gateway-key"}, clear=True),
+        patch("perplexity_webui_scraper.api.routes.models.client_pool.get_or_create", return_value=upstream),
+    ):
+        rejected = client.get("/v1/models", headers={"X-API-Key": "gateway-key"})
+
+    assert rejected.status_code == 401
+    assert account_tier_cache.get(TOKEN) is None
+
+
+def test_account_tier_cache_hashes_tokens_expires_entries_and_caps_capacity() -> None:
+    with raises(ValueError, match="at least one"):
+        AccountTierCache(max_entries=0)
+
+    with raises(ValueError, match="greater than zero"):
+        AccountTierCache(ttl_seconds=0)
+
+    cache = AccountTierCache(max_entries=1, ttl_seconds=600)
+    compact = pack_session_token(TOKEN)
+    cache.set(TOKEN, "pro")
+
+    assert TOKEN not in cache._entries
+    assert sha256(TOKEN.encode("utf-8")).hexdigest() in cache._entries
+    assert cache.get(compact) == "pro"
+
+    cache.set(TOKEN_SECOND, "max")
+    assert cache.get(TOKEN) is None
+    assert cache.get(TOKEN_SECOND) == "max"
+
+    key = cache._key(TOKEN_SECOND)
+    cache._entries[key] = ("max", 0.0)
+    assert cache.get(TOKEN_SECOND) is None
 
 
 def test_client_pool_evicts_oldest_client_at_capacity() -> None:
