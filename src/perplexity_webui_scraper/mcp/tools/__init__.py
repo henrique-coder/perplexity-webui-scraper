@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable  # noqa: TC003
-from typing import Any
+from typing import Any, Literal
 
 from perplexity_webui_scraper._internal.exceptions import ModelStatusError
-from perplexity_webui_scraper._internal.types import SearchFocus, SourceFocus, TimeRange  # noqa: TC001
 from perplexity_webui_scraper.core.client import Perplexity  # noqa: TC001
 from perplexity_webui_scraper.mcp.tools.ask import _ask
 from perplexity_webui_scraper.models.registry import MODELS
@@ -53,14 +52,14 @@ def _register_model_tool(
     @mcp.tool(name=tool_name, description=model_description)
     def _tool(
         query: str,
-        search_focus: SearchFocus = "web",
-        source_focus: SourceFocus = "web",
-        time_range: TimeRange = "all",
+        search_focus: Literal["web", "writing"] = "web",
+        source_focus: Literal["web", "academic", "social", "finance", "all"] = "web",
+        time_range: Literal["all", "day", "week", "month", "year"] = "all",
         language: str = "en-US",
         latitude: float | None = None,
         longitude: float | None = None,
         allow_risky_model: bool = False,
-        research_interaction: str = "auto",
+        research_interaction: Literal["auto", "manual"] = "auto",
     ) -> dict[str, Any]:
         """Search Perplexity AI and return the answer with citations.
 
@@ -72,8 +71,8 @@ def _register_model_tool(
             time_range: Recency filter: ``"all"``, ``"day"``, ``"week"``,
                 ``"month"``, or ``"year"``.
             language: BCP-47 response language tag (e.g. ``"en-US"``).
-            latitude: Optional latitude for location-aware results.
-            longitude: Optional longitude for location-aware results.
+            latitude: Latitude in degrees from -90 through 90. Set it together with ``longitude``.
+            longitude: Longitude in degrees from -180 through 180. Set it together with ``latitude``.
             allow_risky_model: Acknowledge any non-available model status.
             research_interaction: Deep Research clarification handling: ``"auto"`` or ``"manual"``.
 
@@ -109,14 +108,14 @@ def _register_custom_tool(mcp: Any, get_client: Callable[[], Perplexity]) -> Non
         model: str,
         query: str,
         model_mode: ModelMode = "copilot",
-        search_focus: SearchFocus = "web",
-        source_focus: SourceFocus = "web",
-        time_range: TimeRange = "all",
+        search_focus: Literal["web", "writing"] = "web",
+        source_focus: Literal["web", "academic", "social", "finance", "all"] = "web",
+        time_range: Literal["all", "day", "week", "month", "year"] = "all",
         language: str = "en-US",
         latitude: float | None = None,
         longitude: float | None = None,
         allow_risky_model: bool = False,
-        research_interaction: str = "auto",
+        research_interaction: Literal["auto", "manual"] = "auto",
     ) -> dict[str, Any]:
         """Query a custom internal identifier after explicit risk acknowledgement."""
         model_id = model if model.startswith("custom:") else f"custom:{model}"
