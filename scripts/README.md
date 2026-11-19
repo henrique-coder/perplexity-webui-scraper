@@ -8,21 +8,21 @@ uv sync --no-dev --group scripts
 
 ## Catalog and documentation scripts
 
-| Script                        | Purpose                                                                         |
-| ----------------------------- | ------------------------------------------------------------------------------- |
-| `sync_model_catalog.py`       | Synchronize `models.json` from `/rest/models/config/v2` and DrissionPage WebUI. |
-| `generate_model_docs.py`      | Regenerate or verify generated model catalog tables in `docs/`.                 |
-| `probe_model_availability.py` | Run short live availability pings and write `reports/model-smoke-results.json`. |
+| Script                        | Purpose                                                                              |
+| ----------------------------- | ------------------------------------------------------------------------------------ |
+| `sync_model_catalog.py`       | Synchronize `models.json` from `/rest/models/config/v2` and `pydoll` (Py 3.11–3.14). |
+| `generate_model_docs.py`      | Regenerate or verify generated model catalog tables in `docs/`.                      |
+| `probe_model_availability.py` | Run short live availability pings and write `reports/model-smoke-results.json`.      |
 
 ```bash
-uv run --no-sync python scripts/sync_model_catalog.py
-uv run --no-sync python scripts/sync_model_catalog.py --check
-uv run --no-sync python scripts/generate_model_docs.py
-uv run --no-sync python scripts/generate_model_docs.py --check
+uv run --isolated --python 3.11 --no-dev --group scripts python scripts/sync_model_catalog.py
+uv run --isolated --python 3.11 --no-dev --group scripts python scripts/sync_model_catalog.py --check
+uv run --no-dev python scripts/generate_model_docs.py
+uv run --no-dev python scripts/generate_model_docs.py --check
 uv run --no-sync python scripts/probe_model_availability.py --workers 4
 ```
 
-`sync_model_catalog.py` and `probe_model_availability.py` read `PERPLEXITY_SESSION_TOKEN` from `.env` or the environment without printing or saving credentials. `sync_model_catalog.py` drives an already installed Chrome, Chromium, Edge, or Brave binary through DrissionPage without downloading browser runtimes.
+`sync_model_catalog.py` and `probe_model_availability.py` read `PERPLEXITY_SESSION_TOKEN` from `.env` or the environment without printing or saving credentials. `sync_model_catalog.py` uses `pydoll-python` (`>=3.11, <3.15`) to inspect Perplexity's model picker.
 
 ## CI and release scripts (stdlib-only)
 

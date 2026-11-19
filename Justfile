@@ -28,6 +28,10 @@ model-docs-check:
 
 test:
     uv run --no-dev --extra all --group tests --group scripts pytest
+    uv run --isolated --python 3.11 --no-dev --extra all --group tests --group scripts pytest tests/test_sync_model_catalog.py
+
+sync-models:
+    uv run --isolated --python 3.11 --no-dev --group scripts python scripts/sync_model_catalog.py
 
 docs:
     uv run --only-group docs zensical serve -a localhost:4000

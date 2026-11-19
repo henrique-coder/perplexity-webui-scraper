@@ -96,7 +96,7 @@ lint = [
     "ty>=0.0.60",
 ]
 scripts = [
-    "DrissionPage>=4.1.0",
+    "pydoll-python>=3.0.0; python_version >= '3.11' and python_version < '3.15'",
     "python-dotenv>=1.0.0",
 ]
 tests = [
@@ -206,3 +206,9 @@ missing-attribute = "error"
 import-not-found = "error"
 unused-ignore-comment = "warn"
 unsupported-operator = "error"
+
+[[tool.ty.overrides]]
+include = ["scripts/sync_model_catalog.py"]
+
+[tool.ty.overrides.rules]
+import-not-found = "ignore"

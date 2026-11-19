@@ -11,15 +11,12 @@ from copy import deepcopy
 from os import environ
 from pathlib import Path
 from re import IGNORECASE, sub
-from shutil import which
 from subprocess import run
-from sys import executable, platform
+from sys import executable, version_info
 from tempfile import NamedTemporaryFile
-from time import monotonic, sleep
 from typing import TYPE_CHECKING, Annotated, Any, Final
 
 from dotenv import dotenv_values
-from DrissionPage import ChromiumOptions, ChromiumPage
 from orjson import OPT_INDENT_2, JSONDecodeError, dumps, loads
 from pydantic import BaseModel, ConfigDict, Field
 from typer import Exit, Option, Typer, echo
@@ -33,7 +30,13 @@ from perplexity_webui_scraper._internal.constants import (
 )
 from perplexity_webui_scraper.auth.cookies import parse_session_credential
 from perplexity_webui_scraper.http.client import HTTPClient
-from perplexity_webui_scraper.models.types import Model, ModelMode, ModelTier
+from perplexity_webui_scraper.models.types import Model, ModelMinTier, ModelMode
+
+
+if version_info < (3, 15):
+    from pydoll.playwright.sync_api import sync_playwright
+else:
+    sync_playwright = None
 
 
 if TYPE_CHECKING:
@@ -46,71 +49,16 @@ DOC_GENERATOR: Final[Path] = ROOT / "scripts/generate_model_docs.py"
 MODEL_MODES: Final[frozenset[str]] = frozenset({"search", "research"})
 MODEL_ENTRY_KEYS: Final[frozenset[str]] = frozenset(Model.model_fields)
 
-_BROWSER_COMMANDS: Final[tuple[str, ...]] = (
-    "google-chrome",
-    "google-chrome-stable",
-    "chromium",
-    "chromium-browser",
-    "brave-browser",
-    "microsoft-edge",
-)
-_KNOWN_BROWSER_PATHS: Final[tuple[Path, ...]] = (
-    Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
-    Path("/Applications/Chromium.app/Contents/MacOS/Chromium"),
-    Path("/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"),
-    Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe"),
-    Path(r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"),
-    Path(r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"),
-)
-
-_FIND_AND_CLICK_MODEL_BUTTON_JS: Final[str] = """
-() => {
-    const isVisible = (el) => {
-        const style = window.getComputedStyle(el);
-        return (
-            style.display !== 'none'
+_WAIT_VISIBLE_MENU_JS: Final[str] = """
+() => Array.from(document.querySelectorAll('[role="menuitemradio"], [role="menuitem"]')).some(
+    (element) => {
+        const style = window.getComputedStyle(element);
+        return style.display !== 'none'
             && style.visibility !== 'hidden'
             && style.visibility !== 'collapse'
-            && el.getClientRects().length > 0
-        );
-    };
-    const buttons = Array.from(document.querySelectorAll('button, [role="button"]'));
-    const target = buttons.find((el) => {
-        if (!isVisible(el)) return false;
-        const label = (el.getAttribute('aria-label') || el.textContent || '').trim();
-        return label === 'Model';
-    });
-    if (!target) return false;
-    target.click();
-    return true;
-}
-""".strip()
-
-_COLLECT_PICKER_MODELS_JS: Final[str] = """
-() => {
-    const isVisible = (el) => {
-        const style = window.getComputedStyle(el);
-        return (
-            style.display !== 'none'
-            && style.visibility !== 'hidden'
-            && style.visibility !== 'collapse'
-            && el.getClientRects().length > 0
-        );
-    };
-    const items = Array.from(document.querySelectorAll('[role="menuitemradio"], [role="menuitem"]'))
-        .filter(isVisible);
-    if (!items.length) return [];
-    const names = [];
-    for (const item of items) {
-        for (const span of item.querySelectorAll('span[translate="no"]')) {
-            const text = (span.textContent || '').trim();
-            if (text && !names.includes(text)) {
-                names.push(text);
-            }
-        }
+            && element.getClientRects().length > 0;
     }
-    return names;
-}
+)
 """.strip()
 
 
@@ -159,72 +107,6 @@ class ResolvedFamily(BaseModel):
 
     model: EndpointModel
     variants: list[FamilyVariant]
-
-
-def _resolve_browser_path(browser_path: Path | None = None) -> Path | None:
-    """Locate an existing Chromium-compatible browser executable when explicitly discoverable."""
-    if browser_path is not None:
-        resolved = browser_path.expanduser()
-
-        if not resolved.is_file():
-            raise FileNotFoundError(f"Browser executable not found: {resolved}")
-
-        return resolved
-
-    for env_var in ("CHROME_PATH", "CHROMIUM_PATH"):
-        configured = environ.get(env_var, "").strip()
-
-        if configured:
-            candidate = Path(configured).expanduser()
-
-            if candidate.is_file():
-                return candidate
-
-            raise FileNotFoundError(f"{env_var} points to a missing executable: {candidate}")
-
-    for command in _BROWSER_COMMANDS:
-        found = which(command)
-
-        if found:
-            return Path(found)
-
-    for candidate in _KNOWN_BROWSER_PATHS:
-        if candidate.is_file():
-            return candidate
-
-    return None
-
-
-def _build_chromium_options(browser_path: Path | None = None) -> ChromiumOptions:
-    """Configure an isolated headless Chromium session for DrissionPage."""
-    options = ChromiumOptions().auto_port()
-    options.headless(True)
-    options.set_argument("--disable-blink-features=AutomationControlled")
-
-    if platform.startswith("linux"):
-        options.set_argument("--no-sandbox")
-
-    resolved_browser = _resolve_browser_path(browser_path)
-
-    if resolved_browser is not None:
-        options.set_browser_path(str(resolved_browser))
-
-    return options
-
-
-def _poll_until(evaluate_fn: Any, *, timeout: float, interval: float = 0.2) -> Any:
-    """Poll a page-evaluation callback until it returns a truthy result."""
-    deadline = monotonic() + timeout
-
-    while monotonic() < deadline:
-        value = evaluate_fn()
-
-        if value:
-            return value
-
-        sleep(interval)
-
-    raise TimeoutError("Timed out waiting for WebUI model picker state")
 
 
 def _normalize(value: str) -> str:
@@ -346,46 +228,71 @@ def _atomic_write(path: Path, value: object) -> None:
     temporary.replace(path)
 
 
-def _fetch_webui_models(token: str, *, browser_path: Path | None = None) -> list[str]:
-    """Read visible model family names from the authenticated WebUI picker with DrissionPage."""
+def _fetch_webui_models(token: str) -> list[str]:
+    """Read visible model family names from the authenticated picker using pydoll."""
+    if sync_playwright is None:
+        raise RuntimeError(
+            "scripts/sync_model_catalog.py requires Python >=3.11, <3.15 "
+            "(run with: uv run --isolated --python 3.14 --no-dev --group scripts python scripts/sync_model_catalog.py)"
+        )
+
     credential = parse_session_credential(token)
     account_uuid = credential.name.removeprefix(SESSION_COOKIE_PREFIX)
-    options = _build_chromium_options(browser_path)
-    page = ChromiumPage(addr_or_opts=options)
+    names: list[str] = []
 
-    try:
-        page.run_cdp("Network.enable")
-        page.run_cdp(
-            "Network.setCookie",
-            name=credential.name,
-            value=credential.value,
-            url=f"{API_BASE_URL}/",
-            secure=True,
-            httpOnly=True,
-            sameSite="Lax",
-        )
-        page.run_cdp(
-            "Network.setCookie",
-            name="__Host-pplx-last-active-account",
-            value=account_uuid,
-            url=f"{API_BASE_URL}/",
-            secure=True,
-            httpOnly=False,
-            sameSite="Lax",
-        )
-        page.get(f"{API_BASE_URL}/")
+    def collect(page: Any) -> None:
+        page.wait_for_load_state("domcontentloaded")
+        button = page.get_by_role("button", name="Model", exact=True)
+        button.wait_for(state="visible", timeout=15_000)
+        button.click()
 
-        _poll_until(lambda: page.run_js(f"return ({_FIND_AND_CLICK_MODEL_BUTTON_JS})();"), timeout=15.0)
-        names = _poll_until(lambda: page.run_js(f"return ({_COLLECT_PICKER_MODELS_JS})();"), timeout=10.0)
-    except Exception as error:
-        raise RuntimeError("Failed to read the authenticated Perplexity model picker") from error
-    finally:
-        page.quit(del_data=True)
+        items = page.locator('[role="menuitemradio"], [role="menuitem"]')
+        # Pydoll's Playwright compatibility layer omits CSS :visible pseudo-class support.
+        page.wait_for_function(_WAIT_VISIBLE_MENU_JS, timeout=10_000)
 
-    if not isinstance(names, list) or not names:
+        visible_items = [item for item in items.all() if item.is_visible()]
+        visible_names = [
+            name for item in visible_items for name in item.locator('span[translate="no"]').all_text_contents()
+        ]
+        names.extend(dict.fromkeys(name.strip() for name in visible_names if name.strip()))
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+
+        try:
+            context = browser.new_context()
+            context.add_cookies(
+                [
+                    {
+                        "name": credential.name,
+                        "value": credential.value,
+                        "url": f"{API_BASE_URL}/",
+                        "secure": True,
+                        "httpOnly": True,
+                        "sameSite": "Lax",
+                    },
+                    {
+                        "name": "__Host-pplx-last-active-account",
+                        "value": account_uuid,
+                        "url": f"{API_BASE_URL}/",
+                        "secure": True,
+                        "httpOnly": False,
+                        "sameSite": "Lax",
+                    },
+                ]
+            )
+            page = context.new_page()
+            page.goto(f"{API_BASE_URL}/", wait_until="domcontentloaded")
+            collect(page)
+        except Exception as error:
+            raise RuntimeError("Failed to read the authenticated Perplexity model picker") from error
+        finally:
+            browser.close()
+
+    if not names:
         raise RuntimeError("The Perplexity model picker returned no model names")
 
-    return [str(name).strip() for name in names if str(name).strip()]
+    return names
 
 
 def _fetch_endpoint(token: str) -> EndpointCatalog:
@@ -525,7 +432,7 @@ def _new_entry(
 
     description = detail.description or f"{name} model."
     raw_tier = family.subscription_tier if family else None
-    min_tier: ModelTier | None = raw_tier if raw_tier in ("free", "pro", "max") else None
+    min_tier: ModelMinTier = raw_tier if raw_tier in ("free", "pro", "max") else "unknown"
     mode: ModelMode = "research" if detail.mode == "research" else "copilot"
 
     entry: dict[str, Any] = {
@@ -646,15 +553,11 @@ def main(
         bool,
         Option("--check", help="Exit 1 when generated metadata differs from models.json."),
     ] = False,
-    browser: Annotated[
-        Path | None,
-        Option("--browser", help="Optional path to a Chromium-compatible browser executable."),
-    ] = None,
 ) -> None:
     """Synchronize catalog metadata and optionally write files."""
     token = _read_session_token(ROOT / ".env")
     current = _read_models()
-    webui_names = _fetch_webui_models(token, browser_path=browser)
+    webui_names = _fetch_webui_models(token)
     endpoint = _fetch_endpoint(token)
     candidate = _synchronize(current, endpoint, webui_names)
 
