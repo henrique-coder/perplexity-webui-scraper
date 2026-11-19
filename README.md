@@ -71,10 +71,10 @@ The token command accepts an optional `--email` argument and prompts when omitte
 To convert an existing raw cookie or validate an existing compact credential without network access, run:
 
 ```bash
-uv run perplexity-webui-scraper token --convert
+uv run perplexity-webui-scraper token convert
 ```
 
-The CLI masks the pasted input and prints the canonical compact token. Conversion does not encrypt the cookie or improve its security.
+Use `token deconvert` to restore a compact `wsk_` token to its raw session-cookie pair. The CLI masks pasted input and never accepts credentials as positional arguments. Conversion does not encrypt the cookie or improve its security.
 
 ### 2. Basic usage
 
@@ -136,18 +136,19 @@ for model in MODELS.list_all():
 
 Use `-h` or `--help` with the root command or any subcommand. The token command accepts `-e` or `--email`.
 
-| Command                                           | Extra   | Description                                                                                          |
-| ------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------- |
-| `perplexity-webui-scraper token -e/--email EMAIL` | `token` | Authenticate and print a compact `wsk_` account session credential                                   |
-| `perplexity-webui-scraper token -c/--convert`     | `token` | Open the masked offline converter; `token convert` and `token deconvert` provide explicit operations |
-| `perplexity-webui-scraper api`                    | `api`   | Start the OpenAI-compatible REST API server                                                          |
-| `perplexity-webui-scraper mcp`                    | `mcp`   | Start the MCP server                                                                                 |
+| Command                                           | Extra   | Description                                                                     |
+| ------------------------------------------------- | ------- | ------------------------------------------------------------------------------- |
+| `perplexity-webui-scraper token -e/--email EMAIL` | `token` | Authenticate and print a compact `wsk_` account session credential              |
+| `perplexity-webui-scraper token convert`          | `token` | Convert a raw cookie or validate a compact credential offline with masked input |
+| `perplexity-webui-scraper token deconvert`        | `token` | Restore a compact `wsk_` credential to its raw session-cookie pair              |
+| `perplexity-webui-scraper api`                    | `api`   | Start the OpenAI-compatible REST API server                                     |
+| `perplexity-webui-scraper mcp`                    | `mcp`   | Start the MCP server                                                            |
 
 ## API
 
 ### Chat Completions API
 
-`POST /v1/chat/completions` is the only text-generation endpoint. It supports streaming, validated base64 image Data URLs, and account-scoped thread continuation with `perplexity.thread_uuid`. Responses contain final assistant text. `GET /v1/models` lists registered model identifiers. The API does not expose hidden chain-of-thought, execute client tools, or fetch remote image URLs.
+`POST /v1/chat/completions` is the only text-generation endpoint. It is a read-only question-answering mirror of Perplexity's WebUI and automatically prepends a master system instruction rejecting autonomous agent loops and tool execution. It supports streaming, validated base64 image Data URLs, and account-scoped thread continuation with `perplexity.thread_uuid`. Responses contain final assistant text. `GET /v1/models` lists registered model identifiers. The API does not expose hidden chain-of-thought, execute client tools, or fetch remote image URLs.
 
 ```bash
 # Start with clients supplying the Perplexity account session-cookie pair per request
@@ -197,12 +198,14 @@ podman run --rm -it -e PERPLEXITY_SESSION_TOKEN=your_token perplexity-mcp
 
 ### CLI options
 
-| Option        | Short | Default     | Description                           |
-| ------------- | ----- | ----------- | ------------------------------------- |
-| `--host`      | `-H`  | `127.0.0.1` | Bind address                          |
-| `--port`      | `-p`  | `8000`      | Port to listen on                     |
-| `--reload`    |       | `False`     | Enable auto-reload (development only) |
-| `--log-level` |       | `info`      | Uvicorn log level                     |
+| Option            | Short | Default     | Description                                                            |
+| ----------------- | ----- | ----------- | ---------------------------------------------------------------------- |
+| `--host`          | `-H`  | `127.0.0.1` | Bind address                                                           |
+| `--port`          | `-p`  | `8000`      | Port to listen on                                                      |
+| `--reload`        |       | `False`     | Enable auto-reload (development only)                                  |
+| `--log-level`     |       | `info`      | Uvicorn log level                                                      |
+| `--session-token` |       | unset       | Optional server-default Perplexity token (`PERPLEXITY_SESSION_TOKEN`)  |
+| `--api-key`       |       | unset       | Gateway key required when a server token is set (`PERPLEXITY_API_KEY`) |
 
 ### Authentication
 

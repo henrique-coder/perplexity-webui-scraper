@@ -9,11 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Offline token conversion:** Add `token convert` and `token deconvert` for offline cookie conversion and compact-token validation. Mask interactive input; require explicit consent before copying results.
+- **Offline token conversion:** Add `token convert` and `token deconvert` subcommands for offline cookie conversion and compact-token validation. Mask interactive input; require explicit consent before copying results.
 
 ### Changed
 
-- **API:** Remove `POST /v1/responses` for the 2.0.0 release; `POST /v1/chat/completions` remains the only text-generation endpoint. Keep `GET /v1/models`.
+- **API:** Remove `POST /v1/responses` for the 2.0.0 release; `POST /v1/chat/completions` remains the only text-generation endpoint and accepts `developer` system messages. Automatically prepend a master instruction enforcing read-only Perplexity WebUI Q&A behavior so agentic harnesses do not trigger tool-call roleplay. Keep `GET /v1/models`.
+- **Exception attributes:** Remove deprecated `HTTPError.url`, `HTTPError.response_body`, and `ResponseParsingError.raw_data` compatibility attributes.
 - **API contract:** Keep the Python client, MCP interface, shared conversation input validation, and `GET /v1/models`.
 - **Account-scoped authentication:** Accept raw UUIDv4 `__Secure-pplx.session` cookie pairs and compact `wsk_` v1 tokens across client, HTTP, API, and MCP entry points. Email authentication emits compact tokens and includes account context in observed WebUI requests.
 - **Python and API configuration:** Remove `Coordinates` and `CoordinatesInput` in favor of paired `latitude` and `longitude` fields in `ConversationConfig` and `PerplexityExtensions`, validate strings at Pydantic boundaries, and export `FileInput` as one focused typing alias.
