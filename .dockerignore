@@ -15,6 +15,7 @@ node_modules/
 # Directories: generated output
 build/
 dist/
+reports/
 site/
 
 # File extensions and generated suffixes

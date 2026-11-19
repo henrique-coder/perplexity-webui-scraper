@@ -1,6 +1,7 @@
 # Directories: generated output
 .cache/
 .superpowers/
+reports/
 site/
 
 # Named generated files

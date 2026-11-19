@@ -17,6 +17,7 @@ node_modules/
 .superpowers/
 build/
 dist/
+reports/
 site/
 
 # Named files and file patterns
