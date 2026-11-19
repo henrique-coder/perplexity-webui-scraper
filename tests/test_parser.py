@@ -212,7 +212,7 @@ def test_process_sse_data_handles_lowercase_failed_status() -> None:
     with raises(ResponseParsingError, match="Query processing failed") as exc_info:
         process_sse_data({"status": "failed", "text": "Error in processing query."}, [], "clean")
 
-    assert exc_info.value.raw_data is None
+    assert not hasattr(exc_info.value, "raw_data")
 
 
 def test_process_sse_data_does_not_expose_upstream_error_text() -> None:
@@ -222,7 +222,7 @@ def test_process_sse_data_does_not_expose_upstream_error_text() -> None:
         process_sse_data({"status": "failed", "text": sensitive_text}, [], "clean")
 
     assert sensitive_text not in str(exc_info.value)
-    assert exc_info.value.raw_data is None
+    assert not hasattr(exc_info.value, "raw_data")
 
 
 def test_process_sse_data_handles_schematized_workflow_and_diffs() -> None:

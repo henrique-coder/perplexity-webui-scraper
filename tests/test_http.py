@@ -375,7 +375,8 @@ def test_http_client_sanitizes_upstream_http_errors() -> None:
     error = exc_info.value
     assert sensitive_detail not in str(error)
     assert sensitive_detail not in repr(error)
-    assert error.response_body is None
+    assert not hasattr(error, "url")
+    assert not hasattr(error, "response_body")
     assert error.__cause__ is None
     assert error.__context__ is None
 
@@ -386,7 +387,7 @@ def test_http_client_sanitizes_error_logged_by_public_logging_helper() -> None:
     handler_id = logger.add(output.append, format="{message}", level="ERROR")
 
     try:
-        log_error(HTTPError(sensitive_detail, status_code=500, response_body=sensitive_detail))
+        log_error(HTTPError(sensitive_detail, status_code=500))
     finally:
         logger.remove(handler_id)
 

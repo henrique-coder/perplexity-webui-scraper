@@ -209,7 +209,7 @@ def test_token_deconvert_accepts_quoted_compact_token(monkeypatch: Any) -> None:
     assert _RAW_TOKEN in result.output
 
 
-def test_token_convert_help_and_shortcut_work_without_loading_authentication(monkeypatch: Any) -> None:
+def test_token_convert_help_and_removed_shortcut_flag(monkeypatch: Any) -> None:
     monkeypatch.setattr("perplexity_webui_scraper.cli.__main__._load_command", Mock(side_effect=AssertionError))
     result = runner.invoke(cli, ["token", "convert", "--help"])
 
@@ -217,21 +217,17 @@ def test_token_convert_help_and_shortcut_work_without_loading_authentication(mon
     assert "Restore a compact wsk_ token" not in result.output
     assert "Usage:" in result.output
 
-    conversion = Mock()
-    with (
-        patch("perplexity_webui_scraper.cli.__main__._load_token_transform", return_value=conversion),
-    ):
-        shortcut = runner.invoke(cli, ["token", "-c"])
+    for removed_flag in ("-c", "--convert"):
+        rejected = runner.invoke(cli, ["token", removed_flag])
 
-    assert shortcut.exit_code == 0, shortcut.output
-    conversion.assert_called_once_with(None, deconvert=False, interactive=True)
+        assert rejected.exit_code != 0
+        assert "No such option" in rejected.output
 
-    validation = Mock()
-    with patch("perplexity_webui_scraper.cli.__main__._load_token_transform", return_value=validation):
-        explicit_conversion = runner.invoke(cli, ["token", "--convert"])
+    for operation in ("convert", "deconvert"):
+        combined = runner.invoke(cli, ["token", "--email", "user@example.test", operation])
 
-    assert explicit_conversion.exit_code == 0, explicit_conversion.output
-    validation.assert_called_once_with(None, deconvert=False, interactive=True)
+        assert combined.exit_code == 2
+        assert "--email option cannot be combined" in combined.output
 
 
 def test_token_otp_prompt_repeats_locally_before_returning_a_valid_code() -> None:
@@ -307,7 +303,7 @@ def test_token_completion_messages_request_clipboard_consent(monkeypatch: Any) -
         console_input = Mock()
         monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.console.input", console_input)
         monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.run_command", run_token_command)
-        run_token_command("person@example.test", standalone_mode=False)
+        run_token_command("person@example.test")
 
     rendered = output.getvalue()
     assert "Credential copied to clipboard." in rendered

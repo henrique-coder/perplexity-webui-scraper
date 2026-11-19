@@ -14,6 +14,12 @@ from perplexity_webui_scraper._internal.constants import MAX_FILES, SESSION_COOK
 from perplexity_webui_scraper._internal.exceptions import ModelAccessError, ModelRiskWarning, ModelStatusError
 from perplexity_webui_scraper.api.app import app
 from perplexity_webui_scraper.api.auth import ClientPool
+from perplexity_webui_scraper.api.helpers import (
+    _JSON_SYSTEM_PROMPT,
+    _MASTER_REMINDER_PROMPT,
+    _MASTER_SYSTEM_PROMPT,
+    build_query_and_files,
+)
 from perplexity_webui_scraper.api.routes.completions import _validate_model
 from perplexity_webui_scraper.api.schemas import __all__ as api_schema_exports
 from perplexity_webui_scraper.api.schemas.request import ChatCompletionRequest, ChatMessage
@@ -363,6 +369,7 @@ def test_client_pool_evicts_oldest_client_at_capacity() -> None:
         assert pool.get_or_create(TOKEN) is first
         assert pool.get_or_create(TOKEN_SECOND) is second
 
+    first.close.assert_called_once()
     assert TOKEN not in pool._clients
     assert pool.get_or_create(TOKEN_SECOND) is second
 
@@ -410,6 +417,7 @@ def test_client_pool_expires_idle_clients() -> None:
         pool._clients[TOKEN] = (client_instance, 0.0)
         pool.get_or_create(TOKEN_SECOND)
 
+    client_instance.close.assert_called_once()
     assert TOKEN not in pool._clients
 
 
@@ -580,3 +588,65 @@ def test_chat_completion_rejects_excess_image_attachments_with_422(client: TestC
     )
 
     assert response.status_code == 422
+
+
+def test_build_query_and_files_prepends_master_prompt_and_preserves_system_order() -> None:
+    request = ChatCompletionRequest.model_validate(
+        {
+            "model": "perplexity/best",
+            "messages": [
+                {"role": "system", "content": "First system instruction"},
+                {"role": "developer", "content": "Second developer instruction"},
+                {"role": "user", "content": "Earlier question"},
+                {"role": "assistant", "content": "Earlier answer"},
+                {"role": "user", "content": "What is TLS 1.3?"},
+            ],
+            "perplexity": {"response_format": "json_object"},
+        }
+    )
+
+    query, files = build_query_and_files(request)
+
+    assert files == []
+    assert query == "\n\n".join(
+        [
+            _MASTER_SYSTEM_PROMPT,
+            _JSON_SYSTEM_PROMPT,
+            "<client_context>\nFirst system instruction\n\nSecond developer instruction\n</client_context>",
+            "<conversation_history>\n[User]: Earlier question\n\n[Assistant]: Earlier answer\n</conversation_history>",
+            "<user_query>\nWhat is TLS 1.3?\n</user_query>",
+            _MASTER_REMINDER_PROMPT,
+        ]
+    )
+
+
+def test_chat_completion_forwards_master_prompt_even_with_agent_fields(client: TestClient) -> None:
+    conversation = _mock_conversation()
+    upstream = MagicMock()
+    upstream.create_conversation.return_value = conversation
+
+    with patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=upstream):
+        response = client.post(
+            "/v1/chat/completions",
+            json={
+                "model": "perplexity/best",
+                "messages": [
+                    {"role": "system", "content": "Act as Hermes autonomous CLI agent"},
+                    {"role": "user", "content": "Who won the 2026 Nobel Prize in Physics?"},
+                ],
+                "tools": [{"type": "function", "function": {"name": "run_shell", "parameters": {}}}],
+                "tool_choice": "auto",
+            },
+            headers={"Authorization": f"Bearer {TOKEN}"},
+        )
+
+    assert response.status_code == 200
+    forwarded_query = conversation.ask.call_args.args[0]
+    assert forwarded_query.startswith(_MASTER_SYSTEM_PROMPT)
+    assert "<client_context>\nAct as Hermes autonomous CLI agent\n</client_context>" in forwarded_query
+    assert "<user_query>\nWho won the 2026 Nobel Prize in Physics?\n</user_query>" in forwarded_query
+    assert forwarded_query.endswith(_MASTER_REMINDER_PROMPT)
+    assert forwarded_query.index(_MASTER_SYSTEM_PROMPT) < forwarded_query.index("Act as Hermes autonomous CLI agent")
+    assert forwarded_query.index("Who won the 2026 Nobel Prize in Physics?") < forwarded_query.index(
+        _MASTER_REMINDER_PROMPT
+    )
