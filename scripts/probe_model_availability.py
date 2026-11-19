@@ -69,7 +69,7 @@ def _write_report(path: Path, report: dict[str, Any]) -> None:
 
 def _account_tier_gate(model: Model, account_tier: str) -> str | None:
     """Return why the current account cannot test this model, if applicable."""
-    if model.min_tier is None or account_tier not in TIER_RANK or TIER_RANK[account_tier] < 0:
+    if model.min_tier == "unknown" or account_tier not in TIER_RANK or TIER_RANK[account_tier] < 0:
         return None
 
     if TIER_RANK[account_tier] < TIER_RANK[model.min_tier]:
