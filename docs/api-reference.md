@@ -2,18 +2,20 @@
 
 ## `Perplexity(session_token, config?)`
 
-Create one client per session token and reuse it across conversations.
+Create one client per account-scoped session credential and reuse it across conversations. Pass either the raw `__Secure-pplx.session.<UUIDv4>=<JWE>` cookie pair or the compact `wsk_` token produced by `token`. Both forms resolve to the same account cookie.
 
-| Parameter       | Type           | Description                                               |
-| --------------- | -------------- | --------------------------------------------------------- |
-| `session_token` | `str`          | Browser cookie value (`__Secure-next-auth.session-token`) |
-| `config`        | `ClientConfig` | Timeout, retry, TLS, and logging settings                 |
+The compact `wsk_` v1 representation is reversible obfuscation. It is not encryption and its checksum is not authenticated integrity; keep it private as an account credential. Use `perplexity-webui-scraper token --convert` to convert raw cookies or validate compact tokens offline.
+
+| Parameter       | Type           | Description                                                         |
+| --------------- | -------------- | ------------------------------------------------------------------- |
+| `session_token` | `str` | Raw `__Secure-pplx.session.<UUIDv4>=<JWE>` pair or compact `wsk_` token. |
+| `config`        | `ClientConfig` | Timeout, retry, fingerprint, and logging settings                   |
 
 ```python
 from perplexity_webui_scraper import ClientConfig, Perplexity
 
 client = Perplexity(
-    session_token="YOUR_TOKEN",
+    session_token="__Secure-pplx.session.<account UUID>=YOUR_VALUE",
     config=ClientConfig(
         timeout=7200,
         max_retries=3,
@@ -71,10 +73,10 @@ conversation = client.create_conversation(ConversationConfig(model="perplexity/b
 | `query`         | `str`                     | _(required)_                 | The question to ask          |
 | `model`         | `str \| None`             | `None` → `"perplexity/best"` | Model ID string              |
 | `files`         | `list[FileInput] \| None` | `None`                       | File attachments             |
-| `citation_mode` | `str \| None`             | `None`                       | Override conversation config |
+| `citation_mode` | `Literal["default", "markdown", "clean"] \| None` | `None` | Keep markers, link them, or remove them |
 | `stream`        | `bool`                    | `False`                      | Yield chunks as they arrive  |
 | `allow_risky_model` | `bool \| None` | `None` | Acknowledge any non-available model status |
-| `custom_model_mode` | `str \| None` | `None` | Mode for `custom:<identifier>` |
+| `custom_model_mode` | `Literal["copilot", "search", "research"] \| None` | `None` | Mode for `custom:<identifier>` |
 
 Returns `self` (the `Conversation`) for method chaining or streaming iteration.
 
@@ -134,14 +136,14 @@ The OpenAI-compatible API exposes the same controls inside the `perplexity` requ
 | --- | --- | --- | --- | --- | --- | --- |
 | `perplexity/best` | `turbo` | perplexity | `true` | free | `available` | 2026-10-05T20:16:12.021045Z |
 | `perplexity/deep-research` | `pplx_alpha` | perplexity | `true` | pro | `available` | 2026-10-05T20:16:18.032678Z |
-| `openai/gpt-6.1-sol` | `gpt6_1_sol` | openai | `true` | pro | `available` | 2026-10-05T20:16:22.833164Z |
-| `openai/gpt-6.1-sol-thinking` | `gpt6_1_sol_thinking` | openai | `true` | pro | `available` | 2026-10-05T20:16:28.012592Z |
-| `openai/gpt-6-astra` | `gpt6_astra` | openai | `true` | max | `available` | 2026-10-05T20:16:31.992994Z |
-| `openai/gpt-6-astra-thinking` | `gpt6_astra_thinking` | openai | `true` | max | `available` | 2026-10-05T20:16:35.921714Z |
+| `openai/gpt-6.2-sol` | `gpt6_2_sol` | openai | `true` | pro | `unknown` | — |
+| `openai/gpt-6.2-sol-thinking` | `gpt6_2_sol_thinking` | openai | `true` | pro | `unknown` | — |
+| `openai/gpt-6.2-astra` | `gpt6_2_astra` | openai | `true` | max | `unknown` | — |
+| `openai/gpt-6.2-astra-thinking` | `gpt6_2_astra_thinking` | openai | `true` | max | `unknown` | — |
 | `google/gemini-4-carbon` | `gemini4carbon` | google | `true` | max | `unknown` | — |
 | `google/gemini-4-carbon-thinking` | `gemini4carbonthinking` | google | `true` | max | `unknown` | — |
-| `google/gemini-3.8-flash` | `gemini38flash` | google | `true` | pro | `available` | 2026-10-05T20:16:40.371258Z |
-| `google/gemini-3.8-flash-thinking` | `gemini38flashthinking` | google | `true` | pro | `available` | 2026-10-05T20:16:44.417812Z |
+| `google/gemini-neon` | `geminineon` | google | `true` | pro | `unknown` | — |
+| `google/gemini-neon-thinking` | `geminineonthinking` | google | `true` | pro | `unknown` | — |
 | `anthropic/claude-sonnet-5.5` | `claude55sonnet` | anthropic | `true` | pro | `available` | 2026-10-05T20:16:48.109965Z |
 | `anthropic/claude-sonnet-5.5-thinking` | `claude55sonnetthinking` | anthropic | `true` | pro | `available` | 2026-10-05T20:16:52.166366Z |
 | `anthropic/claude-opus-5.5` | `claude55opus` | anthropic | `true` | max | `available` | 2026-10-05T20:16:55.692021Z |
@@ -153,6 +155,14 @@ The OpenAI-compatible API exposes the same controls inside the `perplexity` requ
 | `x-ai/grok-4.7` | `grok47` | x-ai | `true` | pro | `available` | 2026-10-05T20:17:21.160176Z |
 | `x-ai/grok-4.7-thinking` | `grok47thinking` | x-ai | `true` | pro | `available` | 2026-10-05T20:17:27.797021Z |
 | `nvidia/nemotron-3.5-super-vl-thinking` | `nv_nemotron_3_5_super` | nvidia | `true` | pro | `unknown` | — |
+| `google/gemini-4-hydrogen` | `gemini4hydrogen` | google | `false` | pro | `unknown` | — |
+| `google/gemini-4-hydrogen-thinking` | `gemini4hydrogenthinking` | google | `false` | pro | `unknown` | — |
+| `openai/gpt-6.1-sol` | `gpt6_1_sol` | openai | `false` | pro | `available` | 2026-10-05T20:16:22.833164Z |
+| `openai/gpt-6.1-sol-thinking` | `gpt6_1_sol_thinking` | openai | `false` | pro | `available` | 2026-10-05T20:16:28.012592Z |
+| `openai/gpt-6-astra` | `gpt6_astra` | openai | `false` | max | `available` | 2026-10-05T20:16:31.992994Z |
+| `openai/gpt-6-astra-thinking` | `gpt6_astra_thinking` | openai | `false` | max | `available` | 2026-10-05T20:16:35.921714Z |
+| `google/gemini-3.8-flash` | `gemini38flash` | google | `false` | pro | `available` | 2026-10-05T20:16:40.371258Z |
+| `google/gemini-3.8-flash-thinking` | `gemini38flashthinking` | google | `false` | pro | `available` | 2026-10-05T20:16:44.417812Z |
 | `google/gemini-4-argon` | `gemini4argon` | google | `false` | max | `unknown` | — |
 | `google/gemini-4-argon-thinking` | `gemini4argonthinking` | google | `false` | max | `unknown` | — |
 | `anthropic/claude-fable-5.1` | `claudefable51` | anthropic | `false` | max | `available` | 2026-10-05T20:17:03.783203Z |
@@ -277,11 +287,12 @@ config = ConversationConfig(citation_mode="markdown")
 | `citation_mode`   | `Literal["default", "markdown", "clean"]`        | `"clean"`                    | Citation format                                    |
 | `save_to_library` | `bool`                                           | `False`                      | Save conversation to Perplexity library            |
 | `search_focus`    | `Literal["web", "writing"]`                      | `"web"`                      | Search type                                        |
-| `source_focus`    | `str \| list[str]`                               | `"web"`                      | Source types (web, academic, social, etc.)         |
+| `source_focus`    | `str \| list[str]`                               | `"web"`                      | `"web"`, `"academic"`, `"social"`, `"finance"`, or `"all"` |
 | `time_range`      | `Literal["all", "day", "week", "month", "year"]` | `"all"`                      | Recency filter for results                         |
 | `language`        | `str`                                            | `"en-US"`                    | Language for the response                          |
 | `timezone`        | `str \| None`                                    | `None`                       | IANA timezone (e.g. `"America/Sao_Paulo"`)         |
-| `coordinates`     | `Coordinates \| None`                            | `None`                       | Geographic location (lat/lng)                      |
+| `latitude`        | `float \| None`  | `None` | Latitude from -90 through 90; set with longitude |
+| `longitude`       | `float \| None`  | `None` | Longitude from -180 through 180; set with latitude |
 | `space_uuid`      | `str \| None`                                    | `None`                       | UUID of the Perplexity Space to post the thread to |
 | `allow_risky_model` | `bool` | `False` | Acknowledge any non-available model status |
 | `custom_model_mode` | `Literal["copilot", "search", "research"]` | `"copilot"` | Mode for `custom:<identifier>` |
@@ -317,7 +328,7 @@ The Space URL slug is not its UUID. To find the UUID, submit a query in the Spac
 | `"academic"` | Academic papers and scholarly articles |
 | `"social"`   | Social media (Reddit, Twitter, etc.)   |
 | `"finance"`  | SEC EDGAR filings                      |
-| `"all"`      | Web, Academic, and Social blended      |
+| `"all"`      | Web and academic sources               |
 
 ### `search_focus`
 
@@ -375,7 +386,7 @@ try:
 except ResearchClarifyingQuestionsError as e:
     print("Needs clarification:", e.questions)
 except AuthenticationError:
-    print("Token expired; refresh your session token")
+    print("Authentication failed; retrieve a new account session-cookie pair")
 except PerplexityError as e:
     print(f"Library error: {e}")
 ```
@@ -383,6 +394,8 @@ except PerplexityError as e:
 ---
 
 ## OpenAI-compatible API
+
+`POST /v1/chat/completions` is the only text-generation endpoint. It returns final assistant text and supports conversation continuation through `perplexity.thread_uuid`. `GET /v1/models` lists registered model identifiers.
 
 Install with the `api` extra:
 
@@ -392,7 +405,7 @@ uv add 'perplexity-webui-scraper[api]'
 
 ### `perplexity-webui-scraper api`
 
-Starts the server without a configured token. Each request supplies a Perplexity session token through `Authorization: Bearer $PERPLEXITY_SESSION_TOKEN`.
+Starts the server without a configured credential. Each request may supply the raw UUIDv4 cookie pair or compact `wsk_` token through `Authorization`.
 
 | Option               | Short | Default     | Description                                                               |
 | -------------------- | ----- | ----------- | ------------------------------------------------------------------------- |
@@ -400,7 +413,7 @@ Starts the server without a configured token. Each request supplies a Perplexity
 | `--port`             | `-p`  | `8000`      | Port to listen on                                                         |
 | `--reload`           |       | `False`     | Enable auto-reload                                                        |
 | `--log-level`        |       | `info`      | Uvicorn log level (`debug`, `info`, `warning`, `error`, `critical`)       |
-| `--session-token`    |       | unset       | Server-default Perplexity token; requires `--api-key`                    |
+| `--session-token`    |       | unset       | Raw UUIDv4 cookie pair or compact `wsk_` credential; requires `--api-key` |
 | `--api-key`          |       | unset       | Gateway key required when a server token is configured                    |
 
 ```bash
@@ -411,10 +424,10 @@ perplexity-webui-scraper api
 perplexity-webui-scraper api --host 0.0.0.0 --port 8080
 ```
 
-For a server-default upstream token, configure a separate gateway key:
+For a server-default upstream cookie pair, configure both `PERPLEXITY_SESSION_TOKEN` and the separate `PERPLEXITY_API_KEY` gateway key:
 
 ```bash
-PERPLEXITY_SESSION_TOKEN="$PPLX_TOKEN" PERPLEXITY_API_KEY="$GATEWAY_KEY" perplexity-webui-scraper api
+PERPLEXITY_SESSION_TOKEN="__Secure-pplx.session.<account UUID>=YOUR_VALUE" PERPLEXITY_API_KEY="$GATEWAY_KEY" perplexity-webui-scraper api
 ```
 
 ### Container deployment with Podman
@@ -443,11 +456,11 @@ podman run --rm -e PERPLEXITY_SESSION_TOKEN=your_token perplexity-mcp
 
 ### Authentication
 
-By default, pass your Perplexity session token as a Bearer token. For a server-default upstream token, configure `PERPLEXITY_SESSION_TOKEN` and a distinct `PERPLEXITY_API_KEY`; each client request must include `X-API-Key` and may omit `Authorization`. A caller Bearer token can override the server token after gateway authentication. Do not log credentials or include them in client-visible errors.
+Use either a raw `__Secure-pplx.session.<UUIDv4>=<JWE>` pair or a compact `wsk_` token in the `Authorization` header. Compact tokens are reversible obfuscation, not encryption or authenticated integrity.
 
 ```bash
 curl http://localhost:8000/v1/chat/completions \
-  -H 'Authorization: Bearer $PERPLEXITY_SESSION_TOKEN' \
+  -H "Authorization: Bearer $PERPLEXITY_SESSION_TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"model": "perplexity/best", "messages": [{"role": "user", "content": "Hello!"}]}'
 ```
@@ -456,96 +469,36 @@ Returns `HTTP 401` if the header is missing or malformed.
 
 ### Endpoints
 
-| Method | Path                   | Description                                                            |
-| ------ | ---------------------- | ---------------------------------------------------------------------- |
-| `GET`  | `/v1/models`           | List registered models                                                 |
-| `POST` | `/v1/responses`        | Responses text and base64 image input (streaming and non-streaming)    |
-| `POST` | `/v1/chat/completions` | Legacy Chat Completions (streaming and non-streaming)                  |
-| `GET`  | `/docs`                | Interactive Swagger UI                                                 |
-| `GET`  | `/redoc`               | ReDoc API documentation                                                |
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/v1/models` | List registered models |
+| `POST` | `/v1/chat/completions` | Chat Completions API (streaming and non-streaming) |
+| `GET` | `/docs` | Interactive Swagger UI |
+| `GET` | `/redoc` | ReDoc API documentation |
 
 ### `POST /v1/chat/completions`
 
-**Request body:**
-
-| Field      | Type   | Required | Description                                                        |
-| ---------- | ------ | -------- | ------------------------------------------------------------------ |
-| `model`    | `str`  | yes      | Any model ID from `/v1/models` (e.g. `"perplexity/best"`)          |
-| `messages` | `list` | yes      | List of `{role, content}` messages (`system`, `user`, `assistant`) |
-| `stream`   | `bool` | no       | Enable SSE streaming (default: `false`)                            |
-
-> Chat Completions accepts some unsupported OpenAI fields and ignores them. Responses rejects unknown fields.
-
-### `POST /v1/responses`
-
-The Responses adapter accepts `model`, `input`, `instructions`, `stream`, `previous_response_id`, and the `perplexity` extension object. It rejects unknown request fields and input item types it does not implement. Inputs may be a string or message items with `system`, `developer`, `user`, or `assistant` roles; content supports strings, `input_text`, and base64 data-URL `input_image` parts. Remote image URLs, tool execution, durable response retrieval, and token-usage accounting are not implemented. Continuation IDs map to an in-memory conversation thread and expire after 30 minutes of inactivity or process restart.
+**Request body:** Requires `model` and `messages`. Each message has a `role` (`system`, `user`, or `assistant`) and `content` (text or supported text/image parts). Optional fields include `stream` and `perplexity`. Unsupported OpenAI fields may be ignored; this is a partial compatibility layer.
 
 ```json
 {
   "model": "perplexity/best",
-  "input": "Describe the image.",
-  "stream": false
+  "messages": [{"role": "user", "content": "Hello!"}],
+  "stream": false,
+  "perplexity": {"thread_uuid": null}
 }
 ```
 
-For a server-default Perplexity token, send `X-API-Key` on every request; `Authorization` is optional. A client may provide `Authorization: Bearer $PERPLEXITY_SESSION_TOKEN` to override the server token, but must still provide the gateway key.
+Non-streaming responses use the standard Chat Completions envelope with the final assistant text in `choices[0].message.content`. The scraper does not receive token counts; usage values are zero. Follow-up requests continue a cached thread by setting `perplexity.thread_uuid` to the prior response's thread UUID; the UUID is account-scoped, expires with the server cache, and is not itself an upstream credential.
 
-**Responses non-streaming response:**
-
-```json
-{
-  "id": "resp_<generated-id>",
-  "object": "response",
-  "created_at": 1234567890,
-  "status": "completed",
-  "model": "perplexity/best",
-  "output": [
-    {
-      "id": "msg_<generated-id>",
-      "type": "message",
-      "status": "completed",
-      "role": "assistant",
-      "content": [{ "type": "output_text", "text": "...", "annotations": [] }]
-    }
-  ],
-  "output_text": "...",
-  "usage": { "input_tokens": 0, "output_tokens": 0, "total_tokens": 0 }
-}
-```
-
-Responses token counts are unavailable and reported as zero. `previous_response_id` is included when continuing a cached thread.
-
-**Responses streaming** (`stream: true`) emits typed events including `response.created`, `response.in_progress`, text deltas, and `response.completed`, followed by `data: [DONE]`. Upstream errors or an incomplete stream produce `response.failed` and do not emit `response.completed` or `[DONE]`.
-
-### `POST /v1/chat/completions` response
-
-This legacy endpoint returns a Chat Completions object; it does not return the Responses object shown above.
-
-```json
-{
-  "id": "chatcmpl-<generated-id>",
-  "object": "chat.completion",
-  "created": 1234567890,
-  "model": "perplexity/best",
-  "choices": [
-    {
-      "index": 0,
-      "message": { "role": "assistant", "content": "..." },
-      "finish_reason": "stop"
-    }
-  ],
-  "usage": { "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0 }
-}
-```
-
-The OpenAI Python SDK example below also uses Chat Completions:
+The OpenAI Python SDK example below uses Chat Completions:
 
 ```python
 from openai import OpenAI
 
 client = OpenAI(
     base_url="http://localhost:8000/v1",
-    api_key="YOUR_SESSION_TOKEN",  # sent as Authorization: Bearer automatically
+    api_key="__Secure-pplx.session.<account UUID>=YOUR_VALUE",
 )
 
 response = client.chat.completions.create(
@@ -555,16 +508,16 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-Chat Completions streaming emits `chat.completion.chunk` objects as SSE data frames and ends with `data: [DONE]` on success. On an upstream failure it emits an `event: error` frame followed by `[DONE]`, without a successful finish chunk.
+Streaming responses use Chat Completions SSE `data:` chunks, end with a final chunk and `data: [DONE]`, and emit safe `event: error` frames if the upstream stream fails. No tool calls or internal reasoning are exposed.
 
 ### Perplexity request options
 
-Pass Perplexity-specific settings such as `search_focus`, `citation_mode`, or `coordinates` through the OpenAI SDK's `extra_body` dictionary. The API reads them from the `"perplexity"` block.
+Pass Perplexity-specific settings such as `search_focus`, `citation_mode`, `latitude`, or `longitude` through the OpenAI SDK's `extra_body` dictionary. The API reads them from the `"perplexity"` block.
 
 ```python
 from openai import OpenAI
 
-client = OpenAI(base_url="http://localhost:8000/v1", api_key="YOUR_SESSION_TOKEN")
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="__Secure-pplx.session.<account UUID>=YOUR_VALUE")
 
 response = client.chat.completions.create(
     model="google/gemini-3.1-pro-thinking-low",
@@ -586,7 +539,7 @@ With `curl`, add `"perplexity"` to the JSON payload:
 
 ```bash
 curl http://localhost:8000/v1/chat/completions \
-  -H 'Authorization: Bearer $PERPLEXITY_SESSION_TOKEN' \
+  -H "Authorization: Bearer $PERPLEXITY_SESSION_TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
     "model": "perplexity/best",
@@ -614,17 +567,17 @@ response = client.chat.completions.create(
 
 ### Image inputs
 
-The Chat Completions route accepts message content with `text` parts and base64 image Data URLs in `image_url` parts. The Responses route accepts `input_text` and `input_image` parts with base64 data URLs. Neither route fetches remote image URLs or implements every OpenAI vision input form.
+Chat Completions accepts text and base64 image Data URLs in supported `image_url` message parts. Remote image URLs are ignored to prevent implicit server-side requests.
 
 The server decodes each Data URL and uploads the resulting file to Perplexity before sending the prompt.
 
 **OpenAI Python SDK:**
 
 ```python
-from base64 import b64encode
 from openai import OpenAI
+from base64 import b64encode
 
-client = OpenAI(base_url="http://localhost:8000/v1", api_key="YOUR_SESSION_TOKEN")
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="__Secure-pplx.session.<account UUID>=YOUR_VALUE")
 
 # Encode a local image as a data URL
 with open("photo.jpg", "rb") as file:
@@ -650,21 +603,16 @@ print(response.choices[0].message.content)
 
 ```bash
 curl http://localhost:8000/v1/chat/completions \
-  -H 'Authorization: Bearer $PERPLEXITY_SESSION_TOKEN' \
+  -H "Authorization: Bearer $PERPLEXITY_SESSION_TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{
     "model": "perplexity/best",
-    "messages": [
-      {
-        "role": "user",
-        "content": [
-          { "type": "text", "text": "What is in this image?" },
-          {
-            "type": "image_url",
-            "image_url": { "url": "data:image/jpeg;base64,/9j/4AAQSkZJR..." }
-          }
-        ]
-      }
-    ]
+    "messages": [{
+      "role": "user",
+      "content": [
+        {"type": "text", "text": "What is in this image?"},
+        {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,/9j/4AAQSkZJR..."}}
+      ]
+    }]
   }'
 ```

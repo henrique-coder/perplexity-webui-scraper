@@ -20,7 +20,7 @@ Add one of the following entries to your MCP client configuration. `uvx` creates
         "mcp"
       ],
       "env": {
-        "PERPLEXITY_SESSION_TOKEN": "your_token_here"
+        "PERPLEXITY_SESSION_TOKEN": "__Secure-pplx.session.<account UUID>=YOUR_VALUE"
       }
     }
   }
@@ -42,7 +42,7 @@ Add one of the following entries to your MCP client configuration. `uvx` creates
         "mcp"
       ],
       "env": {
-        "PERPLEXITY_SESSION_TOKEN": "your_token_here"
+        "PERPLEXITY_SESSION_TOKEN": "__Secure-pplx.session.<account UUID>=YOUR_VALUE"
       }
     }
   }
@@ -51,15 +51,17 @@ Add one of the following entries to your MCP client configuration. `uvx` creates
 
 ## Container deployment with Podman
 
-For containerized stdio setups only:
+For containerized stdio setups only. `PERPLEXITY_SESSION_TOKEN` accepts either the raw `__Secure-pplx.session.<UUIDv4>=<JWE>` cookie pair or a compact `wsk_` token from the token CLI. Compact tokens are reversible obfuscation, not encryption or authenticated integrity.
 
 ```bash
 # Pull published MCP image
 podman pull ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
 
-# Run MCP server (requires token)
-podman run --rm -it -e PERPLEXITY_SESSION_TOKEN=your_token ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
+# Run the published image with the account session-cookie pair
+podman run --rm -it -e PERPLEXITY_SESSION_TOKEN="__Secure-pplx.session.<account UUID>=YOUR_VALUE" ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
 ```
+
+The MCP server accepts raw and compact credentials. The token CLI retrieves the account cookie through email OTP/magic-link and optional TOTP, then emits compact form. Use `perplexity-webui-scraper token --convert` to convert or validate an existing credential offline.
 
 Use `uvx` for standard MCP client configurations. The container image runs the server over stdio and does not expose an HTTP endpoint.
 
@@ -84,14 +86,14 @@ Tools for models with `available` status can be called without acknowledgement. 
 | --- | --- | --- | --- | --- | --- | --- |
 | `pplx_best` | `perplexity/best` | Best | `true` | free | `available` | 2026-10-05T20:16:12.021045Z |
 | `pplx_deep_research` | `perplexity/deep-research` | Deep research | `true` | pro | `available` | 2026-10-05T20:16:18.032678Z |
-| `pplx_gpt61_sol` | `openai/gpt-6.1-sol` | GPT-6.1 Sol | `true` | pro | `available` | 2026-10-05T20:16:22.833164Z |
-| `pplx_gpt61_sol_think` | `openai/gpt-6.1-sol-thinking` | GPT-6.1 Sol Thinking | `true` | pro | `available` | 2026-10-05T20:16:28.012592Z |
-| `pplx_gpt6_astra` | `openai/gpt-6-astra` | GPT-6 Astra | `true` | max | `available` | 2026-10-05T20:16:31.992994Z |
-| `pplx_gpt6_astra_think` | `openai/gpt-6-astra-thinking` | GPT-6 Astra Thinking | `true` | max | `available` | 2026-10-05T20:16:35.921714Z |
+| `pplx_gpt62_sol` | `openai/gpt-6.2-sol` | GPT-6.2 Sol | `true` | pro | `unknown` | — |
+| `pplx_gpt62_sol_think` | `openai/gpt-6.2-sol-thinking` | GPT-6.2 Sol Thinking | `true` | pro | `unknown` | — |
+| `pplx_gpt62_astra` | `openai/gpt-6.2-astra` | GPT-6.2 Astra | `true` | max | `unknown` | — |
+| `pplx_gpt62_astra_think` | `openai/gpt-6.2-astra-thinking` | GPT-6.2 Astra Thinking | `true` | max | `unknown` | — |
 | `pplx_gemini4_carbon` | `google/gemini-4-carbon` | Gemini 4 Carbon | `true` | max | `unknown` | — |
 | `pplx_gemini4_carbon_think` | `google/gemini-4-carbon-thinking` | Gemini 4 Carbon Thinking | `true` | max | `unknown` | — |
-| `pplx_gemini38_flash` | `google/gemini-3.8-flash` | Gemini 3.8 Flash | `true` | pro | `available` | 2026-10-05T20:16:40.371258Z |
-| `pplx_gemini38_flash_think` | `google/gemini-3.8-flash-thinking` | Gemini 3.8 Flash Thinking | `true` | pro | `available` | 2026-10-05T20:16:44.417812Z |
+| `pplx_gemini_neon` | `google/gemini-neon` | Gemini Neon | `true` | pro | `unknown` | — |
+| `pplx_gemini_neon_think` | `google/gemini-neon-thinking` | Gemini Neon Thinking | `true` | pro | `unknown` | — |
 | `pplx_claude_sonnet55` | `anthropic/claude-sonnet-5.5` | Claude Sonnet 5.5 | `true` | pro | `available` | 2026-10-05T20:16:48.109965Z |
 | `pplx_claude_sonnet55_think` | `anthropic/claude-sonnet-5.5-thinking` | Claude Sonnet 5.5 Thinking | `true` | pro | `available` | 2026-10-05T20:16:52.166366Z |
 | `pplx_claude_opus55` | `anthropic/claude-opus-5.5` | Claude Opus 5.5 | `true` | max | `available` | 2026-10-05T20:16:55.692021Z |
@@ -103,6 +105,14 @@ Tools for models with `available` status can be called without acknowledgement. 
 | `pplx_grok47` | `x-ai/grok-4.7` | Grok 4.7 | `true` | pro | `available` | 2026-10-05T20:17:21.160176Z |
 | `pplx_grok47_think` | `x-ai/grok-4.7-thinking` | Grok 4.7 Thinking | `true` | pro | `available` | 2026-10-05T20:17:27.797021Z |
 | `pplx_nemotron35_super_vl_think` | `nvidia/nemotron-3.5-super-vl-thinking` | Nemotron 3.5 Super VL Thinking | `true` | pro | `unknown` | — |
+| `pplx_gemini4_hydrogen` | `google/gemini-4-hydrogen` | Gemini 4 Hydrogen | `false` | pro | `unknown` | — |
+| `pplx_gemini4_hydrogen_think` | `google/gemini-4-hydrogen-thinking` | Gemini 4 Hydrogen Thinking | `false` | pro | `unknown` | — |
+| `pplx_gpt61_sol` | `openai/gpt-6.1-sol` | GPT-6.1 Sol | `false` | pro | `available` | 2026-10-05T20:16:22.833164Z |
+| `pplx_gpt61_sol_think` | `openai/gpt-6.1-sol-thinking` | GPT-6.1 Sol Thinking | `false` | pro | `available` | 2026-10-05T20:16:28.012592Z |
+| `pplx_gpt6_astra` | `openai/gpt-6-astra` | GPT-6 Astra | `false` | max | `available` | 2026-10-05T20:16:31.992994Z |
+| `pplx_gpt6_astra_think` | `openai/gpt-6-astra-thinking` | GPT-6 Astra Thinking | `false` | max | `available` | 2026-10-05T20:16:35.921714Z |
+| `pplx_gemini38_flash` | `google/gemini-3.8-flash` | Gemini 3.8 Flash | `false` | pro | `available` | 2026-10-05T20:16:40.371258Z |
+| `pplx_gemini38_flash_think` | `google/gemini-3.8-flash-thinking` | Gemini 3.8 Flash Thinking | `false` | pro | `available` | 2026-10-05T20:16:44.417812Z |
 | `pplx_gemini4_argon` | `google/gemini-4-argon` | Gemini 4 Argon | `false` | max | `unknown` | — |
 | `pplx_gemini4_argon_think` | `google/gemini-4-argon-thinking` | Gemini 4 Argon Thinking | `false` | max | `unknown` | — |
 | `pplx_claude_fable51` | `anthropic/claude-fable-5.1` | Claude Fable 5.1 | `false` | max | `available` | 2026-10-05T20:17:03.783203Z |

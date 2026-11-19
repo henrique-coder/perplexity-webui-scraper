@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import UTC, datetime
 
 from pydantic import ValidationError
 from pytest import mark, raises, warns
@@ -48,8 +49,9 @@ def test_model_rejects_unknown_fields() -> None:
         Model.model_validate(model_data)
 
 
-@mark.parametrize("timestamp", ["2026-07-20T23:34:21", "2026-07-21T02:34:21+03:00"])
-def test_model_rejects_non_utc_test_timestamps(timestamp: str) -> None:
+def test_model_rejects_non_utc_test_timestamps() -> None:
+    timestamp = datetime.fromtimestamp(0, UTC).isoformat().replace("+00:00", "+03:00")
+
     with raises(ValidationError, match="last_tested_at must use UTC"):
         Model.model_validate({**_MODEL, "last_tested_at": timestamp})
 
