@@ -54,7 +54,7 @@ Latitude must be between -90 and 90 degrees. Longitude must be between -180 and 
 The REST API nests both fields inside the `perplexity` extension object:
 
 ```json
-{"perplexity": {"latitude": -23.5, "longitude": -46.6}}
+{ "perplexity": { "latitude": -23.5, "longitude": -46.6 } }
 ```
 
 ## File inputs
