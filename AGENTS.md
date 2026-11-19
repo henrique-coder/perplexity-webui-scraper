@@ -24,7 +24,7 @@ The library uses an existing browser session; it does not automate a browser. Ra
 - `api/`: per-request authentication, client/conversation caches, schemas, request conversion helpers, routes, and launcher. `cli/` and `mcp/` are adapters to the core; avoid duplicating business rules there.
 - `scripts/`: CI path classification and generation/validation of derived documentation.
 - `tests/`: offline tests with synthetic fixtures and mocks. Tests requiring network access or an account must be opt-in and must not be required by the normal suite.
-- `docs/`, `README.md`, `CHANGELOG.md`: user documentation and release history. Zensical builds the Read the Docs site. Catalog tables in `docs/api-reference.md` and `docs/mcp-server.md` are generated.
+- `docs/`, `README.md`, `CHANGELOG.md`: user documentation and release history. Zensical builds the Read the Docs site. Catalog tables in `docs/python-client/models.md` and `docs/mcp-server.md` are generated.
 - Repository root: `pyproject.toml` holds Python configuration/dependencies; `uv.lock` is the lockfile; `Justfile` defines standard commands; `Containerfile*` build API/MCP images; `.github/workflows/` validate, secure, and publish releases.
 
 A request flows through an adapter (CLI/API/MCP), typed configuration and model resolution/acknowledgement, `Conversation` account/entitlement checks and optional upload, payload construction and search initialization, `HTTPClient` calls, then SSE parsing/state updates. The result is exposed as Python response objects, API JSON, or API SSE. Preserve this shared flow and its boundaries when refactoring.

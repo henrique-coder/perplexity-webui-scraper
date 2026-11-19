@@ -1,6 +1,8 @@
 # MCP server
 
-The MCP server exposes each registered model as a separate tool. Enable only the tools your MCP client needs.
+The MCP server exposes each registered model as a separate tool over stdio. Enable only the tools your MCP client needs.
+
+See [Session Token](token.md) for how to generate and protect `PERPLEXITY_SESSION_TOKEN` (both compact `wsk_` tokens and raw `__Secure-pplx.session.<UUIDv4>=<JWE>` cookie pairs are supported).
 
 ## Configuration
 

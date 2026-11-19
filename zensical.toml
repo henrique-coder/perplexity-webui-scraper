@@ -8,20 +8,19 @@ site_url = "https://perplexity-webui-scraper.readthedocs.io"
 nav = [
     { "Home" = "index.md" },
     { "Getting Started" = "getting-started.md" },
-    { "Usage Guide" = "usage.md" },
-    { "CLI Reference" = "cli.md" },
-    { "API Reference" = [
-        { "Overview" = "api-reference.md" },
-        { "Python API" = [
-            { "Client" = "api/client.md" },
-            { "Conversation" = "api/conversation.md" },
-            { "Configuration" = "api/configuration.md" },
-            { "Response Models" = "api/response.md" },
-            { "Model Registry" = "api/models.md" },
-            { "Types & Aliases" = "api/types.md" },
-            { "Exceptions" = "api/exceptions.md" },
-        ] },
+    { "Session Token" = "token.md" },
+    { "Python Client" = [
+        { "Usage Guide" = "python-client/usage.md" },
+        { "Client & Account" = "python-client/client.md" },
+        { "Conversation" = "python-client/conversation.md" },
+        { "Configuration" = "python-client/configuration.md" },
+        { "Response Models" = "python-client/response.md" },
+        { "Models & Catalog" = "python-client/models.md" },
+        { "Types & Values" = "python-client/types.md" },
+        { "Exceptions" = "python-client/exceptions.md" },
     ] },
+    { "CLI" = "cli.md" },
+    { "OpenAI-Compatible API" = "rest-api.md" },
     { "MCP Server" = "mcp-server.md" },
 ]
 

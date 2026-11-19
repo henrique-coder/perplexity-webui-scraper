@@ -51,14 +51,8 @@ config = ConversationConfig(latitude=-23.5, longitude=-46.6)
 
 Latitude must be between -90 and 90 degrees. Longitude must be between -180 and 180 degrees.
 
-The REST API nests both fields inside the `perplexity` extension object:
-
-```json
-{ "perplexity": { "latitude": -23.5, "longitude": -46.6 } }
-```
-
 ## File inputs
 
-`Conversation.ask(files=...)` accepts local paths, raw bytes, `(bytes, filename)` tuples, and `(bytes, filename, mimetype)` tuples. The runtime validator rejects unsupported tuple shapes, empty content, oversized files, and missing paths. See [file attachments](../usage.md#file-attachments) for examples.
+`Conversation.ask(files=...)` accepts local paths, raw bytes, `(bytes, filename)` tuples, and `(bytes, filename, mimetype)` tuples. The runtime validator rejects unsupported tuple shapes, empty content, oversized files, and missing paths. See [file attachments](usage.md#file-attachments) for examples.
 
 `FileInput` is also exported from the top-level `perplexity_webui_scraper` package for annotations. Most callers can pass a list directly without importing it.

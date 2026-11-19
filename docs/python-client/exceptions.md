@@ -21,11 +21,11 @@ from perplexity_webui_scraper import (
 
 ## Session credentials
 
-Raised when validating raw `__Secure-pplx.session.<UUIDv4>=<JWE>` cookies or compact `wsk_` v1 tokens. All classes in this group inherit from `SessionTokenError` (and therefore both `PerplexityError` and `ValueError`).
+Raised when validating compact `wsk_` v1 tokens or raw `__Secure-pplx.session.<UUIDv4>=<JWE>` cookie pairs. All classes in this group inherit from `SessionTokenError` (and therefore both `PerplexityError` and `ValueError`).
 
 | Exception                      | Parent                          | Description                                                                 |
 | ------------------------------ | ------------------------------- | --------------------------------------------------------------------------- |
-| `SessionTokenError`            | `PerplexityError`, `ValueError` | Base class for malformed raw session cookies and compact `wsk_` tokens.     |
+| `SessionTokenError`            | `PerplexityError`, `ValueError` | Base class for malformed compact `wsk_` tokens and raw session cookies.     |
 | `CredentialError`              | `SessionTokenError`             | Base class for malformed or ambiguous raw cookie credentials.               |
 | `RawCookieFormatError`         | `CredentialError`               | Raw session cookie lacks a valid RFC 4122 UUIDv4 or canonical A256GCM JWE.  |
 | `CompactTokenFormatError`      | `SessionTokenError`             | Compact token prefix (`wsk_`), Base62 encoding, or length is invalid.       |
@@ -56,3 +56,22 @@ Raised when validating raw `__Secure-pplx.session.<UUIDv4>=<JWE>` cookies or com
 | `ResearchClarifyingQuestionsError` | `PerplexityError` | `questions: list[str]` | Deep Research returned clarifying questions when `research_interaction="manual"`.               |
 | `ResponseParsingError`             | `PerplexityError` | `message: str`         | Upstream SSE or JSON payload could not be parsed into a valid response structure.               |
 | `StreamingError`                   | `PerplexityError` | `message: str`         | SSE stream ended abnormally or reported an upstream streaming failure.                          |
+
+## Handling errors
+
+```python
+from perplexity_webui_scraper import (
+    AuthenticationError,
+    PerplexityError,
+    ResearchClarifyingQuestionsError,
+)
+
+try:
+    conversation.ask("Analyze recent market trends", model="perplexity/best")
+except ResearchClarifyingQuestionsError as e:
+    print("Needs clarification:", e.questions)
+except AuthenticationError:
+    print("Authentication failed; retrieve a fresh session credential")
+except PerplexityError as e:
+    print(f"Library error: {e}")
+```

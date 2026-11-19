@@ -1,8 +1,6 @@
-# Client
+# Client & Account
 
-Pass either a raw `__Secure-pplx.session.<UUIDv4>=<JWE>` cookie pair or a compact `wsk_` credential as `session_token`. Both forms normalize to the same account session. Compact tokens are reversible obfuscation, not encryption or authenticated integrity.
-
-Email authentication emits `wsk_` compact tokens. Convert a raw cookie or validate an existing compact token offline with `perplexity-webui-scraper token convert`, or restore raw cookie form with `perplexity-webui-scraper token deconvert`.
+Pass either a compact `wsk_` credential or a raw `__Secure-pplx.session.<UUIDv4>=<JWE>` cookie pair as `session_token`. Both forms normalize to the same account session. See [Session Token](../token.md) for credential generation, offline conversion, and security guidance.
 
 ## `Perplexity`
 
@@ -21,7 +19,7 @@ with Perplexity(session_token="YOUR_TOKEN", config=ClientConfig()) as client:
 
 | Parameter       | Type                                  | Default | Description                                                                                     |
 | --------------- | ------------------------------------- | ------- | ----------------------------------------------------------------------------------------------- |
-| `session_token` | `str`                                 | —       | Raw `__Secure-pplx.session.<UUIDv4>=<JWE>` cookie pair or compact `wsk_` v1 session token.      |
+| `session_token` | `str`                                 | —       | Compact `wsk_` v1 token or raw `__Secure-pplx.session.<UUIDv4>=<JWE>` cookie pair.              |
 | `config`        | <code>ClientConfig &#124; None</code> | `None`  | Optional transport, retry, rate-limit, and logging configuration (`ClientConfig()` if omitted). |
 
 Raises `SessionTokenError` (a subclass of `PerplexityError` and `ValueError`) if `session_token` is malformed.
@@ -90,15 +88,3 @@ Raises `SessionTokenError` (a subclass of `PerplexityError` and `ValueError`) if
 | `query_count_mobile`  | <code>int &#124; None</code>  | Mobile query count.                                           |
 | `is_verified`         | <code>bool &#124; None</code> | Account verification status.                                  |
 | `account_tier`        | `AccountTier`                 | Normalized tier (`"free"`, `"pro"`, `"max"`, or `"unknown"`). |
-
-## Session credential helpers
-
-The top-level package also exports the credential validation and conversion functions used across all entry points:
-
-| Symbol                         | Signature                                          | Description                                                                                |
-| ------------------------------ | -------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `SessionCredentials`           | `SessionCredentials(uuid: str, cookie_value: str)` | Frozen dataclass holding the validated RFC 4122 UUIDv4 and JWE cookie value.               |
-| `resolve_session_token(token)` | `(str) -> SessionCredentials`                      | Accept either a raw cookie pair or a compact `wsk_` token and return `SessionCredentials`. |
-| `validate_raw_cookie(raw)`     | `(str) -> SessionCredentials`                      | Validate a raw UUID-suffixed session cookie and return `SessionCredentials`.               |
-| `pack_session_token(raw)`      | `(str) -> str`                                     | Encode a raw session cookie into compact `wsk_` v1 format.                                 |
-| `unpack_session_token(token)`  | `(str) -> SessionCredentials`                      | Decode and validate a compact `wsk_` v1 token into `SessionCredentials`.                   |

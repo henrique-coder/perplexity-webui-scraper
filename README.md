@@ -148,14 +148,19 @@ Use `-h` or `--help` with the root command or any subcommand. The token command 
 
 ### Chat Completions API
 
-`POST /v1/chat/completions` is the only text-generation endpoint. It is a read-only question-answering mirror of Perplexity's WebUI and automatically prepends a master system instruction rejecting autonomous agent loops and tool execution. It supports streaming, validated base64 image Data URLs, and account-scoped thread continuation with `perplexity.thread_uuid`. Responses contain final assistant text. `GET /v1/models` requires authentication (`Authorization: Bearer` or gateway `X-API-Key`), checks the account tier (with a 10-minute in-memory cache), and returns only models accessible to that account tier. The API does not expose hidden chain-of-thought, execute client tools, or fetch remote image URLs.
+`POST /v1/chat/completions` is the only text-generation endpoint. It is a read-only question-answering mirror of Perplexity's WebUI and automatically prepends a master system instruction rejecting autonomous agent loops and tool execution. It supports streaming, validated base64 image Data URLs, and account-scoped thread continuation with `perplexity.thread_uuid`. Responses contain final assistant text. `GET /v1/models` checks the account tier (with a 10-minute in-memory cache) and returns only models accessible to that tier. The API does not expose hidden chain-of-thought, execute client tools, or fetch remote image URLs.
 
 ```bash
-# Start with clients supplying the Perplexity account session-cookie pair per request
+# Default: clients supply a compact wsk_ token or raw cookie in Authorization: Bearer
 perplexity-webui-scraper api
 
-# Optional server-default account session-cookie pair, protected by a separate gateway key
-PERPLEXITY_SESSION_TOKEN="__Secure-pplx.session.<account UUID>=YOUR_VALUE" PERPLEXITY_API_KEY="$GATEWAY_KEY" perplexity-webui-scraper api
+# Passwordless mode using one configured server token (no incoming password checked)
+PERPLEXITY_SESSION_TOKEN="wsk_YOUR_COMPACT_TOKEN" perplexity-webui-scraper api
+
+# Custom API key gating the configured server token (checked via Authorization: Bearer)
+PERPLEXITY_SESSION_TOKEN="wsk_YOUR_COMPACT_TOKEN" \
+  PERPLEXITY_API_KEY="my_secret_key_123" \
+  perplexity-webui-scraper api
 
 # Custom host and port
 perplexity-webui-scraper api --host 0.0.0.0 --port 8080
@@ -198,18 +203,18 @@ podman run --rm -it -e PERPLEXITY_SESSION_TOKEN=your_token perplexity-mcp
 
 ### CLI options
 
-| Option            | Short | Default     | Description                                                            |
-| ----------------- | ----- | ----------- | ---------------------------------------------------------------------- |
-| `--host`          | `-H`  | `127.0.0.1` | Bind address                                                           |
-| `--port`          | `-p`  | `8000`      | Port to listen on                                                      |
-| `--reload`        |       | `False`     | Enable auto-reload (development only)                                  |
-| `--log-level`     |       | `info`      | Uvicorn log level                                                      |
-| `--session-token` |       | unset       | Optional server-default Perplexity token (`PERPLEXITY_SESSION_TOKEN`)  |
-| `--api-key`       |       | unset       | Gateway key required when a server token is set (`PERPLEXITY_API_KEY`) |
+| Option            | Short | Default     | Description                                                                        |
+| ----------------- | ----- | ----------- | ---------------------------------------------------------------------------------- |
+| `--host`          | `-H`  | `127.0.0.1` | Bind address                                                                       |
+| `--port`          | `-p`  | `8000`      | Port to listen on                                                                  |
+| `--reload`        |       | `False`     | Enable auto-reload (development only)                                              |
+| `--log-level`     |       | `info`      | Uvicorn log level                                                                  |
+| `--session-token` |       | unset       | Server-default Perplexity token (`PERPLEXITY_SESSION_TOKEN`, `wsk_` or raw cookie) |
+| `--api-key`       |       | unset       | Custom `Authorization: Bearer` key required when `--session-token` is set          |
 
 ### Authentication
 
-Without a server-default credential, send either the raw `__Secure-pplx.session.<UUIDv4>=<JWE>` pair or compact `wsk_` token in `Authorization: Bearer`. When `PERPLEXITY_SESSION_TOKEN` is configured on the server, requests may omit `Authorization` but must include the separate gateway key in `X-API-Key`. A caller credential can override the server default after gateway authentication.
+Requests always use `Authorization: Bearer`. Without `--session-token`, send either a compact `wsk_` token or a raw `__Secure-pplx.session.<UUIDv4>=<JWE>` cookie pair per request. With `--session-token` only, the server accepts requests without a password. With both `--session-token` and `--api-key`, pass your custom `--api-key` as the Bearer token.
 
 ```bash
 # curl
@@ -231,7 +236,7 @@ from openai import OpenAI
 
 client = OpenAI(
     base_url="http://localhost:8000/v1",
-    api_key="__Secure-pplx.session.<account UUID>=YOUR_VALUE",
+    api_key="wsk_YOUR_COMPACT_TOKEN",
 )
 
 response = client.chat.completions.create(
@@ -241,11 +246,11 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-Chat Completions request with server-configured upstream credentials:
+Chat Completions request with server-configured `--session-token` and custom `--api-key`:
 
 ```bash
 curl http://localhost:8000/v1/chat/completions \
-  -H 'X-API-Key: YOUR_GATEWAY_KEY' \
+  -H 'Authorization: Bearer my_secret_key_123' \
   -H 'Content-Type: application/json' \
   -d '{"model":"perplexity/best","messages":[{"role":"user","content":"Hello!"}]}'
 ```
@@ -282,7 +287,7 @@ Expose every Perplexity model as a separate tool for AI agents (Claude Desktop, 
 }
 ```
 
-See the [MCP documentation](https://perplexity-webui-scraper.readthedocs.io/page/mcp-server/) for tools and configuration.
+See the [MCP documentation](https://perplexity-webui-scraper.readthedocs.io/mcp-server/) for tools and configuration.
 
 ## Disclaimer
 

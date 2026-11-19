@@ -4,7 +4,7 @@
 site/
 
 # Named generated files
-docs/api-reference.md
+docs/python-client/models.md
 docs/mcp-server.md
 
 # Dependency lockfiles

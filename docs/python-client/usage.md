@@ -1,13 +1,13 @@
 # Usage guide
 
-Create a client with a raw `__Secure-pplx.session.<UUIDv4>=<JWE>` cookie pair or a compact `wsk_` session token. Both forms resolve to the same session cookie. The compact format is reversible obfuscation, not encryption or authenticated integrity; keep it private as an account credential.
+Create a client with either a compact `wsk_` v1 token or a raw `__Secure-pplx.session.<UUIDv4>=<JWE>` cookie pair. See [Session Token](../token.md) for how to generate or convert credentials.
 
 ## Quick Start
 
 ```python
 from perplexity_webui_scraper import Perplexity
 
-client = Perplexity(session_token="__Secure-pplx.session.<account UUID>=YOUR_VALUE")
+client = Perplexity(session_token="wsk_YOUR_COMPACT_TOKEN")
 conversation = client.create_conversation()
 
 conversation.ask("What is quantum computing?")
@@ -43,7 +43,7 @@ Pass a `ConversationConfig` when creating a conversation:
 ```python
 from perplexity_webui_scraper import ConversationConfig, Perplexity
 
-client = Perplexity(session_token="__Secure-pplx.session.<account UUID>=YOUR_VALUE")
+client = Perplexity(session_token="wsk_YOUR_COMPACT_TOKEN")
 
 config = ConversationConfig(
     model="perplexity/best",
@@ -61,7 +61,7 @@ print(conversation.answer)
 
 ## File attachments
 
-File attachments require a paid Perplexity account. Free accounts can use text prompts, but file uploads are blocked before any upload request is attempted.
+File attachments require a paid Perplexity account. Free accounts can use text prompts, but file uploads raise `FileAccessError` before any upload request is attempted.
 
 The `ask()` method accepts local paths, raw bytes, `(bytes, filename)` tuples, and `(bytes, filename, mimetype)` tuples.
 
@@ -96,7 +96,7 @@ Pass a [Space](https://www.perplexity.ai/spaces) UUID through `space_uuid` to st
 ```python
 from perplexity_webui_scraper import ConversationConfig, Perplexity
 
-client = Perplexity(session_token="__Secure-pplx.session.<account UUID>=YOUR_VALUE")
+client = Perplexity(session_token="wsk_YOUR_COMPACT_TOKEN")
 
 conversation = client.create_conversation(
     ConversationConfig(
@@ -111,4 +111,4 @@ print(conversation.answer)
 
 The URL slug, such as `questions-abcdef123456`, is not the Space UUID. To find the UUID, submit a query inside the Space, inspect the `perplexity_ask` request in the browser Network panel, and copy `target_collection_uuid` from its JSON payload.
 
-The client accepts at most 30 files per prompt and rejects files larger than 50 MB before upload. The accepted input shapes are listed in the [configuration values reference](api/types.md#file-inputs).
+The client accepts at most 30 files per prompt and rejects files larger than 50 MB before upload. See [File inputs](types.md#file-inputs) for supported shapes.

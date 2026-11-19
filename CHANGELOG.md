@@ -13,14 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **API:** Remove `POST /v1/responses` for the 2.0.0 release; `POST /v1/chat/completions` remains the only text-generation endpoint and accepts `developer` system messages. Automatically prepend a master instruction enforcing read-only Perplexity WebUI Q&A behavior so agentic harnesses do not trigger tool-call roleplay. Require authentication on `GET /v1/models` and filter listed models by the caller's account tier using a 10-minute in-memory cache.
+- **API:** Remove `POST /v1/responses` for the 2.0.0 release; `POST /v1/chat/completions` remains the only text-generation endpoint and accepts `developer` system messages. Automatically prepend a master instruction enforcing read-only Perplexity WebUI Q&A behavior so agentic harnesses do not trigger tool-call roleplay. Use pure `Authorization: Bearer` authentication across three server modes (per-request `wsk_` or session cookie by default, passwordless when only `PERPLEXITY_SESSION_TOKEN` is set, or gated by a custom `PERPLEXITY_API_KEY` when both are set), and filter `GET /v1/models` by the caller's account tier using a 10-minute in-memory cache.
 - **Exception attributes:** Remove deprecated `HTTPError.url`, `HTTPError.response_body`, and `ResponseParsingError.raw_data` compatibility attributes.
 - **API contract:** Keep the Python client, MCP interface, shared conversation input validation, and `GET /v1/models`.
 - **Account-scoped authentication:** Accept raw UUIDv4 `__Secure-pplx.session` cookie pairs and compact `wsk_` v1 tokens across client, HTTP, API, and MCP entry points. Email authentication emits compact tokens and includes account context in observed WebUI requests.
 - **Python and API configuration:** Remove `Coordinates` and `CoordinatesInput` in favor of paired `latitude` and `longitude` fields in `ConversationConfig` and `PerplexityExtensions`, validate strings at Pydantic boundaries, and export `FileInput` as one focused typing alias.
 - **HTTP request metadata:** Track retry attempt numbers per thread so concurrent requests cannot overwrite one another's metadata.
-- **Model catalog:** Add current WebUI picker models and retain unverified status for inconclusive probes.
-- **Documentation & tooling:** Replace MkDocs with Zensical (`zensical.toml`), rewrite Python API reference pages as pure GitHub-Flavored Markdown, migrate maintainer scripts to dedicated `scripts` and `tests` dependency groups, and synchronize model catalogs directly over system Chromium CDP without browser downloads.
+- **Model catalog:** Add current WebUI picker models, normalize unknown minimum tiers to `"unknown"`, and retain unverified status for inconclusive probes.
+- **Documentation & tooling:** Replace MkDocs with Zensical (`zensical.toml`), reorganize docs around dedicated Session Token, Python Client, CLI, OpenAI-Compatible API, and MCP Server sections, run maintainer scripts across dedicated `scripts` and `tests` dependency groups, and synchronize model catalogs with `pydoll-python` (`>=3.11, <3.15`).
 - **Repository text:** Standardize source, tests, documentation, and CLI text on en_US English.
 
 ### Fixed

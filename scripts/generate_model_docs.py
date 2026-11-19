@@ -47,7 +47,7 @@ def _status_reference() -> list[str]:
 
 
 def _tier(model: Model) -> str:
-    return model.min_tier or "unknown"
+    return model.min_tier
 
 
 def _last_tested(model: Model) -> str:
@@ -113,7 +113,7 @@ def _replace(path: Path, rendered: str) -> tuple[str, str]:
     if BEGIN not in original or END not in original:
         raise RuntimeError(f"Could not locate generated model catalog markers in {path}")
 
-    updated = sub(f"{BEGIN}.*?{END}\n*", f"{rendered}\n\n", original, flags=DOTALL)
+    updated = sub(f"{BEGIN}.*?{END}\n*", f"{rendered}\n\n", original, flags=DOTALL).rstrip("\n") + "\n"
 
     return original, updated
 
@@ -122,7 +122,7 @@ def render_catalog_docs(*, check: bool = False) -> int:
     """Render or verify model catalog sections across documentation pages."""
     models = _models()
     targets = (
-        (ROOT / "docs/api-reference.md", _api_catalog(models)),
+        (ROOT / "docs/python-client/models.md", _api_catalog(models)),
         (ROOT / "docs/mcp-server.md", _mcp_catalog(models)),
     )
     stale: list[Path] = []
