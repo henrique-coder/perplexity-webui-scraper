@@ -6,4 +6,7 @@ from perplexity_webui_scraper.config.client import ClientConfig
 from perplexity_webui_scraper.config.conversation import ConversationConfig
 
 
-__all__: list[str] = ["ClientConfig", "ConversationConfig"]
+__all__: list[str] = [
+    "ClientConfig",
+    "ConversationConfig",
+]
