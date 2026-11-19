@@ -4,13 +4,12 @@ from __future__ import annotations
 
 from contextlib import nullcontext
 from sys import stdin
-from typing import Annotated
 
 from pyperclip import PyperclipException, copy
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
-from typer import Context, Exit, Option, Typer
+from typer import Exit
 
 from perplexity_webui_scraper._internal.constants import SESSION_COOKIE_PREFIX
 from perplexity_webui_scraper._internal.exceptions import SessionTokenError
@@ -29,15 +28,6 @@ console = Console(stderr=True, soft_wrap=True, color_system="standard")
 def sys_stdin_is_tty() -> bool:
     """Return whether an invalid CLI argument can be corrected interactively."""
     return stdin.isatty()
-
-
-app = Typer(
-    name="token",
-    help="Generate, convert, or restore Perplexity session credentials.",
-    no_args_is_help=False,
-    add_completion=False,
-    context_settings={"help_option_names": ["-h", "--help"]},
-)
 
 
 def _show_header(*, conversion: bool = False) -> None:
@@ -161,25 +151,12 @@ def run_transform_command(value: str | None, *, deconvert: bool, interactive: bo
     _run_transform(value, deconvert=deconvert, interactive=interactive)
 
 
-@app.callback(invoke_without_command=True)
-def run(
-    context: Context,
-    email: Annotated[str | None, Option("-e", "--email", help="Perplexity account email.")] = None,
-    convert: Annotated[
-        bool, Option("-c", "--convert", help="Convert or validate a session credential offline.")
-    ] = False,
-) -> None:
-    """Authenticate, convert a raw cookie, or validate a compact session token."""
-    if context.invoked_subcommand:
-        return
-
+def run_command(email: str | None = None) -> None:
+    """Authenticate via email/TOTP and emit a compact wsk_ session token."""
     screen_context = console.screen(hide_cursor=False) if sys_stdin_is_tty() else nullcontext()
+
     with screen_context:
         try:
-            if convert:
-                _run_transform_value(None, deconvert=False, interactive=True)
-                return
-
             _show_header()
             resolved_email = _prompt_email(email)
             console.print("\n[bold cyan]Step 1: Email verification[/bold cyan]")
@@ -203,6 +180,7 @@ def run(
             console.print("[green]Compact session token generated.[/green]")
             console.print("\n[bold white]Account session credential:[/bold white]")
             console.print(credential, style="green", markup=False, highlight=False, soft_wrap=True)
+
             if Confirm.ask("Copy credential to clipboard?", default=False, console=console):
                 try:
                     copy(credential)
@@ -215,6 +193,7 @@ def run(
             console.print(
                 "\n[bold yellow]Keep this credential private; it grants access to your account.[/bold yellow]"
             )
+
             if sys_stdin_is_tty():
                 console.input("[bold cyan]Press ENTER to clear the screen and exit...[/bold cyan]")
         except Exit:
@@ -224,42 +203,11 @@ def run(
         except Exception as error:
             console.print("\n[bold red]Authentication failed:[/bold red] ", end="")
             console.print(str(error), markup=False, highlight=False)
+
             if sys_stdin_is_tty():
                 console.input("[bold cyan]Press ENTER to exit...[/bold cyan]")
+
             raise Exit(code=1) from error
 
 
-def run_command(
-    email: str | None = None,
-    convert: bool = False,
-    arguments: list[str] | None = None,
-    *,
-    standalone_mode: bool = True,
-) -> None:
-    """Entry point used by the lazy root CLI dispatcher."""
-    args = arguments or []
-    if args or convert:
-        operation = args[0] if args else "convert"
-        if operation not in {"convert", "deconvert"} or len(args) > 1:
-            console.print("Usage: perplexity-webui-scraper token convert or token deconvert", markup=False)
-            raise Exit(code=2)
-        _run_transform(
-            None,
-            deconvert=operation == "deconvert",
-            interactive=sys_stdin_is_tty(),
-        )
-        return
-    if not sys_stdin_is_tty():
-        try:
-            app(args=["--email", email] if email is not None else [], standalone_mode=standalone_mode)
-        except SystemExit:
-            raise
-        except BaseException as error:
-            console.print("Authentication failed: ", end="")
-            console.print(str(error), markup=False, highlight=False)
-            raise Exit(code=1) from error
-        return
-    app(args=["--email", email] if email is not None else [], standalone_mode=standalone_mode)
-
-
-__all__ = ["app", "run", "run_command"]
+__all__ = ["run_command", "run_transform_command"]

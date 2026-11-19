@@ -60,22 +60,15 @@ def _load_command(command_name: str) -> tuple[Callable[..., Any], str]:
 def token(
     context: Context,
     email: Annotated[str | None, Option("-e", "--email", help="Perplexity account email.")] = None,
-    convert: Annotated[bool, Option("-c", "--convert", help="Convert a session credential offline.")] = False,
 ) -> None:
-    """Generate or convert Perplexity session credentials."""
+    """Generate, convert, or restore Perplexity session credentials."""
     operation = context.invoked_subcommand
 
     if operation:
-        return
+        if email is not None:
+            echo("The --email option cannot be combined with convert or deconvert.", err=True)
+            raise Exit(code=2)
 
-    if convert:
-        try:
-            transform = _load_token_transform()
-        except SystemExit as error:
-            echo(str(error), err=True)
-            raise Exit(code=1) from error
-
-        transform(None, deconvert=False, interactive=True)
         return
 
     try:
@@ -162,10 +155,7 @@ def _load_token_transform() -> Callable[..., Any]:
     return module.run_transform_command
 
 
-@cli.command(
-    name="api",
-    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
-)
+@cli.command(name="api", context_settings={"help_option_names": ["-h", "--help"]})
 def api(
     host: Annotated[str, Option("--host", "-H", help="Host address to bind the server to.")] = "127.0.0.1",
     port: Annotated[int, Option("--port", "-p", help="Port to listen on.")] = 8000,
