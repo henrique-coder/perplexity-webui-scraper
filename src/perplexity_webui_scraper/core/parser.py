@@ -37,6 +37,7 @@ MAX_ANSWER_BYTES = 1024 * 1024
 
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from re import Match
 
 
@@ -50,6 +51,7 @@ class SchematizedStreamState:
     markdown_chunks: list[str] = field(default_factory=list)
     activity: dict[str, ActivityEvent] = field(default_factory=dict)
     search_results: list[SearchResultItem] = field(default_factory=list)
+    citation_results: list[SearchResultItem] = field(default_factory=list)
 
 
 def _json_pointer_tokens(path: str) -> list[str]:
@@ -61,6 +63,47 @@ def _json_pointer_tokens(path: str) -> list[str]:
         raise ValueError(f"Invalid JSON Patch path: {path!r}")
 
     return [part.replace("~1", "/").replace("~0", "~") for part in path[1:].split("/")]
+
+
+def _apply_list_patch(target: list[Any], op: Any, key: str, value: Any) -> None:
+    """Apply an ``add``, ``replace``, or ``remove`` JSON Patch operation to a list."""
+    if op == "add":
+        if key == "-":
+            target.append(value)
+        else:
+            target.insert(int(key), value)
+
+        return
+
+    if op == "replace":
+        target[int(key)] = value
+
+        return
+
+    if op == "remove":
+        target.pop(int(key))
+
+        return
+
+    raise ResponseParsingError("Unsupported JSON Patch operation") from None
+
+
+def _apply_dict_patch(target: dict[str, Any], op: Any, key: str, value: Any) -> None:
+    """Apply an ``add``, ``replace``, or ``remove`` JSON Patch operation to a mapping."""
+    if op in {"add", "replace"}:
+        if op == "replace" and key not in target:
+            raise ResponseParsingError("JSON Patch replace target does not exist") from None
+
+        target[key] = value
+
+        return
+
+    if op == "remove":
+        target.pop(key, None)
+
+        return
+
+    raise ResponseParsingError("Unsupported JSON Patch operation") from None
 
 
 def _apply_json_patch(document: Any, operation: dict[str, Any]) -> None:
@@ -85,34 +128,160 @@ def _apply_json_patch(document: Any, operation: dict[str, Any]) -> None:
 
     for token in tokens[:-1]:
         target = target[int(token)] if isinstance(target, list) else target[token]
+
     key = tokens[-1]
 
     if isinstance(target, list):
-        if op == "add":
-            if key == "-":
-                target.append(operation.get("value"))
-            else:
-                target.insert(int(key), operation.get("value"))
-        elif op == "replace":
-            target[int(key)] = operation.get("value")
-        elif op == "remove":
-            target.pop(int(key))
-        else:
-            raise ResponseParsingError("Unsupported JSON Patch operation") from None
-
+        _apply_list_patch(target, op, key, operation.get("value"))
         return
 
     if not isinstance(target, dict):
         raise ResponseParsingError("JSON Patch target must be an object or list") from None
 
-    if op in {"add", "replace"}:
-        if key not in target and op == "replace":
-            raise ResponseParsingError("JSON Patch replace target does not exist") from None
-        target[key] = operation.get("value")
-    elif op == "remove":
-        target.pop(key, None)
-    else:
-        raise ResponseParsingError("Unsupported JSON Patch operation") from None
+    _apply_dict_patch(target, op, key, operation.get("value"))
+
+
+def _apply_workflow_block(
+    state: SchematizedStreamState,
+    workflow_block: dict[str, Any],
+    search_results: list[SearchResultItem],
+    raw_data: dict[str, Any],
+) -> None:
+    """Store and project an incoming ``workflow_block`` event."""
+    state.workflow_block = workflow_block
+    _check_workflow_state_size(state)
+    _update_activity(state, workflow_block, search_results)
+    raw_data["workflow_block"] = _bounded_raw_value(workflow_block)
+
+
+def _apply_diff_block(
+    state: SchematizedStreamState,
+    diff_block: dict[str, Any],
+    search_results: list[SearchResultItem],
+    raw_data: dict[str, Any],
+) -> None:
+    """Validate and apply JSON Patch updates to ``state.workflow_block``."""
+    workflow_block = state.workflow_block
+
+    if workflow_block is None:
+        return
+
+    patches = diff_block.get("patches", [])
+
+    if not isinstance(patches, list):
+        state.workflow_block = None
+        raise ResponseParsingError("SSE diff patches field must be a list.") from None
+
+    if len(patches) > 100:
+        state.workflow_block = None
+        raise ResponseParsingError("SSE diff contains more than 100 patch operations.") from None
+
+    try:
+        for patch in patches:
+            if isinstance(patch, dict):
+                _apply_json_patch(workflow_block, patch)
+    except (ValueError, TypeError, IndexError, KeyError):
+        state.workflow_block = None
+        raise ResponseParsingError("Malformed SSE diff patch.") from None
+
+    _check_workflow_state_size(state)
+    _update_activity(state, workflow_block, search_results)
+    raw_data["diff_block"] = _bounded_raw_value(diff_block)
+
+
+def _apply_web_result_block(
+    state: SchematizedStreamState,
+    web_result_block: dict[str, Any],
+    search_results: list[SearchResultItem],
+    raw_data: dict[str, Any],
+) -> list[SearchResultItem]:
+    """Validate and merge incoming web search results into stream state."""
+    if not isinstance(web_result_block.get("web_results"), list):
+        raise ResponseParsingError("Web result block must contain a list.") from None
+
+    updated_results = _extract_web_results(web_result_block)
+
+    if updated_results is not None:
+        search_results = updated_results
+        state.citation_results = _citation_results(updated_results)
+        state.search_results = _merge_search_results(state.search_results, updated_results)[:50]
+
+    _update_activity(state, state.workflow_block, state.search_results or search_results)
+
+    if state.activity.get("search_web") is not None:
+        event = state.activity["search_web"]
+        state.activity["search_web"] = ActivityEvent(
+            kind=event.kind,
+            status=event.status,
+            label=event.label,
+            queries=event.queries,
+            results=_validated_search_results([*state.search_results, *event.results])[:50],
+        )
+
+    raw_data["web_result_block"] = _bounded_raw_value(web_result_block)
+
+    return search_results
+
+
+def _apply_schematized_block(
+    state: SchematizedStreamState,
+    block: dict[str, Any],
+    citation_mode: Literal["default", "markdown", "clean"],
+    search_results: list[SearchResultItem],
+    raw_data: dict[str, Any],
+) -> list[SearchResultItem]:
+    """Dispatch one schematized SSE block to its handler."""
+    workflow_block = block.get("workflow_block")
+
+    if isinstance(workflow_block, dict):
+        _apply_workflow_block(state, workflow_block, search_results, raw_data)
+
+    diff_block = block.get("diff_block")
+
+    if isinstance(diff_block, dict):
+        _apply_diff_block(state, diff_block, search_results, raw_data)
+
+    markdown_block = block.get("markdown_block")
+
+    if isinstance(markdown_block, dict):
+        citation_sources = state.citation_results or _citation_results(search_results)
+        _process_markdown_block(markdown_block, citation_mode, citation_sources, state)
+        raw_data["markdown_block"] = _bounded_raw_value(markdown_block)
+
+    web_result_block = block.get("web_result_block")
+
+    if isinstance(web_result_block, dict):
+        search_results = _apply_web_result_block(state, web_result_block, search_results, raw_data)
+
+    return search_results
+
+
+def _finalize_schematized_blocks(
+    data: dict[str, Any],
+    citation_mode: Literal["default", "markdown", "clean"],
+    search_results: list[SearchResultItem],
+    state: SchematizedStreamState,
+    raw_data: dict[str, Any],
+) -> tuple[str | None, list[str], list[SearchResultItem], dict[str, Any]]:
+    """Project final workflow text and completion flags after applying blocks."""
+    citation_sources = state.citation_results or _citation_results(search_results)
+
+    if state.workflow_block is not None:
+        raw_data["workflow_block"] = _bounded_raw_value(state.workflow_block)
+        extracted = _extract_workflow_text(state.workflow_block, citation_mode, citation_sources)
+
+        if extracted is not None:
+            state.answer, state.chunks, _ = extracted
+
+    is_final = any(data.get(key) for key in ("text_completed", "final_sse_message", "final"))
+
+    if is_final:
+        state.activity = _complete_activity(state.activity)
+
+        if state.answer is None and state.markdown_chunks:
+            state.answer = format_citations("".join(state.markdown_chunks), citation_mode, citation_sources)
+
+    return (state.answer if is_final else None), list(state.chunks), search_results, raw_data
 
 
 def _process_schematized_blocks(
@@ -132,99 +301,93 @@ def _process_schematized_blocks(
         raise ResponseParsingError("SSE event contains more than 100 blocks.") from None
 
     for block in raw_blocks:
-        if not isinstance(block, dict):
+        if isinstance(block, dict):
+            search_results = _apply_schematized_block(state, block, citation_mode, search_results, raw_data)
+
+    return _finalize_schematized_blocks(data, citation_mode, search_results, state, raw_data)
+
+
+def _iter_search_web_items(steps: Any, item_type: str) -> Iterable[dict[str, Any]]:
+    """Yield allowlisted workflow items matching *item_type* under ``search_web`` steps."""
+    if not isinstance(steps, list):
+        return
+
+    for step in steps[:100]:
+        if not isinstance(step, dict) or step.get("tool_name") != "search_web":
             continue
 
-        workflow_block = block.get("workflow_block")
+        raw_items = step.get("items", [])
 
-        if isinstance(workflow_block, dict):
-            state.workflow_block = workflow_block
-            _check_workflow_state_size(state)
-            _update_activity(state, workflow_block, search_results)
-            raw_data["workflow_block"] = _bounded_raw_value(workflow_block)
+        if not isinstance(raw_items, list):
+            continue
 
-        diff_block = block.get("diff_block")
+        for item in raw_items[:100]:
+            if isinstance(item, dict) and item.get("type") == item_type:
+                yield item
 
-        if isinstance(diff_block, dict) and state.workflow_block is not None:
-            patches = diff_block.get("patches", [])
 
-            if not isinstance(patches, list):
-                state.workflow_block = None
-                raise ResponseParsingError("SSE diff patches field must be a list.") from None
+def _extract_activity_queries(steps: Any) -> tuple[bool, list[str]]:
+    """Extract query strings from ``WORKFLOW_ITEM_QUERIES`` steps."""
+    query_evidence = False
+    queries: list[str] = []
 
-            if len(patches) > 100:
-                state.workflow_block = None
-                raise ResponseParsingError("SSE diff contains more than 100 patch operations.") from None
+    for item in _iter_search_web_items(steps, "WORKFLOW_ITEM_QUERIES"):
+        payload = item.get("payload")
+        queries_payload = payload.get("queries_payload") if isinstance(payload, dict) else None
+        raw_queries = queries_payload.get("queries") if isinstance(queries_payload, dict) else None
 
-            try:
-                for patch in patches:
-                    if isinstance(patch, dict):
-                        _apply_json_patch(state.workflow_block, patch)
-            except (ValueError, TypeError, IndexError, KeyError):
-                state.workflow_block = None
-                raise ResponseParsingError("Malformed SSE diff patch.") from None
+        if not isinstance(raw_queries, list):
+            continue
 
-            _check_workflow_state_size(state)
-            _update_activity(state, state.workflow_block, search_results)
-            raw_data["diff_block"] = _bounded_raw_value(diff_block)
+        query_evidence = True
 
-        markdown_block = block.get("markdown_block")
+        for query in raw_queries[:20]:
+            safe_query = _safe_activity_text(query)
 
-        if isinstance(markdown_block, dict):
-            _process_markdown_block(
-                markdown_block,
-                citation_mode,
-                state.search_results or search_results,
-                state,
-            )
-            raw_data["markdown_block"] = _bounded_raw_value(markdown_block)
+            if safe_query is not None and safe_query not in queries and len(queries) < 20:
+                queries.append(safe_query)
 
-        web_result_block = block.get("web_result_block")
+    return query_evidence, queries
 
-        if isinstance(web_result_block, dict):
-            if isinstance(web_result_block.get("web_results"), list):
-                updated_results = _extract_web_results(web_result_block)
-            else:
-                raise ResponseParsingError("Web result block must contain a list.") from None
 
-            if updated_results is not None:
-                search_results = updated_results
-                state.search_results = _merge_search_results(state.search_results, updated_results)[:50]
+def _extract_activity_sources(steps: Any) -> list[SearchResultItem]:
+    """Extract raw source records from ``WORKFLOW_ITEM_SOURCES`` steps."""
+    source_results: list[SearchResultItem] = []
 
-            _update_activity(state, state.workflow_block, state.search_results or search_results)
+    for item in _iter_search_web_items(steps, "WORKFLOW_ITEM_SOURCES"):
+        payload = item.get("payload")
+        sources_payload = payload.get("sources_payload") if isinstance(payload, dict) else None
+        raw_sources = sources_payload.get("sources") if isinstance(sources_payload, dict) else None
 
-            if state.activity.get("search_web") is not None:
-                event = state.activity["search_web"]
-                state.activity["search_web"] = ActivityEvent(
-                    kind=event.kind,
-                    status=event.status,
-                    label=event.label,
-                    queries=event.queries,
-                    results=_validated_search_results([*state.search_results, *event.results])[:50],
-                )
+        if not isinstance(raw_sources, list):
+            continue
 
-            raw_data["web_result_block"] = _bounded_raw_value(web_result_block)
+        for source in raw_sources[:50]:
+            if not isinstance(source, dict):
+                continue
 
-    if state.workflow_block is not None:
-        raw_data["workflow_block"] = _bounded_raw_value(state.workflow_block)
-        extracted = _extract_workflow_text(state.workflow_block, citation_mode, search_results)
+            url = source.get("url")
+            title = source.get("name")
+            snippet = source.get("snippet")
 
-        if extracted is not None:
-            state.answer, state.chunks, search_results = extracted
+            if isinstance(url, str) and isinstance(title, str) and isinstance(snippet, str):
+                source_results.append(SearchResultItem(url=url, title=title, snippet=snippet))
 
-    is_final = bool(data.get("text_completed") or data.get("final_sse_message") or data.get("final"))
+    return source_results
 
-    if is_final:
-        state.activity = _complete_activity(state.activity)
 
-    if is_final and state.answer is None and state.markdown_chunks:
-        state.answer = format_citations("".join(state.markdown_chunks), citation_mode, search_results)
+def _merge_unique_queries(existing_queries: list[str], new_queries: list[str], limit: int = 20) -> list[str]:
+    """Preserve query order while deduplicating and capping at *limit*."""
+    combined_queries: list[str] = []
 
-    answer = state.answer if is_final else None
+    for query in [*existing_queries, *new_queries]:
+        if query not in combined_queries:
+            combined_queries.append(query)
 
-    raw = raw_data
+        if len(combined_queries) == limit:
+            break
 
-    return answer, list(state.chunks), search_results, raw
+    return combined_queries
 
 
 def _update_activity(
@@ -236,80 +399,19 @@ def _update_activity(
     if not isinstance(workflow_block, dict):
         return
 
-    query_evidence = False
-    queries: list[str] = []
     steps = workflow_block.get("steps", [])
-
-    for step in steps[:100] if isinstance(steps, list) else []:
-        if not isinstance(step, dict) or step.get("tool_name") != "search_web":
-            continue
-
-        raw_items = step.get("items", [])
-
-        for item in raw_items[:100] if isinstance(raw_items, list) else []:
-            if not isinstance(item, dict) or item.get("type") != "WORKFLOW_ITEM_QUERIES":
-                continue
-
-            payload = item.get("payload")
-            queries_payload = payload.get("queries_payload") if isinstance(payload, dict) else None
-            raw_queries = queries_payload.get("queries") if isinstance(queries_payload, dict) else None
-
-            if isinstance(raw_queries, list):
-                query_evidence = True
-
-                for query in raw_queries[:20]:
-                    safe_query = _safe_activity_text(query)
-
-                    if safe_query is not None and safe_query not in queries and len(queries) < 20:
-                        queries.append(safe_query)
+    query_evidence, queries = _extract_activity_queries(steps)
 
     if not query_evidence:
         return
 
-    source_results: list[SearchResultItem] = []
-    for step in steps[:100] if isinstance(steps, list) else []:
-        if not isinstance(step, dict) or step.get("tool_name") != "search_web":
-            continue
-
-        raw_items = step.get("items", [])
-
-        for item in raw_items[:100] if isinstance(raw_items, list) else []:
-            if not isinstance(item, dict) or item.get("type") != "WORKFLOW_ITEM_SOURCES":
-                continue
-
-            payload = item.get("payload")
-            sources_payload = payload.get("sources_payload") if isinstance(payload, dict) else None
-            raw_sources = sources_payload.get("sources") if isinstance(sources_payload, dict) else None
-
-            if not isinstance(raw_sources, list):
-                continue
-
-            for source in raw_sources[:50]:
-                if not isinstance(source, dict):
-                    continue
-
-                url = source.get("url")
-                title = source.get("name")
-                snippet = source.get("snippet")
-
-                if not isinstance(url, str) or not isinstance(title, str) or not isinstance(snippet, str):
-                    continue
-
-                source_results.append(SearchResultItem(url=url, title=title, snippet=snippet))
-
+    source_results = _extract_activity_sources(steps)
     results = _validated_search_results([*search_results, *source_results])[:50]
     status: Literal["in_progress", "completed"] = (
         "completed" if workflow_block.get("status") == "WORKFLOW_COMPLETED" else "in_progress"
     )
     existing = state.activity.get("search_web")
-    combined_queries: list[str] = []
-
-    for query in [*(existing.queries if existing else []), *queries]:
-        if query not in combined_queries:
-            combined_queries.append(query)
-
-        if len(combined_queries) == 20:
-            break
+    combined_queries = _merge_unique_queries(existing.queries if existing else [], queries)
 
     state.activity["search_web"] = ActivityEvent(
         kind="search",
@@ -337,65 +439,86 @@ def _safe_activity_text(value: Any, max_length: int = 512) -> str | None:
     return text
 
 
+def _is_public_hostname(raw_hostname: str) -> bool:
+    """Return whether *raw_hostname* is a routable non-local public host."""
+    hostname = raw_hostname.lower().rstrip(".")
+
+    if not hostname or hostname == "localhost" or hostname.endswith((".localhost", ".local")):
+        return False
+
+    try:
+        return ip_address(hostname).is_global
+    except ValueError:
+        return True
+
+
+def _normalize_public_https_url(url: Any) -> str | None:
+    """Return a canonical fragment-free HTTPS URL for public hosts, or ``None``."""
+    if not isinstance(url, str) or len(url) > 2048:
+        return None
+
+    try:
+        parsed = urlsplit(url)
+        port = parsed.port
+    except ValueError:
+        return None
+
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or (port is not None and not 1 <= port <= 65535)
+        or not _is_public_hostname(parsed.hostname)
+    ):
+        return None
+
+    return url.split("#", 1)[0]
+
+
+def _upsert_search_result(
+    results: list[SearchResultItem],
+    seen_urls: set[str],
+    canonical_url: str,
+    item: SearchResultItem,
+) -> None:
+    """Update an existing URL entry in place or append a new bounded entry."""
+    if canonical_url in seen_urls:
+        for index, existing in enumerate(results):
+            if existing.url == canonical_url:
+                results[index] = item
+                break
+
+        return
+
+    seen_urls.add(canonical_url)
+    results.append(item)
+
+
+def _citation_results(search_results: list[SearchResultItem]) -> list[SearchResultItem]:
+    """Preserve 1-based source indices for citations without exposing unsafe URLs."""
+    return [SearchResultItem(url=_normalize_public_https_url(result.url)) for result in search_results[:50]]
+
+
 def _validated_search_results(search_results: list[SearchResultItem]) -> list[SearchResultItem]:
     """Return a bounded list of public HTTPS source metadata without private payloads."""
     results: list[SearchResultItem] = []
     seen_urls: set[str] = set()
 
     for result in search_results:
-        url = result.url
-
-        if not isinstance(url, str) or len(url) > 2048:
-            continue
-
-        try:
-            parsed = urlsplit(url)
-            port = parsed.port
-        except ValueError:
-            continue
-
-        if (
-            parsed.scheme != "https"
-            or not parsed.hostname
-            or parsed.username is not None
-            or parsed.password is not None
-        ):
-            continue
-
-        if port is not None and not 1 <= port <= 65535:
-            continue
-
-        hostname = parsed.hostname.lower().rstrip(".")
-
-        if not hostname or hostname == "localhost" or hostname.endswith((".localhost", ".local")):
-            continue
-
-        try:
-            address = ip_address(hostname)
-        except ValueError:
-            address = None
-
-        if address is not None and not address.is_global:
-            continue
-
-        canonical_url = url.split("#", 1)[0]
-
+        canonical_url = _normalize_public_https_url(result.url)
         title = _safe_activity_text(result.title)
         snippet = _safe_activity_text(result.snippet, max_length=2048)
 
-        if title is None or snippet is None:
+        if canonical_url is None or title is None or snippet is None:
             continue
 
-        if canonical_url in seen_urls:
-            for index, existing in enumerate(results):
-                if existing.url == canonical_url:
-                    results[index] = SearchResultItem(url=canonical_url, title=title, snippet=snippet)
-                    break
-
-            continue
-
-        seen_urls.add(canonical_url)
-        results.append(SearchResultItem(url=canonical_url, title=title, snippet=snippet))
+        _upsert_search_result(
+            results,
+            seen_urls,
+            canonical_url,
+            SearchResultItem(url=canonical_url, title=title, snippet=snippet),
+        )
 
         if len(results) == 50:
             break
@@ -892,22 +1015,23 @@ def _extract_state(
     """
     web_results = answer_data.get("web_results", [])
     updated_results = current_results
+    citation_sources = _citation_results(current_results)
 
     if web_results:
         if not isinstance(web_results, list):
             raise ResponseParsingError("Web results must be a list.") from None
 
-        updated_results = _validated_search_results(
-            [
-                SearchResultItem(
-                    title=r.get("name") if isinstance(r.get("name"), str) else None,
-                    snippet=r.get("snippet") if isinstance(r.get("snippet"), str) else None,
-                    url=r.get("url") if isinstance(r.get("url"), str) else None,
-                )
-                for r in web_results[:50]
-                if isinstance(r, dict)
-            ]
-        )
+        raw_results = [
+            SearchResultItem(
+                title=r.get("name") if isinstance(r.get("name"), str) else None,
+                snippet=r.get("snippet") if isinstance(r.get("snippet"), str) else None,
+                url=r.get("url") if isinstance(r.get("url"), str) else None,
+            )
+            for r in web_results[:50]
+            if isinstance(r, dict)
+        ]
+        updated_results = _validated_search_results(raw_results)
+        citation_sources = _citation_results(raw_results)
 
     raw_answer = answer_data.get("answer")
     answer_text: str | None = raw_answer if isinstance(raw_answer, str) else None
@@ -918,7 +1042,7 @@ def _extract_state(
     if answer_text is not None:
         answer_text = answer_text[:MAX_ANSWER_BYTES]
 
-    formatted_answer = format_citations(answer_text, citation_mode, updated_results)
+    formatted_answer = format_citations(answer_text, citation_mode, citation_sources)
 
     raw_chunks: list[Any] = answer_data.get("chunks", [])
     formatted_chunks: list[str] = []
@@ -928,7 +1052,7 @@ def _extract_state(
             raise ResponseParsingError("Answer chunks must be a list.") from None
 
         formatted_chunks = [
-            format_citations(str(chunk)[:65_536], citation_mode, updated_results) or ""
+            format_citations(str(chunk)[:65_536], citation_mode, citation_sources) or ""
             for chunk in raw_chunks[:100]
             if chunk is not None
         ]

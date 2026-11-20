@@ -1071,3 +1071,21 @@ def test_process_sse_data_prefers_markdown_chunks_over_stale_answer() -> None:
 
     assert answer == "The Berlin Wall fell in 1989."
     assert chunks == ["The Berlin Wall fell in 1", "989."]
+
+
+def test_extract_state_preserves_citation_indices_when_results_are_filtered() -> None:
+    payload = {
+        "answer": "First [1], second [2], duplicate [3].",
+        "chunks": ["First [1], second [2], duplicate [3]."],
+        "web_results": [
+            {"name": "Legacy HTTP", "url": "http://first.example/a", "snippet": "First summary"},
+            {"name": "Valid Second", "url": "https://second.example/b"},
+            {"name": "Duplicate Second", "url": "https://second.example/b", "snippet": "Second summary"},
+        ],
+    }
+
+    updated, answer, chunks, _raw = _extract_state(payload, [], "markdown")
+
+    assert [item.url for item in updated] == ["https://second.example/b"]
+    assert answer == ("First [1], second [2](https://second.example/b), duplicate [3](https://second.example/b).")
+    assert chunks == [answer]
