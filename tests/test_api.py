@@ -67,10 +67,10 @@ def _mock_profile_client(tier: AccountTier) -> MagicMock:
 @fixture(autouse=True)
 def _clear_auth_caches() -> Generator[None, None, None]:
     account_tier_cache.clear()
-    client_pool._clients.clear()
+    client_pool.clear()
     yield
     account_tier_cache.clear()
-    client_pool._clients.clear()
+    client_pool.clear()
 
 
 @fixture

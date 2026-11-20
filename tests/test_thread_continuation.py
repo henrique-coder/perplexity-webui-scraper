@@ -48,12 +48,12 @@ def _conversation(uuid: str = THREAD_UUID) -> MagicMock:
 
 @fixture(autouse=True)
 def _clean_caches():
-    _conversation_cache._store.clear()
-    _client_pool._clients.clear()
+    _conversation_cache.clear()
+    _client_pool.clear()
     with patch("perplexity_webui_scraper.api.routes.completions.MODELS", _Models()):
         yield
-    _conversation_cache._store.clear()
-    _client_pool._clients.clear()
+    _conversation_cache.clear()
+    _client_pool.clear()
 
 
 @fixture
@@ -235,6 +235,50 @@ def test_streaming_returns_thread_uuid_in_terminal_chunk(http_client: TestClient
     chunks = [loads(line[6:]) for line in response.text.splitlines() if line.startswith("data: {")]
     terminal = next(chunk for chunk in chunks if chunk["choices"][0].get("finish_reason") == "stop")
     assert terminal["perplexity"]["thread_uuid"] == THREAD_UUID
+
+
+def test_client_pool_defers_closing_until_cached_conversation_evicts(http_client: TestClient) -> None:
+    second_token = f"{SESSION_COOKIE_PREFIX}123e4567-e89b-42d3-a456-426614174001={_JWE}"
+    first_conversation = _conversation()
+    second_conversation = _conversation()
+    first_client = MagicMock()
+    first_client.create_conversation.return_value = first_conversation
+    second_client = MagicMock()
+    second_client.create_conversation.return_value = second_conversation
+
+    with (
+        patch("perplexity_webui_scraper.api.auth.Perplexity", side_effect=[first_client, second_client]),
+        patch.object(_client_pool, "_max_clients", 1),
+    ):
+        first_response = http_client.post(
+            "/v1/chat/completions",
+            json={"model": MODEL_ID, "messages": [{"role": "user", "content": "Start"}]},
+            headers={"Authorization": AUTH_HEADER},
+        )
+        assert first_response.status_code == 200
+
+        second_response = http_client.post(
+            "/v1/chat/completions",
+            json={"model": MODEL_ID, "messages": [{"role": "user", "content": "Other"}]},
+            headers={"Authorization": f"Bearer {second_token}"},
+        )
+        assert second_response.status_code == 200
+        first_client.close.assert_not_called()
+
+        continued = http_client.post(
+            "/v1/chat/completions",
+            json={
+                "model": MODEL_ID,
+                "messages": [{"role": "user", "content": "Continue"}],
+                "perplexity": {"thread_uuid": THREAD_UUID},
+            },
+            headers={"Authorization": AUTH_HEADER},
+        )
+        assert continued.status_code == 200
+        first_client.close.assert_not_called()
+
+        _conversation_cache.remove(TOKEN, THREAD_UUID)
+        first_client.close.assert_called_once()
 
 
 async def _empty_stream() -> Any:

@@ -172,19 +172,33 @@ class ClientPool:
             raise ValueError("ttl_seconds must be greater than zero")
 
         self._clients: OrderedDict[str, tuple[Perplexity, float]] = OrderedDict()
+        self._leases: dict[int, tuple[Perplexity, int]] = {}
+        self._retired: dict[int, Perplexity] = {}
         self._max_clients = max_clients
         self._ttl_seconds = ttl_seconds
         self._lock = Lock()
 
-    def _evict_stale(self, now: float) -> None:
-        """Remove and close client references that have been idle beyond TTL."""
+    def _retire_client(self, client: Perplexity, to_close: list[Perplexity]) -> None:
+        """Defer closing an evicted client while cached or active work still uses it."""
+        client_id = id(client)
+
+        if client_id in self._leases:
+            self._retired[client_id] = client
+        else:
+            to_close.append(client)
+
+    def _evict_stale(self, now: float) -> list[Perplexity]:
+        """Remove client references idle beyond TTL and return closeable instances."""
         stale_tokens = [
             token for token, (_client, last_access) in self._clients.items() if now - last_access > self._ttl_seconds
         ]
+        to_close: list[Perplexity] = []
 
         for token in stale_tokens:
             stale_client, _last_access = self._clients.pop(token)
-            stale_client.close()
+            self._retire_client(stale_client, to_close)
+
+        return to_close
 
     def get_or_create(self, token: str) -> Perplexity:
         """Return an existing or newly created client for *token*.
@@ -196,25 +210,91 @@ class ClientPool:
             A :class:`~perplexity_webui_scraper.Perplexity` instance.
         """
         canonical_token = _canonical_session_token(token)
+        to_close: list[Perplexity] = []
+
+        try:
+            with self._lock:
+                now = monotonic()
+                to_close.extend(self._evict_stale(now))
+                cached = self._clients.get(canonical_token)
+
+                if cached is not None:
+                    self._clients.move_to_end(canonical_token)
+                    self._clients[canonical_token] = (cached[0], now)
+
+                    return cached[0]
+
+                client = Perplexity(canonical_token, config=ClientConfig())
+                self._clients[canonical_token] = (client, now)
+
+                if len(self._clients) > self._max_clients:
+                    _evicted_token, (evicted_client, _last_access) = self._clients.popitem(last=False)
+                    self._retire_client(evicted_client, to_close)
+
+                return client
+        finally:
+            for retired_client in to_close:
+                retired_client.close()
+
+    def touch(self, token: str) -> None:
+        """Refresh the TTL and LRU order for an active session client if pooled."""
+        canonical_token = _canonical_session_token(token)
+        to_close: list[Perplexity] = []
+
+        try:
+            with self._lock:
+                now = monotonic()
+                cached = self._clients.get(canonical_token)
+
+                if cached is not None:
+                    self._clients.move_to_end(canonical_token)
+                    self._clients[canonical_token] = (cached[0], now)
+
+                to_close.extend(self._evict_stale(now))
+        finally:
+            for retired_client in to_close:
+                retired_client.close()
+
+    def acquire(self, client: Perplexity | None) -> None:
+        """Register an active request or cached conversation holding *client*."""
+        if client is None:
+            return
+
         with self._lock:
-            now = monotonic()
-            self._evict_stale(now)
-            cached = self._clients.get(canonical_token)
+            client_id = id(client)
+            current = self._leases.get(client_id)
+            count = current[1] + 1 if current is not None else 1
+            self._leases[client_id] = (client, count)
 
-            if cached is not None:
-                self._clients.move_to_end(canonical_token)
-                self._clients[canonical_token] = (cached[0], now)
+    def release(self, client: Perplexity | None) -> None:
+        """Release one reference to *client* and close it once retired and unused."""
+        if client is None:
+            return
 
-                return cached[0]
+        close_target: Perplexity | None = None
 
-            client = Perplexity(canonical_token, config=ClientConfig())
-            self._clients[canonical_token] = (client, now)
+        with self._lock:
+            client_id = id(client)
+            current = self._leases.get(client_id)
 
-            if len(self._clients) > self._max_clients:
-                _evicted_token, (evicted_client, _last_access) = self._clients.popitem(last=False)
-                evicted_client.close()
+            if current is not None:
+                remaining = current[1] - 1
 
-            return client
+                if remaining > 0:
+                    self._leases[client_id] = (client, remaining)
+                else:
+                    self._leases.pop(client_id, None)
+                    close_target = self._retired.pop(client_id, None)
+
+        if close_target is not None:
+            close_target.close()
+
+    def clear(self) -> None:
+        """Remove pooled, leased, and retired client entries without closing mocks."""
+        with self._lock:
+            self._clients.clear()
+            self._leases.clear()
+            self._retired.clear()
 
 
 class AccountTierCache:
