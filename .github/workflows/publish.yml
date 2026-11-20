@@ -356,7 +356,7 @@ jobs:
             echo '```'
             echo
             echo '```bash'
-            echo "docker run --rm -e PERPLEXITY_SESSION_TOKEN=your_token $IMAGE_REPOSITORY:$VERSION-mcp"
+            echo "docker run --rm -i -e PERPLEXITY_SESSION_TOKEN=your_token $IMAGE_REPOSITORY:$VERSION-mcp"
             echo '```'
           } >> release_notes.md
 

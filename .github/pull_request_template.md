@@ -24,7 +24,7 @@
 - [ ] I removed secrets, tokens, cookies, private prompts, and local files from the diff.
 - [ ] I ran `just lint`.
 - [ ] I ran `just test`.
-- [ ] I ran `uv run --no-dev --group docs mkdocs build --strict`.
+- [ ] I ran `uv run --only-group docs zensical build --clean --strict`.
 - [ ] I ran `uv build`.
 - [ ] This PR targets `dev`, or it is the release promotion from `dev` to `prod`.
 

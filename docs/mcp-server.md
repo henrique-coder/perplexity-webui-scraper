@@ -22,7 +22,7 @@ Add one of the following entries to your MCP client configuration. `uvx` creates
         "mcp"
       ],
       "env": {
-        "PERPLEXITY_SESSION_TOKEN": "__Secure-pplx.session.<account UUID>=YOUR_VALUE"
+        "PERPLEXITY_SESSION_TOKEN": "wsk_YOUR_COMPACT_TOKEN"
       }
     }
   }
@@ -44,7 +44,7 @@ Add one of the following entries to your MCP client configuration. `uvx` creates
         "mcp"
       ],
       "env": {
-        "PERPLEXITY_SESSION_TOKEN": "__Secure-pplx.session.<account UUID>=YOUR_VALUE"
+        "PERPLEXITY_SESSION_TOKEN": "wsk_YOUR_COMPACT_TOKEN"
       }
     }
   }
@@ -59,8 +59,8 @@ For containerized stdio setups only. `PERPLEXITY_SESSION_TOKEN` accepts either t
 # Pull published MCP image
 podman pull ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
 
-# Run the published image with the account session-cookie pair
-podman run --rm -it -e PERPLEXITY_SESSION_TOKEN="__Secure-pplx.session.<account UUID>=YOUR_VALUE" ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
+# Run the published image over stdio with your session token
+podman run --rm -i -e PERPLEXITY_SESSION_TOKEN="wsk_YOUR_COMPACT_TOKEN" ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
 ```
 
 The MCP server accepts raw and compact credentials. The token CLI retrieves the account cookie through email OTP/magic-link and optional TOTP, then emits compact form. Use `perplexity-webui-scraper token convert` to convert or validate an existing credential offline, or `perplexity-webui-scraper token deconvert` to restore the raw cookie pair.

@@ -186,7 +186,7 @@ Optional MCP image for containerized stdio setups:
 podman pull ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
 
 # Run MCP server (requires token)
-podman run --rm -e PERPLEXITY_SESSION_TOKEN=your_token ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
+podman run --rm -i -e PERPLEXITY_SESSION_TOKEN=your_token ghcr.io/henrique-coder/perplexity-webui-scraper:mcp
 ```
 
 For local development, you can still build the provided container files:
@@ -198,7 +198,7 @@ podman run --rm -it -p 8000:8000 perplexity-api
 
 # MCP image: installs the `mcp` extra and starts the stdio MCP server. It does not expose an HTTP port.
 podman build -t perplexity-mcp -f Containerfile.mcp .
-podman run --rm -it -e PERPLEXITY_SESSION_TOKEN=your_token perplexity-mcp
+podman run --rm -i -e PERPLEXITY_SESSION_TOKEN=your_token perplexity-mcp
 ```
 
 ### CLI options
@@ -287,7 +287,7 @@ Expose every Perplexity model as a separate tool for AI agents (Claude Desktop, 
 }
 ```
 
-See the [MCP documentation](https://perplexity-webui-scraper.readthedocs.io/mcp-server/) for tools and configuration.
+See the [MCP documentation](https://perplexity-webui-scraper.readthedocs.io/page/mcp-server/) for tools and configuration.
 
 ## Disclaimer
 
