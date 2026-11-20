@@ -240,6 +240,57 @@ def follow_callback(session: Session, callback_url: str) -> str | None:
     raise ValueError("Authentication callback exceeded the redirect limit.")
 
 
+def _submit_totp_verification(
+    session: Session,
+    verify_url: str,
+    challenge_token: str,
+    code: str,
+    on_invalid_code: Callable[[], object] | None,
+) -> Any | None:
+    """Submit one TOTP verification code; return ``None`` when rejected as invalid."""
+    try:
+        return request_with_rate_limit_retry(
+            partial(_post_json, session, verify_url, {"token": challenge_token, "code": code}),
+            "TOTP verification request",
+            "Verifying TOTP...",
+        )
+    except Exception as error:
+        if not isinstance(error, AuthRequestError):
+            raise TypeError("TOTP verification request failed.") from None
+
+        if error.invalid_code and error.status_code in (400, 401):
+            if on_invalid_code is not None:
+                on_invalid_code()
+
+            return None
+
+        raise ValueError(f"TOTP verification request failed with HTTP {error.status_code}.") from None
+
+
+def _parse_totp_response_data(response: Any) -> dict[str, Any]:
+    """Decode and validate a JSON TOTP verification response body."""
+    try:
+        data = loads(response.content)
+
+        if not isinstance(data, dict):
+            raise TypeError("Invalid TOTP verification response.")
+    except Exception:
+        raise ValueError("Failed to parse the TOTP verification response.") from None
+
+    return data
+
+
+def _follow_totp_redirect(session: Session, verify_url: str, target: str, *, missing_message: str) -> None:
+    """Follow a post-TOTP callback redirect and reject any recursive challenge."""
+    if not target:
+        raise ValueError(missing_message)
+
+    challenge = follow_callback(session, redirect_url(target, base_url=verify_url))
+
+    if challenge:
+        raise ValueError("Unexpected TOTP challenge after verification.")
+
+
 def verify_totp(
     session: Session,
     challenge_token: str,
@@ -248,73 +299,70 @@ def verify_totp(
 ) -> None:
     """Prompt for a TOTP code and follow its successful redirect."""
     verify_url = f"{API_BASE_URL}{ENDPOINT_AUTH_TOTP_CHALLENGE_VERIFY}?version={API_VERSION}&source=default"
+
     while True:
         code = prompt().strip()
+
         if not fullmatch(_OTP_PATTERN, code):
             if on_invalid_code is not None:
                 on_invalid_code()
                 continue
+
             raise ValueError("TOTP code must be a 6-digit number.")
 
-        try:
-            response = request_with_rate_limit_retry(
-                partial(_post_json, session, verify_url, {"token": challenge_token, "code": code}),
-                "TOTP verification request",
-                "Verifying TOTP...",
-            )
-        except Exception as error:
-            if not isinstance(error, AuthRequestError):
-                raise TypeError("TOTP verification request failed.") from None
+        response = _submit_totp_verification(session, verify_url, challenge_token, code, on_invalid_code)
 
-            if error.invalid_code and error.status_code in (400, 401):
-                if on_invalid_code is not None:
-                    on_invalid_code()
-                continue
+        if response is None:
+            continue
 
-            raise ValueError(f"TOTP verification request failed with HTTP {error.status_code}.") from None
         if response.status_code in (301, 302, 303, 307, 308):
             location = response.headers.get("Location", "")
-            if not location:
-                raise ValueError("TOTP verification redirect did not include a Location header.")
-            challenge = follow_callback(session, redirect_url(location, base_url=verify_url))
-            if challenge:
-                raise ValueError("Unexpected TOTP challenge after verification.")
+            _follow_totp_redirect(
+                session,
+                verify_url,
+                location,
+                missing_message="TOTP verification redirect did not include a Location header.",
+            )
+
             return
 
-        try:
-            data = loads(response.content)
-            if not isinstance(data, dict):
-                raise TypeError("Invalid TOTP verification response.")
-        except Exception:
-            raise ValueError("Failed to parse the TOTP verification response.") from None
+        data = _parse_totp_response_data(response)
 
         if data.get("error"):
             if data.get("error") not in _INVALID_TOTP_ERRORS:
                 raise ValueError("TOTP verification failed.")
+
             if on_invalid_code is not None:
                 on_invalid_code()
+
             continue
+
         next_redirect = data.get("redirect", "")
+
         if next_redirect:
             if not isinstance(next_redirect, str):
                 raise ValueError("Invalid post-TOTP redirect.")
-            challenge = follow_callback(
+
+            _follow_totp_redirect(
                 session,
-                redirect_url(next_redirect, base_url=verify_url),
+                verify_url,
+                next_redirect,
+                missing_message="Invalid post-TOTP redirect.",
             )
-            if challenge:
-                raise ValueError("Unexpected TOTP challenge after verification.")
+
         return
 
 
 def get_session_credential(session: Session) -> str:
     """Return the compact ``wsk_`` token for the active authenticated account."""
     credential = extract_session_cookie(session.cookies)
+
     if credential is None:
         raise ValueError(
             "The authentication session returned no account-scoped UUID cookie. "
             "Confirm email/TOTP verification completed in the current session."
         )
+
     return pack_session_token(serialize_session_credential(credential))
 
 
@@ -331,8 +379,10 @@ def authenticate(
     with create_session() as session:
         csrf = fetch_csrf(session)
         send_otp(session, email, csrf)
+
         while True:
             otp = prompt_otp().strip()
+
             if not validate_otp_input(otp, email):
                 if on_malformed_otp is not None:
                     on_malformed_otp()
@@ -340,9 +390,12 @@ def authenticate(
 
             try:
                 magic_link = _parse_magic_link(otp, email)
+
                 if on_otp_submitted is not None:
                     on_otp_submitted()
+
                 callback = magic_link if magic_link is not None else resolve_redirect_url(session, email, otp)
+
                 if callback is None:
                     raise ValueError("Invalid Perplexity email sign-in link.")
             except Exception as error:
