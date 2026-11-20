@@ -248,11 +248,15 @@ async def _start_chat_stream(
 ) -> StreamingResponse:
     """Start a streaming ask and return an SSE response with lock cleanup."""
     operation_lock = cached_entry.operation_lock if cached_entry is not None else None
-    if operation_lock is not None:
-        await operation_lock.acquire()
+    acquired_lock = False
 
     try:
+        if operation_lock is not None:
+            await operation_lock.acquire()
+            acquired_lock = True
+
         await _run_sync_safely(partial(conversation.ask, query, files=files or None, stream=True))
+
         return _LockReleasingStreamingResponse(
             _stream_response(conversation, request.model, token, owner_client=owner_client),
             operation_lock=operation_lock,
@@ -265,8 +269,9 @@ async def _start_chat_stream(
             },
         )
     except BaseException:
-        if operation_lock is not None and operation_lock.locked():
+        if acquired_lock and operation_lock is not None:
             operation_lock.release()
+
         _client_pool.release(owner_client)
         raise
 

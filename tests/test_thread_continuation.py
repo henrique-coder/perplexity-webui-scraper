@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from asyncio import run
+from asyncio import CancelledError, create_task, run, sleep
 from contextlib import suppress
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -18,8 +18,10 @@ from perplexity_webui_scraper.api.routes.completions import (
     _client_pool,
     _conversation_cache,
     _LockReleasingStreamingResponse,
+    _start_chat_stream,
     _stream_response,
 )
+from perplexity_webui_scraper.api.schemas.request import ChatCompletionRequest
 from perplexity_webui_scraper.core import Conversation
 
 
@@ -279,6 +281,48 @@ def test_client_pool_defers_closing_until_cached_conversation_evicts(http_client
 
         _conversation_cache.remove(TOKEN, THREAD_UUID)
         first_client.close.assert_called_once()
+
+
+def test_cancelled_stream_wait_releases_client_lease_without_unlocking_lock() -> None:
+    second_token = f"{SESSION_COOKIE_PREFIX}123e4567-e89b-42d3-a456-426614174001={_JWE}"
+    conversation = _conversation()
+    first_client = MagicMock()
+    second_client = MagicMock()
+
+    async def exercise_cancellation() -> None:
+        with (
+            patch("perplexity_webui_scraper.api.auth.Perplexity", side_effect=[first_client, second_client]),
+            patch.object(_client_pool, "_max_clients", 1),
+        ):
+            pooled_client = _client_pool.get_or_create(TOKEN)
+            _conversation_cache.set(TOKEN, THREAD_UUID, conversation, MODEL_ID, client=pooled_client)
+            entry = _conversation_cache.get_entry(TOKEN, THREAD_UUID)
+            assert entry is not None
+            _client_pool.get_or_create(second_token)
+            first_client.close.assert_not_called()
+
+            await entry.operation_lock.acquire()
+            _client_pool.acquire(pooled_client)
+            request = ChatCompletionRequest(
+                model=MODEL_ID,
+                messages=[{"role": "user", "content": "Continue"}],
+                stream=True,
+            )
+            task = create_task(_start_chat_stream(conversation, entry, pooled_client, request, TOKEN, "Continue", []))
+            await sleep(0)
+
+            task.cancel()
+            with suppress(CancelledError):
+                await task
+
+            assert entry.operation_lock.locked()
+            entry.operation_lock.release()
+            first_client.close.assert_not_called()
+
+            _conversation_cache.remove(TOKEN, THREAD_UUID)
+            first_client.close.assert_called_once()
+
+    run(exercise_cancellation())
 
 
 async def _empty_stream() -> Any:
