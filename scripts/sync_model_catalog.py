@@ -233,7 +233,7 @@ def _fetch_webui_models(token: str) -> list[str]:
     if sync_playwright is None:
         raise RuntimeError(
             "scripts/sync_model_catalog.py requires Python >=3.11, <3.15 "
-            "(run with: uv run --isolated --python 3.14 --no-dev --group scripts python scripts/sync_model_catalog.py)"
+            "(run with: uv run --isolated --python 3.11 --no-dev --group scripts python scripts/sync_model_catalog.py)"
         )
 
     credential = parse_session_credential(token)

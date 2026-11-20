@@ -39,7 +39,7 @@ def fetch_published_files(package_name: str, version: str) -> dict[str, str]:
     request = Request(url, method="GET")
 
     try:
-        with urlopen(request, timeout=20) as response:
+        with urlopen(request, timeout=20) as response:  # nosec B310
             return {item["filename"]: item["digests"]["sha256"] for item in load(response)["urls"]}
     except HTTPError as error:
         if error.code == 404:
