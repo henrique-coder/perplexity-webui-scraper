@@ -1,36 +1,4 @@
-"""Extract AI responses from Perplexity's web interface.
-
-Import public objects from this module::
-
-    from perplexity_webui_scraper import (
-        Perplexity,
-        Conversation,
-        ClientConfig,
-        ConversationConfig,
-        MODELS,
-        Model,
-        Response,
-        SearchResultItem,
-        Coordinates,
-        FileInput,
-        CitationMode,
-        SearchFocus,
-        SourceFocus,
-        TimeRange,
-        LogLevel,
-        PerplexityError,
-        HTTPError,
-        AuthenticationError,
-        RateLimitError,
-        FileAccessError,
-        FileUploadError,
-        FileValidationError,
-        ResearchClarifyingQuestionsError,
-        ModelAccessError,
-        ResponseParsingError,
-        StreamingError,
-    )
-"""
+"""Public import surface for the Perplexity WebUI client."""
 
 from __future__ import annotations
 
@@ -38,6 +6,12 @@ from importlib.metadata import version
 
 from perplexity_webui_scraper._internal.exceptions import (
     AuthenticationError,
+    CompactTokenAlignmentError,
+    CompactTokenChecksumError,
+    CompactTokenFormatError,
+    CompactTokenTruncatedError,
+    CredentialError,
+    EmbeddedUUIDError,
     FileAccessError,
     FileUploadError,
     FileValidationError,
@@ -47,21 +21,30 @@ from perplexity_webui_scraper._internal.exceptions import (
     ModelStatusError,
     PerplexityError,
     RateLimitError,
+    RawCookieFormatError,
     ResearchClarifyingQuestionsError,
     ResponseParsingError,
+    SessionTokenError,
     StreamingError,
+    UnsupportedTokenVersionError,
 )
-from perplexity_webui_scraper._internal.types import (
+from perplexity_webui_scraper.auth.session_token import (
+    SessionCredentials,
+    pack_session_token,
+    resolve_session_token,
+    unpack_session_token,
+    validate_raw_cookie,
+)
+from perplexity_webui_scraper.config.client import ClientConfig
+from perplexity_webui_scraper.config.conversation import ConversationConfig
+from perplexity_webui_scraper.config.values import (
     CitationMode,
-    FileInput,
     LogLevel,
     ResearchInteraction,
     SearchFocus,
     SourceFocus,
     TimeRange,
 )
-from perplexity_webui_scraper.config.client import ClientConfig
-from perplexity_webui_scraper.config.conversation import ConversationConfig
 from perplexity_webui_scraper.core.account import (
     AccountProfile,
     AccountSession,
@@ -71,7 +54,8 @@ from perplexity_webui_scraper.core.account import (
 )
 from perplexity_webui_scraper.core.client import Perplexity
 from perplexity_webui_scraper.core.conversation import Conversation
-from perplexity_webui_scraper.core.response import Coordinates, Response, SearchResultItem
+from perplexity_webui_scraper.core.file_types import FileInput
+from perplexity_webui_scraper.core.response import ActivityEvent, Response, SearchResultItem
 from perplexity_webui_scraper.models.registry import MODELS
 from perplexity_webui_scraper.models.types import Model, ModelStatus
 
@@ -85,12 +69,18 @@ __all__: list[str] = [
     "AccountSettings",
     "AccountTier",
     "AccountUser",
+    "ActivityEvent",
     "AuthenticationError",
     "CitationMode",
     "ClientConfig",
+    "CompactTokenAlignmentError",
+    "CompactTokenChecksumError",
+    "CompactTokenFormatError",
+    "CompactTokenTruncatedError",
     "Conversation",
     "ConversationConfig",
-    "Coordinates",
+    "CredentialError",
+    "EmbeddedUUIDError",
     "FileAccessError",
     "FileInput",
     "FileUploadError",
@@ -105,13 +95,21 @@ __all__: list[str] = [
     "Perplexity",
     "PerplexityError",
     "RateLimitError",
+    "RawCookieFormatError",
     "ResearchClarifyingQuestionsError",
     "ResearchInteraction",
     "Response",
     "ResponseParsingError",
     "SearchFocus",
     "SearchResultItem",
+    "SessionCredentials",
+    "SessionTokenError",
     "SourceFocus",
     "StreamingError",
     "TimeRange",
+    "UnsupportedTokenVersionError",
+    "pack_session_token",
+    "resolve_session_token",
+    "unpack_session_token",
+    "validate_raw_cookie",
 ]

@@ -15,7 +15,7 @@ from uvicorn import run as uvicorn_run
 console = Console(stderr=True, soft_wrap=True)
 
 app = Typer(
-    name="perplexity-webui-scraper-api",
+    name="perplexity-webui-scraper api",
     help="OpenAI-compatible API server powered by Perplexity WebUI Scraper.",
     add_completion=False,
     context_settings={"help_option_names": ["-h", "--help"]},
@@ -42,17 +42,30 @@ def main(
     ] = "info",
     default_session_token: Annotated[
         str | None,
-        Option("--session-token", envvar="PERPLEXITY_SESSION_TOKEN", help="Optional server-default Perplexity token."),
+        Option(
+            "--session-token",
+            envvar="PERPLEXITY_SESSION_TOKEN",
+            help=(
+                "Optional server-default Perplexity token (compact wsk_ or raw cookie). "
+                "Runs without a password unless --api-key is also set."
+            ),
+        ),
     ] = None,
     gateway_api_key: Annotated[
         str | None,
-        Option("--api-key", envvar="PERPLEXITY_API_KEY", help="Gateway key required on each request when configured."),
+        Option(
+            "--api-key",
+            envvar="PERPLEXITY_API_KEY",
+            help="Optional custom Bearer API key required on every request when --session-token is set.",
+        ),
     ] = None,
 ) -> None:
-    """Start the OpenAI-compatible Perplexity API server.
+    """Start the API server; callers authenticate with Authorization: Bearer.
 
-    Authentication is done per-request via the ``Authorization: Bearer`` header.
-    Pass your Perplexity session token as the API key in every request.
+    By default, requests pass a compact ``wsk_`` token or raw cookie pair in
+    ``Authorization: Bearer``. Setting ``--session-token`` alone enables
+    passwordless mode; adding ``--api-key`` requires that custom key via
+    ``Authorization: Bearer``.
     """
     if default_session_token:
         environ["PERPLEXITY_SESSION_TOKEN"] = default_session_token
@@ -60,8 +73,15 @@ def main(
     if gateway_api_key:
         environ["PERPLEXITY_API_KEY"] = gateway_api_key
 
-    if environ.get("PERPLEXITY_SESSION_TOKEN") and not environ.get("PERPLEXITY_API_KEY"):
-        raise ValueError("PERPLEXITY_SESSION_TOKEN requires PERPLEXITY_API_KEY for gateway authentication")
+    if environ.get("PERPLEXITY_API_KEY") and not environ.get("PERPLEXITY_SESSION_TOKEN"):
+        raise ValueError("PERPLEXITY_API_KEY requires PERPLEXITY_SESSION_TOKEN")
+
+    if environ.get("PERPLEXITY_SESSION_TOKEN") and environ.get("PERPLEXITY_API_KEY"):
+        auth_label = "Authorization: Bearer <custom API key> (server session token)"
+    elif environ.get("PERPLEXITY_SESSION_TOKEN"):
+        auth_label = "None — passwordless (using server session token)"
+    else:
+        auth_label = "Authorization: Bearer <wsk_ or session cookie>"
 
     info = Text.assemble(
         ("🌐  URL:   ", "bold cyan"),
@@ -71,12 +91,7 @@ def main(
         ("📘  ReDoc: ", "bold cyan"),
         (f"http://{host}:{port}/redoc\n", "white"),
         ("🔑  Auth:  ", "bold cyan"),
-        (
-            "X-API-Key + server session token"
-            if environ.get("PERPLEXITY_SESSION_TOKEN")
-            else "Authorization: Bearer <Perplexity token>",
-            "dim white",
-        ),
+        (auth_label, "dim white"),
     )
     console.print(Panel(info, title="[bold green]Perplexity API Server[/bold green]", expand=False))
 

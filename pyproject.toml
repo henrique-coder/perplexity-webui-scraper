@@ -6,7 +6,7 @@ build-backend = "uv_build"
 
 [project]
 name = "perplexity-webui-scraper"
-version = "1.2.1"
+version = "2.0.0"
 description = "Python client, CLI, MCP server, and OpenAI-compatible REST API for Perplexity's WebUI."
 authors = [
     { name = "Henrique Moreira", email = "78804989+henrique-coder@users.noreply.github.com" },
@@ -63,6 +63,7 @@ all = [
     "perplexity-webui-scraper[token,api,mcp]",
 ]
 token = [
+    "prompt-toolkit>=3.0.30",
     "pyperclip>=1.9.0",
     "rich>=13.0.0",
 ]
@@ -80,30 +81,28 @@ dev = [
     { include-group = "docs" },
     { include-group = "hooks" },
     { include-group = "lint" },
-    { include-group = "test" },
+    { include-group = "scripts" },
+    { include-group = "tests" },
+    { include-group = "workflow" },
 ]
 docs = [
-    "mkdocs>=1.6.0",
-    "mkdocs-material>=9.7.0",
-    "mkdocstrings[python]>=1.0.0",
-    "ruff>=0.16.0",
+    "zensical>=0.1.0",
 ]
 hooks = [
     "prek>=0.4.0",
 ]
 lint = [
-    { include-group = "workflow" },
     "ruff>=0.16.0",
     "ty>=0.0.60",
 ]
-test = [
-    "fastapi>=0.120.0",
-    "fastmcp>=3.0.0",
+scripts = [
+    "pydoll-python>=3.0.0; python_version >= '3.11' and python_version < '3.15'",
+    "python-dotenv>=1.0.0",
+]
+tests = [
     "httpx2>=2.14.0",
-    "pyperclip>=1.9.0",
+    "openai>=2.0.0, <3.0.0",
     "pytest>=8.0.0",
-    "rich>=13.0.0",
-    "typer>=0.20.0",
 ]
 workflow = [
     "zizmor>=1.28.0",
@@ -198,12 +197,18 @@ convention = "google"
 division-by-zero = "warn"
 index-out-of-bounds = "warn"
 invalid-argument-type = "error"
-invalid-return-type = "error"
+invalid-explicit-return = "error"
 missing-argument = "error"
 possibly-missing-attribute = "warn"
 redundant-cast = "warn"
 too-many-positional-arguments = "error"
-unresolved-attribute = "error"
-unresolved-import = "error"
+missing-attribute = "error"
+import-not-found = "error"
 unused-ignore-comment = "warn"
 unsupported-operator = "error"
+
+[[tool.ty.overrides]]
+include = ["scripts/sync_model_catalog.py"]
+
+[tool.ty.overrides.rules]
+import-not-found = "ignore"

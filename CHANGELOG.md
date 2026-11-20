@@ -5,7 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0).
 
-## [Unreleased]
+## [2.0.0] - 2026-11-20
+
+### Added
+
+- **Offline token conversion:** Add `token convert` and `token deconvert` subcommands for offline cookie conversion and compact-token validation. Mask interactive input; require explicit consent before copying results.
+
+### Changed
+
+- **API:** Remove `POST /v1/responses` for the 2.0.0 release; `POST /v1/chat/completions` remains the only text-generation endpoint and accepts `developer` system messages. Automatically prepend a master instruction enforcing read-only Perplexity WebUI Q&A behavior so agentic harnesses do not trigger tool-call roleplay. Use pure `Authorization: Bearer` authentication across three server modes (per-request `wsk_` or session cookie by default, passwordless when only `PERPLEXITY_SESSION_TOKEN` is set, or gated by a custom `PERPLEXITY_API_KEY` when both are set), and filter `GET /v1/models` by the caller's account tier using a 10-minute in-memory cache.
+- **Exception attributes:** Remove deprecated `HTTPError.url`, `HTTPError.response_body`, and `ResponseParsingError.raw_data` compatibility attributes.
+- **API contract:** Keep the Python client, MCP interface, shared conversation input validation, and `GET /v1/models`.
+- **Account-scoped authentication:** Accept raw UUIDv4 `__Secure-pplx.session` cookie pairs and compact `wsk_` v1 tokens across client, HTTP, API, and MCP entry points. Email authentication emits compact tokens and includes account context in observed WebUI requests.
+- **Python and API configuration:** Remove `Coordinates` and `CoordinatesInput` in favor of paired `latitude` and `longitude` fields in `ConversationConfig` and `PerplexityExtensions`, validate strings at Pydantic boundaries, and export `FileInput` as one focused typing alias.
+- **HTTP request metadata:** Track retry attempt numbers per thread so concurrent requests cannot overwrite one another's metadata.
+- **Model catalog:** Add current WebUI picker models, normalize unknown minimum tiers to `"unknown"`, and retain unverified status for inconclusive probes.
+- **Documentation & tooling:** Replace MkDocs with Zensical (`zensical.toml`), reorganize docs around dedicated Session Token, Python Client, CLI, OpenAI-Compatible API, and MCP Server sections, run maintainer scripts across dedicated `scripts` and `tests` dependency groups, and synchronize model catalogs with `pydoll-python` (`>=3.11, <3.15`).
+- **Repository text:** Standardize source, tests, documentation, and CLI text on en_US English.
+
+### Fixed
+
+- **Email authentication:** Validate six-digit OTPs and same-account Perplexity callback links locally; reprompt after invalid codes without resending the email or discarding the current session, and handle HTTP 400/401 OTP and `invalid_totp` rejections cleanly.
+- **Token CLI:** Mask email OTP, magic-link, and TOTP inputs; reject positional credentials on `token convert` and `token deconvert`; throttle manual retries after 429 responses while preserving Ctrl+C cancellation; use a full-screen terminal flow for interactive authentication and conversion.
+- **API request-body limit:** Preserve the 10 MiB request limit on `POST /v1/chat/completions`.
+- **API base64 image handling:** Require the `data:image/...;base64,` header, enforce canonical Base64 and per-image size bounds before decoding, return HTTP 422 on invalid Data URLs, and continue ignoring remote image URLs.
+- **SSE resilience:** Bound incoming SSE frames, incremental workflow state, chunk counts, and retained raw projections; reject non-object JSON SSE payloads with `ResponseParsingError`; sanitize upstream parser errors and activity URLs.
+- **HTTP resilience:** Honor bounded numeric (`0`+) and HTTP-date `Retry-After` values, retry `curl_cffi` connection and timeout errors, and release session locks before iterating SSE response streams.
+- **Error handling:** Suppress raw transport exception bodies, network exception text, and exception context chains from public errors and logs.
+- **S3 upload boundary:** Validate pre-signed URLs, restrict upload targets to virtual-hosted AWS S3 regional endpoints, require HTTPS port 443 without redirects, and bound path reads during upload.
+- **CLI output:** Use explicit terminal colors for copy confirmation, credential warnings, and exit prompts; clear the screen before displaying transformed credentials.
+- **Rate-limit diagnostics:** Preserve upstream `Retry-After` values in HTTP and email-authentication errors.
+- **Release policy and PyPI checks:** Enforce a dated `YYYY-MM-DD` changelog heading matching `pyproject.toml` and `uv.lock` on `dev` → `prod` promotion PRs and publish validation; pass `GH_TOKEN` to the release immutability check; validate artifact headers and digests before upload.
 
 ## [1.2.1] - 2026-10-20
 
@@ -34,7 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Model catalog:** Added current WebUI models and updated availability metadata.
 - **Optional dependencies:** Renamed `[cli]` to `[token]`. `[all]` installs `[token]`, `[api]`, and `[mcp]`.
-- **API:** Added `/v1/responses` and retained `/v1/chat/completions`. Server-configured upstream tokens require a separate gateway key on each request.
+- **API:** Added `/v1/responses` alongside `/v1/chat/completions`. Server-configured upstream tokens require a separate gateway key on each request.
 - **CLI:** Removed terminal chat and saved-token storage. Token generation, API, and MCP remain separate optional commands.
 - **CLI options:** Added `-h` and `--help` to all commands, plus `-e` for the token command's `--email` option.
 - **Python support:** Set `.python-version` to Python 3.15, added it to the supported range, and included it in the CI test matrix.

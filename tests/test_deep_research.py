@@ -11,6 +11,8 @@ from perplexity_webui_scraper.core.conversation import Conversation
 
 
 class _Response:
+    content = dumps({"user": {"subscription_tier": "pro"}})
+
     def json(self) -> dict[str, Any]:
         return {"user": {"subscription_tier": "pro"}}
 
@@ -46,7 +48,7 @@ def _clarification_stream() -> list[str]:
                     [
                         {
                             "step_type": "RESEARCH_CLARIFYING_QUESTIONS",
-                            "content": {"questions": ["Qual período devo analisar?"]},
+                            "content": {"questions": ["Which period should I analyze?"]},
                         }
                     ]
                 ).decode()
@@ -59,7 +61,7 @@ def _final_stream() -> list[str]:
     return [
         _event(
             {
-                "text": dumps([{"step_type": "FINAL", "content": {"answer": "Pesquisa concluída."}}]).decode(),
+                "text": dumps([{"step_type": "FINAL", "content": {"answer": "Research complete."}}]).decode(),
                 "final": True,
             }
         )
@@ -73,13 +75,14 @@ def test_deep_research_answers_clarification_automatically() -> None:
         ConversationConfig(model="perplexity/deep-research"),
     )
 
-    conversation.ask("Analise o mercado", model="perplexity/deep-research")
+    conversation.ask("Analyze the market", model="perplexity/deep-research")
 
-    assert conversation.answer == "Pesquisa concluída."
+    assert conversation.answer == "Research complete."
     assert len(http.payloads) == 2
     assert http.payloads[1]["params"]["last_backend_uuid"] == "thread-1"
-    assert "escolhendo as opções mais razoáveis" not in http.payloads[1]["query_str"]
-    assert "Qual período devo analisar?" in http.payloads[1]["query_str"]
+    assert http.payloads[1]["params"]["read_write_token"] == "token-1"
+    assert "reasonable options from the original context" not in http.payloads[1]["query_str"]
+    assert "Which period should I analyze?" in http.payloads[1]["query_str"]
 
 
 def test_deep_research_manual_mode_exposes_clarification() -> None:
@@ -89,7 +92,7 @@ def test_deep_research_manual_mode_exposes_clarification() -> None:
         ConversationConfig(model="perplexity/deep-research", research_interaction="manual"),
     )
 
-    with raises(ResearchClarifyingQuestionsError, match="Qual período"):
-        conversation.ask("Analise o mercado", model="perplexity/deep-research")
+    with raises(ResearchClarifyingQuestionsError, match="Which period"):
+        conversation.ask("Analyze the market", model="perplexity/deep-research")
 
     assert len(http.payloads) == 1

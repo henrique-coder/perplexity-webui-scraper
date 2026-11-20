@@ -9,7 +9,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 ModelTier: TypeAlias = Literal["free", "pro", "max"]
-"""Minimum Perplexity subscription tier required by a model."""
+"""Valid Perplexity subscription tiers for tier-specific overrides."""
+
+ModelMinTier: TypeAlias = Literal["free", "pro", "max", "unknown"]
+"""Minimum Perplexity subscription tier required by a model, or ``"unknown"``."""
 
 ModelMode: TypeAlias = Literal["copilot", "search", "research"]
 """Internal Perplexity request mode used for a model."""
@@ -38,7 +41,7 @@ class Model(BaseModel):
         tool_name: MCP tool name used when registering this model as an MCP tool.
         provider: Provider slug used for catalog grouping.
         is_official: Whether Perplexity currently lists the model in its official WebUI.
-        min_tier: Minimum Perplexity subscription, or ``None`` when unknown.
+        min_tier: Minimum Perplexity subscription tier, or ``"unknown"`` when unverified.
         mode: API request mode sent in the payload (e.g. ``"copilot"``,
             ``"search"``, ``"research"``).
         mode_by_tier: Optional mode overrides selected by account tier.
@@ -57,7 +60,7 @@ class Model(BaseModel):
     identifier_by_tier: dict[ModelTier, str] = Field(default_factory=dict)
     tool_name: str
     provider: str
-    min_tier: ModelTier | None
+    min_tier: ModelMinTier = "unknown"
     is_official: bool = False
     mode: ModelMode = "copilot"
     mode_by_tier: dict[ModelTier, ModelMode] = Field(default_factory=dict)

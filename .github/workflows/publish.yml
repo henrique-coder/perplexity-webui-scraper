@@ -23,6 +23,9 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  RELEASE_PYTHON: "3.14"
+
 jobs:
   validate:
     name: Validate Release Candidate
@@ -44,16 +47,16 @@ jobs:
           persist-credentials: false
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "latest"
-          python-version: "3.14"
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.RELEASE_PYTHON }}
+          enable-cache: false
 
       - name: Validate Immutable Release Inputs
         id: version
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REQUESTED_VERSION: ${{ inputs.version }}
           RELEASE_MODE: ${{ inputs.mode }}
           GITHUB_SHA: ${{ github.sha }}
@@ -68,19 +71,9 @@ jobs:
             exit 1
           fi
 
-          PROJECT_VERSION=$(uv run --python 3.14 --no-project python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
-          LOCK_VERSION=$(awk '/name = "perplexity-webui-scraper"/{found=1; next} found && /^version = /{gsub(/[" ]/, "", $3); print $3; exit}' uv.lock)
-          CHANGELOG_HEADING=$(grep -F "## [$REQUESTED_VERSION] - " CHANGELOG.md | head -n 1)
-
-          if [ "$REQUESTED_VERSION" != "$PROJECT_VERSION" ] || [ "$PROJECT_VERSION" != "$LOCK_VERSION" ]; then
-            echo "::error::Requested version, pyproject.toml, and uv.lock must match."
-            exit 1
-          fi
-
-          if [ -z "$CHANGELOG_HEADING" ] || [[ "$CHANGELOG_HEADING" = *"Unreleased" ]]; then
-            echo "::error::CHANGELOG.md must contain a dated section for $REQUESTED_VERSION before publication."
-            exit 1
-          fi
+          uv run --python "$RELEASE_PYTHON" --no-project python scripts/verify_release_policy.py \
+            --expected-version "$REQUESTED_VERSION"
+          PROJECT_VERSION="$REQUESTED_VERSION"
 
           TAG="v$REQUESTED_VERSION"
           TAG_EXISTS=false
@@ -98,7 +91,10 @@ jobs:
             echo "Resuming the interrupted release for $TAG."
           fi
 
-          PACKAGE_NAME=$(uv run --python 3.14 --no-project python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["name"])')
+          PACKAGE_NAME=$(
+            uv run --python "$RELEASE_PYTHON" --no-project python -c \
+              'from pathlib import Path; from tomllib import load; f = Path("pyproject.toml").open("rb"); print(load(f)["project"]["name"]); f.close()'
+          )
           echo "version=$PROJECT_VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$PROJECT_VERSION" >> "$GITHUB_OUTPUT"
           echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
@@ -123,12 +119,11 @@ jobs:
           persist-credentials: false
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "latest"
-          python-version: "3.14"
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.RELEASE_PYTHON }}
+          enable-cache: false
 
       - name: Build and Validate Package
         env:
@@ -141,10 +136,10 @@ jobs:
             rm -f "$README_BACKUP"
           }
           trap cleanup EXIT
-          uv run --python 3.14 --no-sync --no-dev scripts/render_pypi_readme.py --reference "$GITHUB_SHA"
-          uv build --python 3.14
-          uvx --python 3.14 twine check dist/*.whl dist/*.tar.gz
-          uv run --python 3.14 --no-project python scripts/validate_release_artifacts.py \
+          uv run --python "$RELEASE_PYTHON" --no-project python scripts/rewrite_pypi_readme.py --reference "$GITHUB_SHA"
+          uv build --python "$RELEASE_PYTHON"
+          uvx --python "$RELEASE_PYTHON" twine check dist/*.whl dist/*.tar.gz
+          uv run --python "$RELEASE_PYTHON" --no-project python scripts/verify_release_artifacts.py \
             --version "$PROJECT_VERSION" dist/*.whl dist/*.tar.gz
           sha256sum dist/* > dist/SHA256SUMS
 
@@ -176,9 +171,10 @@ jobs:
           persist-credentials: false
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "latest"
+          python-version: ${{ env.RELEASE_PYTHON }}
           enable-cache: false
           ignore-empty-workdir: true
 
@@ -193,7 +189,7 @@ jobs:
         env:
           PACKAGE_NAME: ${{ needs.validate.outputs.package_name }}
           VERSION: ${{ needs.validate.outputs.version }}
-        run: python3 scripts/check_pypi_artifacts.py
+        run: uv run --python "$RELEASE_PYTHON" --no-project python scripts/verify_pypi_uploads.py
 
       - name: Publish Distributions to PyPI
         if: steps.pypi_state.outputs.publish == 'true'
@@ -205,7 +201,7 @@ jobs:
         env:
           PACKAGE_NAME: ${{ needs.validate.outputs.package_name }}
           VERSION: ${{ needs.validate.outputs.version }}
-        run: python3 scripts/check_pypi_artifacts.py --verify-only
+        run: uv run --python "$RELEASE_PYTHON" --no-project python scripts/verify_pypi_uploads.py --verify-only
 
   publish_container:
     name: Publish Container Images
@@ -235,7 +231,7 @@ jobs:
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       - name: Log in to GHCR
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -307,12 +303,19 @@ jobs:
           name: python-dist
           path: dist
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "latest"
+          python-version: ${{ env.RELEASE_PYTHON }}
+          enable-cache: false
+
       - name: Generate Release Notes from Changelog
         env:
           VERSION: ${{ needs.validate.outputs.version }}
           REPOSITORY: ${{ github.repository }}
         run: |
-          python3 - <<'PY'
+          uv run --python "$RELEASE_PYTHON" --no-project python - <<'PY'
           from os import environ
           from pathlib import Path
           from re import finditer
@@ -353,7 +356,7 @@ jobs:
             echo '```'
             echo
             echo '```bash'
-            echo "docker run --rm -e PERPLEXITY_SESSION_TOKEN=your_token $IMAGE_REPOSITORY:$VERSION-mcp"
+            echo "docker run --rm -i -e PERPLEXITY_SESSION_TOKEN=your_token $IMAGE_REPOSITORY:$VERSION-mcp"
             echo '```'
           } >> release_notes.md
 

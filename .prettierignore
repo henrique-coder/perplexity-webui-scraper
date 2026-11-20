@@ -1,8 +1,16 @@
-# Folders
-docs/api/
-docs/api-reference.md
+# Directories: generated output
+.cache/
+.superpowers/
+reports/
+site/
+
+# Named generated files
+docs/python-client/models.md
 docs/mcp-server.md
 
-# Files
-uv.lock
+# Dependency lockfiles
 pnpm-lock.yaml
+uv.lock
+
+# Editor settings
+.editorconfig

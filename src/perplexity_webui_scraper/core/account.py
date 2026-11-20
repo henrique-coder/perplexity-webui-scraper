@@ -10,7 +10,7 @@ from perplexity_webui_scraper._internal.exceptions import FileAccessError, Model
 
 
 if TYPE_CHECKING:
-    from perplexity_webui_scraper.models.types import Model, ModelTier
+    from perplexity_webui_scraper.models.types import Model, ModelMinTier, ModelTier
 
 
 AccountTier: TypeAlias = Literal["free", "pro", "max", "unknown"]
@@ -161,9 +161,9 @@ def normalize_account_tier(
 def ensure_model_access(session: AccountSession, model: Model) -> None:
     """Raise if *session* cannot access *model* based on its minimum tier."""
     account_tier = session.account_tier
-    required_tier: ModelTier | None = model.min_tier
+    required_tier: ModelMinTier = model.min_tier
 
-    if required_tier is None:
+    if required_tier == "unknown":
         return
 
     if TIER_RANK.get(account_tier, -1) < TIER_RANK[required_tier]:

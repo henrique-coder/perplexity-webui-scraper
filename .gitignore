@@ -1,29 +1,34 @@
-# Folders
-.idea/
-.vscode/
-.venv/
-__pycache__/
-.pytest_cache/
-.ruff_cache/
-.mypy_cache/
-node_modules/
-.gemini/
+# Directories: repository metadata, local tools, and environments
+.git/
 .claude/
 .debug/
+.gemini/
+.idea/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+.vscode/
+__pycache__/
+node_modules/
 
-# Files
-example*.py
-
-# Extensions
-*.env
-*.log
-*.tmp
-*.bak
-
-# Build artifacts
+# Directories: generated content and distribution artifacts
+.cache/
+.superpowers/
 build/
 dist/
+reports/
 site/
+
+# Named files and file patterns
+example*.py
+
+# Extensions and generated file suffixes
+*.bak
 *.build/
 *.dist/
+*.env
+*.log
 *.onefile-build/
+*.py[cod]
+*.tmp

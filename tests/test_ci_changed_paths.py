@@ -2,13 +2,14 @@
 
 from os import environ
 from pathlib import Path
+from re import search
 from subprocess import run
-from sys import executable
+from sys import executable, platform
 from textwrap import dedent
 
 from pytest import mark
 
-from scripts.ci_changed_paths import _changed_paths, classify_paths
+from scripts.classify_ci_paths import _changed_paths, classify_paths
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]
@@ -69,18 +70,6 @@ def test_workflow_only_changes_skip_python_checks() -> None:
     }
 
 
-def test_readthedocs_configuration_runs_documentation_checks() -> None:
-    """Read the Docs configuration changes must validate the documentation build."""
-    assert classify_paths([".readthedocs.yaml"]) == {
-        "python": False,
-        "documentation": True,
-        "frontend": False,
-        "workflows": False,
-        "containers": False,
-        "metadata": False,
-    }
-
-
 def test_unclassified_metadata_still_receives_a_lightweight_check() -> None:
     """Repository policy and ownership files are not silently ignored."""
     assert classify_paths([".github/CODEOWNERS"]) == {
@@ -93,87 +82,119 @@ def test_unclassified_metadata_still_receives_a_lightweight_check() -> None:
     }
 
 
-def test_container_changes_run_container_builds() -> None:
-    """Container build inputs trigger image validation."""
-    assert classify_paths(["Containerfile.mcp", ".dockerignore"]) == {
-        "python": False,
-        "documentation": False,
-        "frontend": False,
-        "workflows": False,
-        "containers": True,
-        "metadata": False,
+def test_container_build_inputs_trigger_image_validation() -> None:
+    """All configured container inputs trigger image validation."""
+    for path in ("Containerfile", "Containerfile.mcp", ".dockerignore"):
+        assert classify_paths([path])["containers"]
+
+
+def test_release_policy_checks_run_only_for_internal_dev_to_prod_pull_requests() -> None:
+    workflow = (REPOSITORY / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    required_job = workflow.split("  required:\n", maxsplit=1)[1]
+
+    assert "github.event_name == 'pull_request'" in workflow
+    assert "github.base_ref == 'prod'" in workflow
+    assert "HEAD_REF: ${{ github.event.pull_request.head.ref }}" in workflow
+    assert "HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}" in workflow
+    assert "github.event.pull_request.head.repo.full_name == github.repository" in workflow
+    assert "RELEASE_POLICY_RESULT" in required_job
+    assert '"$BUILD_RESULT" \\' in required_job
+    assert '"$RELEASE_POLICY_RESULT";' in required_job
+    assert 'if [ "$RELEASE_POLICY_RESULT" != "success" ]; then' in required_job
+    assert (
+        'if [ "$RELEASE_POLICY_RESULT" != "success" ] && [ "$RELEASE_POLICY_RESULT" != "skipped" ]; then'
+        not in required_job
+    )
+
+
+@mark.skipif(platform == "win32", reason="Tests POSIX shell script in ubuntu-latest CI workflow")
+def test_required_gate_rejects_skipped_release_policy_on_internal_promotion_pr() -> None:
+    workflow = (REPOSITORY / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    required_job = workflow.split("  required:\n", maxsplit=1)[1]
+    script = dedent(required_job.split("        run: |\n", maxsplit=1)[1])
+    env = {
+        **environ,
+        "CHANGES_RESULT": "success",
+        "PYTHON_QUALITY_RESULT": "success",
+        "DOCUMENTATION_RESULT": "success",
+        "FORMATTING_RESULT": "success",
+        "WORKFLOW_LINT_RESULT": "success",
+        "CONTAINERS_RESULT": "success",
+        "TESTS_RESULT": "success",
+        "BUILD_RESULT": "success",
+        "RELEASE_POLICY_RESULT": "skipped",
+        "EVENT_NAME": "pull_request",
+        "BASE_REF": "prod",
+        "HEAD_REF": "dev",
+        "HEAD_REPOSITORY": "henrique-coder/perplexity-webui-scraper",
+        "REPOSITORY": "henrique-coder/perplexity-webui-scraper",
     }
 
+    result = run(["bash", "-c", script], cwd=REPOSITORY, env=env, check=False, capture_output=True, text=True)
 
-@mark.parametrize("path", ["Containerfile", "Containerfile.mcp", ".dockerignore"])
-def test_each_container_input_is_classified(path: str) -> None:
-    assert classify_paths([path])["containers"]
-
-
-def test_publish_workflow_disables_uv_cache_without_checkout_or_dependencies() -> None:
-    workflow = Path(".github/workflows/publish.yml").read_text(encoding="utf-8")
-    publish_job = workflow.split("  publish_pypi:", maxsplit=1)[1].split("  publish_container:", maxsplit=1)[0]
-
-    assert "enable-cache: false" in publish_job
-    assert "uv publish --check-url https://pypi.org/simple/ --trusted-publishing always" in publish_job
+    assert result.returncode != 0
+    assert "production release policy must pass" in result.stdout
 
 
-def test_publish_release_notes_include_all_changelog_entries_until_previous_release(tmp_path: Path) -> None:
+@mark.skipif(platform == "win32", reason="Tests POSIX shell script in ubuntu-latest CI workflow")
+def test_required_gate_allows_skipped_release_policy_on_unrelated_push() -> None:
+    workflow = (REPOSITORY / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    required_job = workflow.split("  required:\n", maxsplit=1)[1]
+    script = dedent(required_job.split("        run: |\n", maxsplit=1)[1])
+    env = {
+        **environ,
+        "CHANGES_RESULT": "success",
+        "PYTHON_QUALITY_RESULT": "skipped",
+        "DOCUMENTATION_RESULT": "skipped",
+        "FORMATTING_RESULT": "success",
+        "WORKFLOW_LINT_RESULT": "skipped",
+        "CONTAINERS_RESULT": "skipped",
+        "TESTS_RESULT": "skipped",
+        "BUILD_RESULT": "skipped",
+        "RELEASE_POLICY_RESULT": "skipped",
+        "EVENT_NAME": "push",
+        "BASE_REF": "",
+        "HEAD_REF": "",
+        "HEAD_REPOSITORY": "",
+        "REPOSITORY": "henrique-coder/perplexity-webui-scraper",
+    }
+
+    result = run(["bash", "-c", script], cwd=REPOSITORY, env=env, check=False, capture_output=True, text=True)
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_publish_release_notes_stop_at_previous_minor_release(tmp_path: Path) -> None:
     workflow = (REPOSITORY / ".github" / "workflows" / "publish.yml").read_text(encoding="utf-8")
     changelog = tmp_path / "CHANGELOG.md"
+    release_history = "## [3.4.5] - 2000-01-01\n\n"
     changelog.write_text(
-        "## [Unreleased]\n\n"
-        "## [1.2.1] - 2026-10-20\n\n"
-        "### Changed\n\n- Release recovery fix.\n\n"
-        "## [1.2.0] - 2026-10-19\n\n"
-        "### Fixed\n\n- Add the Responses API.\n\n"
-        "## [1.1.10] - 2026-10-05\n\n"
-        "### Changed\n\n- Update the model catalog.\n",
+        "## [Unreleased]\n\n" + release_history + "### Changed\n\n- Release recovery fix.\n\n"
+        "## [3.4.4] - 2000-01-02\n\n"
+        "### Fixed\n\n- Follow-up release fix.\n\n"
+        "## [3.3.8] - 2000-01-03\n\n"
+        "### Changed\n\n- Previous minor release.\n",
         encoding="utf-8",
     )
     step = workflow.split("      - name: Generate Release Notes from Changelog\n", maxsplit=1)[1]
     step = step.split("      - name: Create Immutable Tag and Release\n", maxsplit=1)[0]
     script = dedent(step.split("        run: |\n", maxsplit=1)[1])
-
-    python_step = script.split("python3 - <<'PY'\n", maxsplit=1)[1].split("\nPY\n", maxsplit=1)[0]
+    python_match = search(r'(?s)uv run --python "\$RELEASE_PYTHON" --no-project python - <<\'PY\'\n(.*?)\nPY\n', script)
+    assert python_match is not None
+    release_script = python_match.group(1)
+    release_version = release_history.split("[", maxsplit=1)[1].split("]", maxsplit=1)[0]
     result = run(
-        [executable, "-c", python_step],
+        [executable, "-c", release_script],
         cwd=tmp_path,
         check=False,
         capture_output=True,
         text=True,
-        env={**environ, "VERSION": "1.2.1", "REPOSITORY": "owner/repo"},
+        env={**environ, "VERSION": release_version, "REPOSITORY": "owner/repo"},
     )
 
     assert result.returncode == 0, result.stderr
     release_notes = (tmp_path / "release_notes.md").read_text(encoding="utf-8")
+
     assert "- Release recovery fix." in release_notes
-    assert "- Add the Responses API." in release_notes
-    assert "- Update the model catalog." not in release_notes
-
-
-def test_publish_workflow_verifies_pypi_artifact_hashes_before_resuming() -> None:
-    workflow = Path(".github/workflows/publish.yml").read_text(encoding="utf-8")
-    publish_job = workflow.split("  publish_pypi:\n", maxsplit=1)[1].split("  publish_container:\n", maxsplit=1)[0]
-
-    assert "python3 scripts/check_pypi_artifacts.py" in publish_job
-    assert "python3 scripts/check_pypi_artifacts.py --verify-only" in publish_job
-    assert "uv publish --check-url https://pypi.org/simple/" in publish_job
-    assert "steps.pypi_artifacts.outputs.publish == 'true'" not in publish_job
-
-
-def test_publish_job_checks_out_source_for_artifact_verifier() -> None:
-    workflow = Path(".github/workflows/publish.yml").read_text(encoding="utf-8")
-    publish_job = workflow.split("  publish_pypi:\n", maxsplit=1)[1].split("  publish_container:\n", maxsplit=1)[0]
-    checkout = publish_job.index("name: Checkout Release Source")
-    artifact_download = publish_job.index("name: Download Package Artifacts")
-    artifact_check = publish_job.index("name: Verify PyPI Artifact State")
-
-    assert checkout < artifact_download < artifact_check
-
-
-def test_publish_job_checks_out_source_before_downloading_artifacts() -> None:
-    workflow = Path(".github/workflows/publish.yml").read_text(encoding="utf-8")
-    publish_job = workflow.split("  publish_pypi:\n", maxsplit=1)[1].split("  publish_container:\n", maxsplit=1)[0]
-
-    assert publish_job.index("name: Checkout Release Source") < publish_job.index("name: Download Package Artifacts")
+    assert "- Follow-up release fix." in release_notes
+    assert "- Previous minor release." not in release_notes

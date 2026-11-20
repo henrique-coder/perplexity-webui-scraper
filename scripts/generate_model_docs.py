@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from argparse import ArgumentParser
 from collections import Counter
-from importlib.resources import files
 from pathlib import Path
-from re import DOTALL, MULTILINE, sub
+from re import DOTALL, sub
 from sys import stderr, stdout
 
 from orjson import loads
@@ -15,6 +14,7 @@ from perplexity_webui_scraper.models.types import MODEL_STATUS_DESCRIPTIONS, Mod
 
 
 ROOT = Path(__file__).resolve().parents[1]
+MODELS_FILE = ROOT / "src/perplexity_webui_scraper/_static/models.json"
 BEGIN = "<!-- BEGIN GENERATED MODEL CATALOG -->"
 END = "<!-- END GENERATED MODEL CATALOG -->"
 STATUS_ORDER: tuple[ModelStatus, ...] = ("available", "unknown", "unavailable")
@@ -25,8 +25,9 @@ STATUS_BEHAVIOR: dict[ModelStatus, str] = {
 }
 
 
-def _models() -> list[Model]:
-    raw = files("perplexity_webui_scraper._static").joinpath("models.json").read_bytes()
+def _models(catalog_path: Path = MODELS_FILE) -> list[Model]:
+    """Load and validate catalog models directly from the static JSON file."""
+    raw = catalog_path.read_bytes()
 
     return [Model.model_validate(item) for item in loads(raw)]
 
@@ -46,7 +47,7 @@ def _status_reference() -> list[str]:
 
 
 def _tier(model: Model) -> str:
-    return model.min_tier or "unknown"
+    return model.min_tier
 
 
 def _last_tested(model: Model) -> str:
@@ -105,47 +106,35 @@ def _mcp_catalog(models: list[Model]) -> str:
     return "\n".join(lines)
 
 
-def _replace(path: Path, rendered: str, fallback_pattern: str) -> tuple[str, str]:
+def _replace(path: Path, rendered: str) -> tuple[str, str]:
+    """Replace the generated catalog region delimited by BEGIN and END markers."""
     original = path.read_text(encoding="utf-8")
 
-    if BEGIN in original and END in original:
-        updated = sub(f"{BEGIN}.*?{END}\n*", f"{rendered}\n\n", original, flags=DOTALL)
-    else:
-        updated = sub(fallback_pattern, rendered, original, count=1, flags=DOTALL | MULTILINE)
+    if BEGIN not in original or END not in original:
+        raise RuntimeError(f"Could not locate generated model catalog markers in {path}")
 
-    if updated == original and rendered not in original:
-        raise RuntimeError(f"Could not locate generated model catalog in {path}")
+    updated = sub(f"{BEGIN}.*?{END}\n*", f"{rendered}\n\n", original, flags=DOTALL).rstrip("\n") + "\n"
 
     return original, updated
 
 
-def main() -> int:
-    parser = ArgumentParser()
-    parser.add_argument("--check", action="store_true", help="Fail if checked-in catalogs are stale")
-    args = parser.parse_args()
+def render_catalog_docs(*, check: bool = False) -> int:
+    """Render or verify model catalog sections across documentation pages."""
     models = _models()
-    targets = [
-        (
-            ROOT / "docs/api-reference.md",
-            _api_catalog(models),
-            r"^\| Model ID.*?\n\n(?=Inspect models programmatically:)",
-        ),
-        (
-            ROOT / "docs/mcp-server.md",
-            _mcp_catalog(models),
-            r"^\| Tool.*?\n\n(?=\*\*All tools support)",
-        ),
-    ]
+    targets = (
+        (ROOT / "docs/python-client/models.md", _api_catalog(models)),
+        (ROOT / "docs/mcp-server.md", _mcp_catalog(models)),
+    )
     stale: list[Path] = []
     updated_paths: list[Path] = []
 
-    for path, rendered, fallback in targets:
-        original, updated = _replace(path, rendered, fallback)
+    for path, rendered in targets:
+        original, updated = _replace(path, rendered)
 
         if original == updated:
             continue
 
-        if args.check:
+        if check:
             stale.append(path)
         else:
             path.write_text(updated, encoding="utf-8")
@@ -160,7 +149,7 @@ def main() -> int:
         return 1
 
     counts = Counter(model.status for model in models)
-    action = "Verified" if args.check else "Generated" if updated_paths else "Already up to date"
+    action = "Verified" if check else "Generated" if updated_paths else "Already up to date"
     stdout.write(
         f"{action} model docs: {len(models)} models "
         f"({', '.join(f'{counts[status]} {status}' for status in STATUS_ORDER)}).\n"
@@ -171,6 +160,15 @@ def main() -> int:
             stdout.write(f"  updated {path.relative_to(ROOT)}\n")
 
     return 0
+
+
+def main(arguments: list[str] | None = None) -> int:
+    """Parse CLI arguments and render or verify the generated model tables."""
+    parser = ArgumentParser(description=__doc__)
+    parser.add_argument("--check", action="store_true", help="Fail if checked-in catalogs are stale")
+    args = parser.parse_args(arguments)
+
+    return render_catalog_docs(check=args.check)
 
 
 if __name__ == "__main__":

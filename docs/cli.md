@@ -1,75 +1,59 @@
 # Command-line interface
 
-The base package installs the `perplexity-webui-scraper` command and root help. Install the matching extra to use a feature command.
+The base package installs the `perplexity-webui-scraper` entry point and root help (`-h` / `--help`). Install the matching optional extra to enable each subcommand.
 
 ```bash
 perplexity-webui-scraper --help
 ```
 
-| Invocation                                        | Extra   | Purpose                                                         |
-| ------------------------------------------------- | ------- | --------------------------------------------------------------- |
-| `perplexity-webui-scraper token -e/--email EMAIL` | `token` | Generate a session token through Perplexity email verification. |
-| `perplexity-webui-scraper api`                    | `api`   | Start the OpenAI-compatible REST API server.                    |
-| `perplexity-webui-scraper mcp`                    | `mcp`   | Start the MCP server.                                           |
+| Invocation                                        | Extra   | Purpose                                                        | Guide                                |
+| ------------------------------------------------- | ------- | -------------------------------------------------------------- | ------------------------------------ |
+| `perplexity-webui-scraper token -e/--email EMAIL` | `token` | Authenticate and print a compact `wsk_` session credential.    | [Session Token](token.md)            |
+| `perplexity-webui-scraper token convert`          | `token` | Convert a raw cookie or validate a compact credential offline. | [Session Token](token.md)            |
+| `perplexity-webui-scraper token deconvert`        | `token` | Restore a compact credential to its raw cookie pair.           | [Session Token](token.md)            |
+| `perplexity-webui-scraper api`                    | `api`   | Start the OpenAI-compatible REST API server.                   | [OpenAI-Compatible API](rest-api.md) |
+| `perplexity-webui-scraper mcp`                    | `mcp`   | Start the MCP stdio server.                                    | [MCP Server](mcp-server.md)          |
 
-The CLI provides token-generation, API, and MCP commands. Use the Python client to create conversations.
-
-Use either `-h` or `--help` with the root command and each subcommand. The token command accepts `-e` or `--email` for the account address.
-
-Install the feature extras required by the commands you use:
+## Installing extras
 
 ```bash
-# Install from PyPI
 uv add 'perplexity-webui-scraper[token]'
 uv add 'perplexity-webui-scraper[api]'
 uv add 'perplexity-webui-scraper[mcp]'
 uv add 'perplexity-webui-scraper[all]'
 ```
 
-For local development, run the command through `uv --directory /path/to/perplexity-webui-scraper run`.
+For local checkout development, invoke commands with `uv --directory /path/to/perplexity-webui-scraper run perplexity-webui-scraper ...`.
 
-## Token generator
+## Subcommands
 
-```bash
-perplexity-webui-scraper token
-perplexity-webui-scraper token -e user@example.com
-perplexity-webui-scraper token --email user@example.com
-```
+### `token`
 
-The token command signs in through Perplexity email verification, supports TOTP challenges, displays the session cookie, and offers clipboard copy. Treat the token as a password.
+Generates a compact `wsk_` credential through email OTP/magic-link and optional TOTP verification, or performs offline conversions via `token convert` and `token deconvert`. See [Session Token](token.md) for security details and examples.
 
-## API server
+### `api`
 
-Without a server-default token, clients provide their Perplexity session token with `Authorization: Bearer $PERPLEXITY_SESSION_TOKEN`.
+Starts the FastAPI server with pure `Authorization: Bearer` authentication:
 
 ```bash
+# Default: clients pass a wsk_ token or raw cookie in Authorization: Bearer
 perplexity-webui-scraper api
-perplexity-webui-scraper api --host 0.0.0.0 --port 8080
+
+# Passwordless server-default token
+PERPLEXITY_SESSION_TOKEN="$PERPLEXITY_SESSION_TOKEN" perplexity-webui-scraper api
+
+# Custom API key gating the server token
+PERPLEXITY_SESSION_TOKEN="$PERPLEXITY_SESSION_TOKEN" PERPLEXITY_API_KEY="my_secret_key_123" perplexity-webui-scraper api
 ```
 
-To configure a server-side upstream token, set both it and a separate gateway API key:
+See [OpenAI-Compatible API](rest-api.md) for all flags, endpoints, and client examples.
 
-```bash
-PERPLEXITY_SESSION_TOKEN="$PPLX_TOKEN" PERPLEXITY_API_KEY="$GATEWAY_KEY" perplexity-webui-scraper api
-```
+### `mcp`
 
-Requests may omit `Authorization` and use the server-default token, but must include `X-API-Key`. A client Bearer token overrides the server default; it must still provide the gateway key.
-
-The recommended endpoint is `/v1/responses`; `/v1/chat/completions` remains supported for legacy clients. Responses accepts text and base64 data-URL image inputs, streams text events, and supports in-memory `previous_response_id` continuation. Tool calls and unknown request fields are rejected. Response history is process-local and expires. Remote image URLs are not fetched.
-
-```bash
-curl http://127.0.0.1:8000/v1/responses \
-  -H 'Authorization: Bearer $PERPLEXITY_SESSION_TOKEN' \
-  -H 'Content-Type: application/json' \
-  -d '{"model":"perplexity/best","input":"Hello"}'
-```
-
-## MCP server
-
-Set `PERPLEXITY_SESSION_TOKEN` before launching the server:
+Starts the stdio MCP server with `PERPLEXITY_SESSION_TOKEN`:
 
 ```bash
 PERPLEXITY_SESSION_TOKEN="$PERPLEXITY_SESSION_TOKEN" perplexity-webui-scraper mcp
 ```
 
-The MCP server registers one tool per model in the JSON registry.
+See [MCP Server](mcp-server.md) for client configuration JSON and the generated tool list.

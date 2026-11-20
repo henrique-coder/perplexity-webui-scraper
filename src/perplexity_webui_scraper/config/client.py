@@ -1,30 +1,29 @@
-"""HTTP client and resilience configuration model."""
+"""HTTP client and resilience configuration."""
 
 from __future__ import annotations
 
 from os import PathLike  # noqa: TC003
+from typing import Annotated, Literal
 
 from curl_cffi.requests import BrowserTypeLiteral  # noqa: TC002
-from pydantic import BaseModel, ConfigDict
-
-from perplexity_webui_scraper._internal.types import LogLevel  # noqa: TC001
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ClientConfig(BaseModel):
-    """Immutable HTTP client and resilience settings.
+    """Immutable transport and retry settings for a ``Perplexity`` client.
 
     Attributes:
-        timeout: Request timeout in seconds. Defaults to 3600 (1 hour) for long queries.
-        impersonate: Browser fingerprint profile (e.g., ``"chrome"``, ``"firefox"``).
-        max_retries: Max retry attempts on transient errors.
-        retry_base_delay: Initial backoff delay in seconds.
-        retry_max_delay: Maximum backoff delay cap in seconds.
-        retry_jitter: Jitter factor (0-1) to randomize retry delays.
-        rotate_fingerprint: Recreates the HTTP session after retries while preserving its fingerprint.
-        requests_per_second: Max request rate. Set to ``0`` to disable.
-        max_init_query_length: Truncates init query length to avoid HTTP 414.
-        logging_level: Log verbosity. Defaults to ``"disabled"``.
-        log_file: Path to write logs. ``None`` writes to stderr.
+        timeout: Request timeout in seconds.
+        impersonate: Browser fingerprint profile used by curl-cffi.
+        max_retries: Retry attempts for transient errors.
+        retry_base_delay: Initial retry backoff in seconds.
+        retry_max_delay: Maximum retry delay in seconds.
+        retry_jitter: Randomized backoff factor from zero to one.
+        rotate_fingerprint: Recreate the HTTP session after a retry.
+        requests_per_second: Maximum request rate; zero disables throttling.
+        max_init_query_length: Maximum search-init query length; zero disables truncation.
+        logging_level: ``"disabled"``, ``"debug"``, ``"info"``, ``"warning"``, ``"error"``, or ``"critical"``.
+        log_file: Append logs to this path instead of standard error.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -38,5 +37,8 @@ class ClientConfig(BaseModel):
     rotate_fingerprint: bool = True
     requests_per_second: float = 0.5
     max_init_query_length: int = 2000
-    logging_level: LogLevel = "disabled"
+    logging_level: Annotated[
+        Literal["disabled", "debug", "info", "warning", "error", "critical"],
+        Field(description='"disabled" suppresses library logs; other values set the minimum emitted severity.'),
+    ] = "disabled"
     log_file: str | PathLike[str] | None = None

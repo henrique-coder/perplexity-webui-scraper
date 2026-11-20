@@ -1,98 +1,168 @@
 """Authentication helpers for the API server.
 
-``extract_token()`` validates the ``Authorization: Bearer`` header.
-``ClientPool`` maintains a per-token cache of ``Perplexity`` client instances
-to avoid recreating HTTP sessions on every request.
+``extract_token()`` validates the ``Authorization: Bearer`` header containing a
+compact ``wsk_`` token or raw session-cookie pair. ``ClientPool`` maintains a
+per-credential cache of ``Perplexity`` client instances to avoid recreating
+HTTP sessions on every request.
 """
 
 from __future__ import annotations
 
 from collections import OrderedDict
+from hashlib import sha256
 from hmac import compare_digest
+from logging import getLogger
+from os import environ
 from threading import Lock
 from time import monotonic
+from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
 
 from perplexity_webui_scraper import Perplexity
 from perplexity_webui_scraper._internal.constants import AUTH_BEARER_PREFIX
+from perplexity_webui_scraper._internal.exceptions import SessionTokenError
+from perplexity_webui_scraper.auth.cookies import parse_session_credential, serialize_session_credential
 from perplexity_webui_scraper.config.client import ClientConfig
 
 
+if TYPE_CHECKING:
+    from perplexity_webui_scraper.core.account import AccountTier
+
+
+_logger = getLogger("uvicorn.error")
+_BEARER_SCHEME = AUTH_BEARER_PREFIX.strip().casefold()
+_MISSING_AUTH_DETAIL = (
+    "Missing or invalid Authorization header. "
+    "Pass a compact wsk_ token or raw __Secure-pplx.session.<account UUID>=value cookie pair as: "
+    "Authorization: Bearer <token>"
+)
+_INVALID_CREDENTIAL_DETAIL = (
+    "Invalid Perplexity session credential. "
+    "Pass a valid compact wsk_ token or raw __Secure-pplx.session.<account UUID>=value cookie pair."
+)
+_INVALID_API_KEY_DETAIL = (
+    "Missing or invalid API key. Pass the configured server API key as: Authorization: Bearer <api_key>"
+)
+
+
+def _canonical_session_token(token: str) -> str:
+    """Normalize raw and compact credentials to one canonical cookie pair."""
+    return serialize_session_credential(parse_session_credential(token))
+
+
+def _parse_bearer_header(authorization: str | None) -> tuple[bool, str]:
+    """Parse a Bearer header case-insensitively without mutating the token."""
+    if not authorization:
+        return False, ""
+
+    stripped = authorization.strip()
+
+    if not stripped:
+        return False, ""
+
+    parts = stripped.split(None, 1)
+
+    if parts[0].casefold() != _BEARER_SCHEME:
+        return False, ""
+
+    if len(parts) == 1:
+        return True, ""
+
+    return True, parts[1].strip()
+
+
+def _validate_default_token(default_session_token: str) -> str:
+    """Validate and canonicalize the configured server-default credential."""
+    try:
+        return _canonical_session_token(default_session_token)
+    except SessionTokenError:
+        raise HTTPException(status_code=503, detail="Server default credentials are invalid.") from None
+
+
 def extract_token(authorization: str | None) -> str:
-    """Extract the raw session token from the ``Authorization: Bearer`` header.
+    """Extract and validate a Perplexity credential from Authorization.
 
     Args:
         authorization: Raw value of the ``Authorization`` header.
 
     Returns:
-        The session token string (everything after ``"Bearer "``).
+        The canonical account-scoped session-cookie pair.
 
     Raises:
-        HTTPException: 401 if the header is missing, not ``Bearer``, or empty.
+        HTTPException: 401 if the header is missing, not ``Bearer``, empty, or malformed.
     """
-    if not authorization or not authorization.startswith(AUTH_BEARER_PREFIX):
-        raise HTTPException(
-            status_code=401,
-            detail=(
-                "Missing or invalid Authorization header. "
-                "Pass your Perplexity session token as: "
-                "Authorization: Bearer <token>"
-            ),
-        )
+    is_bearer, token = _parse_bearer_header(authorization)
 
-    token = authorization[len(AUTH_BEARER_PREFIX) :]
+    if not is_bearer:
+        _logger.warning("Rejected API request (401): missing or invalid Authorization header")
+        raise HTTPException(status_code=401, detail=_MISSING_AUTH_DETAIL)
 
     if not token:
+        _logger.warning("Rejected API request (401): empty Bearer token")
         raise HTTPException(status_code=401, detail="Bearer token is empty.")
 
-    return token
+    try:
+        return _canonical_session_token(token)
+    except SessionTokenError:
+        _logger.warning("Rejected API request (401): malformed Perplexity session credential")
+        raise HTTPException(status_code=401, detail=_INVALID_CREDENTIAL_DETAIL) from None
 
 
 def resolve_session_token(
     authorization: str | None,
-    api_key: str | None,
     default_session_token: str | None,
     configured_api_key: str | None,
 ) -> str:
-    """Authenticate a gateway request and resolve its upstream Perplexity token.
+    """Resolve the upstream Perplexity credential using pure Bearer authentication.
 
-    When the server has a configured upstream token, a separate gateway key is
-    mandatory on every request. A caller may optionally supply its own Perplexity
-    token in Authorization to override the configured upstream token.
+    Three modes are supported:
+    1. No server configuration: callers pass a compact ``wsk_`` token or raw
+       session-cookie pair via ``Authorization: Bearer <token>``.
+    2. Server ``--session-token`` only: requests require no password and use the
+       configured server-default credential directly.
+    3. Server ``--session-token`` + ``--api-key``: callers pass the configured
+       key via ``Authorization: Bearer <api_key>``, and the server authenticates
+       upstream with its configured session credential.
     """
-    if default_session_token and not configured_api_key:
+    if configured_api_key and not default_session_token:
         raise HTTPException(status_code=503, detail="Server default credentials are misconfigured.")
 
-    if configured_api_key and not compare_digest(api_key or "", configured_api_key):
-        raise HTTPException(status_code=401, detail="Missing or invalid gateway API key.")
+    if default_session_token and configured_api_key:
+        is_bearer, bearer_value = _parse_bearer_header(authorization)
 
-    if authorization:
-        return extract_token(authorization)
+        if not is_bearer or not bearer_value or not compare_digest(bearer_value, configured_api_key):
+            _logger.warning("Rejected API request (401): missing or invalid Bearer API key")
+            raise HTTPException(status_code=401, detail=_INVALID_API_KEY_DETAIL)
+
+        return _validate_default_token(default_session_token)
 
     if default_session_token:
-        return default_session_token
+        return _validate_default_token(default_session_token)
 
-    raise HTTPException(
-        status_code=401,
-        detail=(
-            "Missing or invalid Authorization header. Pass your Perplexity session token as: "
-            "Authorization: Bearer <token>"
-        ),
+    return extract_token(authorization)
+
+
+def resolve_upstream_token(authorization: str | None) -> str:
+    """Resolve the active authentication mode against server environment settings."""
+    return resolve_session_token(
+        authorization,
+        environ.get("PERPLEXITY_SESSION_TOKEN"),
+        environ.get("PERPLEXITY_API_KEY"),
     )
 
 
 class ClientPool:
-    """Per-token cache of :class:`~perplexity_webui_scraper.Perplexity` client instances.
+    """Per-credential cache of :class:`~perplexity_webui_scraper.Perplexity` client instances.
 
     Avoids recreating the curl-cffi session and rate limiter for every API
-    request. Clients are keyed by session token and remain cached for the
+    request. Clients are keyed by session-cookie pair and remain cached for the
     lifetime of the process.
 
     Usage::
 
         pool = ClientPool()
-        client = pool.get_or_create("my-session-token")
+        client = pool.get_or_create("__Secure-pplx.session.<account UUID>=value")
     """
 
     def __init__(self, max_clients: int = 128, ttl_seconds: float = 30 * 60) -> None:
@@ -102,18 +172,33 @@ class ClientPool:
             raise ValueError("ttl_seconds must be greater than zero")
 
         self._clients: OrderedDict[str, tuple[Perplexity, float]] = OrderedDict()
+        self._leases: dict[int, tuple[Perplexity, int]] = {}
+        self._retired: dict[int, Perplexity] = {}
         self._max_clients = max_clients
         self._ttl_seconds = ttl_seconds
         self._lock = Lock()
 
-    def _evict_stale(self, now: float) -> None:
-        """Remove client references that have been idle beyond the configured TTL."""
+    def _retire_client(self, client: Perplexity, to_close: list[Perplexity]) -> None:
+        """Defer closing an evicted client while cached or active work still uses it."""
+        client_id = id(client)
+
+        if client_id in self._leases:
+            self._retired[client_id] = client
+        else:
+            to_close.append(client)
+
+    def _evict_stale(self, now: float) -> list[Perplexity]:
+        """Remove client references idle beyond TTL and return closeable instances."""
         stale_tokens = [
             token for token, (_client, last_access) in self._clients.items() if now - last_access > self._ttl_seconds
         ]
+        to_close: list[Perplexity] = []
 
         for token in stale_tokens:
-            self._clients.pop(token)
+            stale_client, _last_access = self._clients.pop(token)
+            self._retire_client(stale_client, to_close)
+
+        return to_close
 
     def get_or_create(self, token: str) -> Perplexity:
         """Return an existing or newly created client for *token*.
@@ -124,32 +209,156 @@ class ClientPool:
         Returns:
             A :class:`~perplexity_webui_scraper.Perplexity` instance.
         """
+        canonical_token = _canonical_session_token(token)
+        to_close: list[Perplexity] = []
+
+        try:
+            with self._lock:
+                now = monotonic()
+                to_close.extend(self._evict_stale(now))
+                cached = self._clients.get(canonical_token)
+
+                if cached is not None:
+                    self._clients.move_to_end(canonical_token)
+                    self._clients[canonical_token] = (cached[0], now)
+
+                    return cached[0]
+
+                client = Perplexity(canonical_token, config=ClientConfig())
+                self._clients[canonical_token] = (client, now)
+
+                if len(self._clients) > self._max_clients:
+                    _evicted_token, (evicted_client, _last_access) = self._clients.popitem(last=False)
+                    self._retire_client(evicted_client, to_close)
+
+                return client
+        finally:
+            for retired_client in to_close:
+                retired_client.close()
+
+    def touch(self, token: str) -> None:
+        """Refresh the TTL and LRU order for an active session client if pooled."""
+        canonical_token = _canonical_session_token(token)
+        to_close: list[Perplexity] = []
+
+        try:
+            with self._lock:
+                now = monotonic()
+                cached = self._clients.get(canonical_token)
+
+                if cached is not None:
+                    self._clients.move_to_end(canonical_token)
+                    self._clients[canonical_token] = (cached[0], now)
+
+                to_close.extend(self._evict_stale(now))
+        finally:
+            for retired_client in to_close:
+                retired_client.close()
+
+    def acquire(self, client: Perplexity | None) -> None:
+        """Register an active request or cached conversation holding *client*."""
+        if client is None:
+            return
+
+        with self._lock:
+            client_id = id(client)
+            current = self._leases.get(client_id)
+            count = current[1] + 1 if current is not None else 1
+            self._leases[client_id] = (client, count)
+
+    def release(self, client: Perplexity | None) -> None:
+        """Release one reference to *client* and close it once retired and unused."""
+        if client is None:
+            return
+
+        close_target: Perplexity | None = None
+
+        with self._lock:
+            client_id = id(client)
+            current = self._leases.get(client_id)
+
+            if current is not None:
+                remaining = current[1] - 1
+
+                if remaining > 0:
+                    self._leases[client_id] = (client, remaining)
+                else:
+                    self._leases.pop(client_id, None)
+                    close_target = self._retired.pop(client_id, None)
+
+        if close_target is not None:
+            close_target.close()
+
+    def clear(self) -> None:
+        """Remove pooled, leased, and retired client entries without closing mocks."""
+        with self._lock:
+            self._clients.clear()
+            self._leases.clear()
+            self._retired.clear()
+
+
+class AccountTierCache:
+    """Bounded, per-credential in-memory TTL cache for resolved account tiers."""
+
+    def __init__(self, max_entries: int = 128, ttl_seconds: float = 10 * 60) -> None:
+        if max_entries < 1:
+            raise ValueError("max_entries must be at least one")
+        if ttl_seconds <= 0:
+            raise ValueError("ttl_seconds must be greater than zero")
+
+        self._entries: OrderedDict[str, tuple[AccountTier, float]] = OrderedDict()
+        self._max_entries = max_entries
+        self._ttl_seconds = ttl_seconds
+        self._lock = Lock()
+
+    @staticmethod
+    def _key(token: str) -> str:
+        """Hash canonical credentials so raw session tokens are never stored as cache keys."""
+        canonical = _canonical_session_token(token)
+
+        return sha256(canonical.encode("utf-8")).hexdigest()
+
+    def _evict_stale(self, now: float) -> None:
+        """Remove cached tier entries whose TTL has elapsed."""
+        stale_keys = [key for key, (_tier, stored_at) in self._entries.items() if now - stored_at > self._ttl_seconds]
+
+        for key in stale_keys:
+            self._entries.pop(key)
+
+    def get(self, token: str) -> AccountTier | None:
+        """Return a non-expired cached account tier, or ``None`` on cache miss."""
+        key = self._key(token)
+
         with self._lock:
             now = monotonic()
             self._evict_stale(now)
-            cached = self._clients.get(token)
+            cached = self._entries.get(key)
 
-            if cached is not None:
-                self._clients.move_to_end(token)
-                self._clients[token] = (cached[0], now)
+            if cached is None:
+                return None
 
-                return cached[0]
+            self._entries.move_to_end(key)
 
-            client = Perplexity(token, config=ClientConfig())
-            self._clients[token] = (client, now)
+            return cached[0]
 
-            if len(self._clients) > self._max_clients:
-                self._clients.popitem(last=False)
+    def set(self, token: str, tier: AccountTier) -> None:
+        """Cache *tier* for *token* for the configured TTL."""
+        key = self._key(token)
 
-            return client
-
-    def touch(self, token: str, client: Perplexity) -> None:
-        """Refresh TTL after a request only if *client* remains cached."""
         with self._lock:
-            cached = self._clients.get(token)
+            now = monotonic()
+            self._evict_stale(now)
+            self._entries[key] = (tier, now)
+            self._entries.move_to_end(key)
 
-            if cached is None or cached[0] is not client:
-                return
+            if len(self._entries) > self._max_entries:
+                self._entries.popitem(last=False)
 
-            self._clients[token] = (client, monotonic())
-            self._clients.move_to_end(token)
+    def clear(self) -> None:
+        """Remove all cached account tiers."""
+        with self._lock:
+            self._entries.clear()
+
+
+client_pool = ClientPool()
+account_tier_cache = AccountTierCache()

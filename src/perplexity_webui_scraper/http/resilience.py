@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from math import isfinite
 from random import uniform
 from threading import Lock
@@ -9,6 +11,8 @@ from time import monotonic, sleep
 from typing import TYPE_CHECKING, TypeVar
 
 from pydantic import BaseModel, ConfigDict, model_validator
+
+from perplexity_webui_scraper._internal.exceptions import RateLimitError
 
 
 if TYPE_CHECKING:
@@ -19,7 +23,7 @@ T = TypeVar("T")
 
 
 class RetryConfig(BaseModel):
-    """Immutable configuration for exponential-backoff retry behaviour.
+    """Immutable configuration for exponential-backoff retry behavior.
 
     Attributes:
         max_retries: Maximum number of retry attempts after the initial failure.
@@ -99,18 +103,20 @@ def retry_with_backoff(
     config: RetryConfig,
     on_retry: Callable[[int, BaseException, float], None] | None = None,
     retryable: tuple[type[BaseException], ...] = (),
+    now: datetime | None = None,
 ) -> T:
     """Execute *fn* with exponential-backoff retry.
 
     Args:
         fn: Zero-argument callable to execute.
-        config: :class:`RetryConfig` controlling retry behaviour.
-        on_retry: Optional callback invoked **before** each retry with
+        config: :class:`RetryConfig` controlling retry behavior.
+        on_retry: Optional callback invoked before each retry with
             ``(attempt, exception, wait_seconds)``.  Use this to rotate
             sessions, log warnings, etc.
-        retryable: Tuple of exception types that trigger a retry.  Any
+        retryable: Tuple of exception types that trigger a retry. Any
             exception not in this tuple is re-raised immediately without
             retrying.  Pass an empty tuple to retry on any exception.
+        now: Optional clock value for parsing HTTP-date ``Retry-After`` headers.
 
     Returns:
         The return value of *fn* on success.
@@ -127,7 +133,9 @@ def retry_with_backoff(
 
         try:
             return fn()
-        except BaseException as _exc:
+        except (KeyboardInterrupt, SystemExit, GeneratorExit):
+            raise
+        except Exception as _exc:
             exc = _exc
 
         if exc is not None:
@@ -139,12 +147,21 @@ def retry_with_backoff(
             if attempt >= max_attempts:
                 break
 
-            delay = min(config.base_delay * (2 ** (attempt - 1)), config.max_delay)
+            delay = min(config.base_delay * (2 ** min(attempt - 1, 60)), config.max_delay)
             jitter_amount = delay * config.jitter
             wait = max(0.0, delay + uniform(-jitter_amount, jitter_amount))
 
+            if isinstance(exc, RateLimitError) and exc.retry_after is not None:
+                retry_after_delay = _retry_after_seconds(exc.retry_after, config.max_delay, now)
+
+                if retry_after_delay is not None:
+                    wait = retry_after_delay
+
             if on_retry is not None:
-                on_retry(attempt, exc, wait)
+                try:
+                    on_retry(attempt, exc, wait)
+                except Exception:
+                    raise RuntimeError("Retry callback failed.") from None
 
             sleep(wait)
 
@@ -152,3 +169,37 @@ def retry_with_backoff(
         raise last_exc
 
     raise RuntimeError("Retry loop exhausted without raising an exception")
+
+
+def _retry_after_seconds(value: str | None, maximum_delay: float, now: datetime | None = None) -> float | None:
+    """Parse and cap the server Retry-After value; return None when invalid."""
+    if not value:
+        return None
+
+    normalized = value.strip()
+
+    if not normalized:
+        return None
+
+    if normalized.isascii() and normalized.isdigit():
+        if len(normalized) > 20:
+            return maximum_delay
+
+        seconds: float = float(int(normalized))
+    else:
+        try:
+            retry_at = parsedate_to_datetime(normalized)
+        except (TypeError, ValueError, OverflowError):
+            return None
+
+        if retry_at.tzinfo is None:
+            retry_at = retry_at.replace(tzinfo=UTC)
+
+        seconds = (retry_at - (now or datetime.now(UTC))).total_seconds()
+
+    bounded = min(max(0.0, seconds), maximum_delay)
+
+    if not isfinite(bounded):
+        return maximum_delay
+
+    return bounded

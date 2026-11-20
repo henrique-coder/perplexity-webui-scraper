@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
+from orjson import dumps
 from pytest import raises, warns
 
 from perplexity_webui_scraper._internal.constants import ENDPOINT_AUTH_SESSION, ENDPOINT_USER_SETTINGS
@@ -25,6 +27,7 @@ if TYPE_CHECKING:
 class _SessionResponse:
     def __init__(self, payload: dict[str, Any]) -> None:
         self._payload = payload
+        self.content = dumps(payload)
 
     def json(self) -> dict[str, Any]:
         return self._payload
@@ -62,7 +65,7 @@ class _FakeHTTP:
 
 def _session_payload(subscription_tier: str, payment_tier: str = "free_with_pm") -> dict[str, Any]:
     return {
-        "expires": "2026-07-30T02:59:58.715563094Z",
+        "expires": (datetime.now(UTC) + timedelta(days=30)).isoformat(),
         "preventUsernameRedirect": False,
         "user": {
             "email": "user@example.com",
@@ -77,7 +80,7 @@ def _session_payload(subscription_tier: str, payment_tier: str = "free_with_pm")
 
 def _free_session_payload() -> dict[str, Any]:
     return {
-        "expires": "2026-07-30T03:28:20.712115624Z",
+        "expires": (datetime.now(UTC) + timedelta(days=30)).isoformat(),
         "preventUsernameRedirect": False,
         "user": {
             "email": "user@example.com",
@@ -157,19 +160,6 @@ def test_non_available_model_defers_entitlement_check_to_backend() -> None:
 
     assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, True)]
     assert fake_http.stream_called is True
-
-
-def test_acknowledged_non_available_model_defers_tier_check_to_backend() -> None:
-    fake_http = _FakeHTTP(_session_payload("pro"))
-    conversation = Conversation(
-        cast("HTTPClient", fake_http),
-        ConversationConfig(model="anthropic/claude45haiku", allow_risky_model=True),
-    )
-
-    with warns(ModelRiskWarning):
-        conversation.ask("hello")
-
-    assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, True)]
     assert fake_http.ask_payload is not None
     assert fake_http.ask_payload["params"]["model_preference"] == "claude45haiku"
 
@@ -207,20 +197,6 @@ def test_best_model_uses_pro_upgraded_copilot_for_pro_account() -> None:
     assert fake_http.ask_payload["params"]["query_source"] == "home"
 
 
-def test_writing_search_focus_disables_search_without_changing_search_focus() -> None:
-    fake_http = _FakeHTTP(_session_payload("pro"))
-    conversation = Conversation(
-        cast("HTTPClient", fake_http),
-        ConversationConfig(model="perplexity/best", search_focus="writing"),
-    )
-
-    conversation.ask("write a haiku")
-
-    assert fake_http.ask_payload is not None
-    assert fake_http.ask_payload["params"]["search_focus"] == "internet"
-    assert fake_http.ask_payload["params"]["skip_search_enabled"] is True
-
-
 def test_custom_model_builds_payload_after_risk_acknowledgement() -> None:
     fake_http = _FakeHTTP(_session_payload("pro"))
     conversation = Conversation(
@@ -242,7 +218,7 @@ def test_custom_model_builds_payload_after_risk_acknowledgement() -> None:
 
 def test_unknown_session_tier_falls_back_to_user_settings() -> None:
     fake_http = _FakeHTTP(
-        {"expires": "2026-07-30T03:28:20.712115624Z", "user": {"email": "user@example.com"}},
+        {"expires": (datetime.now(UTC) + timedelta(days=30)).isoformat(), "user": {"email": "user@example.com"}},
         settings_payload=_free_settings_payload(),
     )
     conversation = Conversation(
@@ -273,18 +249,6 @@ def test_free_account_cannot_send_files() -> None:
     assert fake_http.stream_called is False
 
 
-def test_account_checks_respect_http_rate_limiter() -> None:
-    fake_http = _FakeHTTP(_session_payload("pro"))
-    conversation = Conversation(
-        cast("HTTPClient", fake_http),
-        ConversationConfig(model="perplexity/best"),
-    )
-
-    conversation.ask("hello")
-
-    assert fake_http.get_calls == [(ENDPOINT_AUTH_SESSION, True)]
-
-
 def test_client_get_account_session_uses_fast_session_request() -> None:
     fake_http = _FakeHTTP(_session_payload("pro"))
     client = Perplexity.__new__(Perplexity)
@@ -298,7 +262,7 @@ def test_client_get_account_session_uses_fast_session_request() -> None:
 
 def test_client_get_account_profile_uses_settings_only_when_needed() -> None:
     fake_http = _FakeHTTP(
-        {"expires": "2026-07-30T03:28:20.712115624Z", "user": {"email": "user@example.com"}},
+        {"expires": (datetime.now(UTC) + timedelta(days=30)).isoformat(), "user": {"email": "user@example.com"}},
         settings_payload=_free_settings_payload(),
     )
     client = Perplexity.__new__(Perplexity)

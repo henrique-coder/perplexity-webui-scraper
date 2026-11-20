@@ -123,7 +123,7 @@ class ModelRegistry:
                 identifier=identifier,
                 tool_name="pplx_custom",
                 provider="custom",
-                min_tier=None,
+                min_tier="unknown",
                 mode=custom_model_mode,
                 status="unknown",
             )

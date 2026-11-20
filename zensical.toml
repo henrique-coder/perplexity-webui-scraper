@@ -1,0 +1,67 @@
+[project]
+site_name = "Perplexity WebUI Scraper"
+site_description = "Unofficial Python client, CLI, MCP server, and OpenAI-compatible REST API for Perplexity's WebUI."
+site_author = "Henrique Moreira"
+repo_url = "https://github.com/henrique-coder/perplexity-webui-scraper"
+site_url = "https://perplexity-webui-scraper.readthedocs.io"
+
+nav = [
+    { "Home" = "index.md" },
+    { "Getting Started" = "getting-started.md" },
+    { "Session Token" = "token.md" },
+    { "Python Client" = [
+        { "Usage Guide" = "python-client/usage.md" },
+        { "Client & Account" = "python-client/client.md" },
+        { "Conversation" = "python-client/conversation.md" },
+        { "Configuration" = "python-client/configuration.md" },
+        { "Response Models" = "python-client/response.md" },
+        { "Models & Catalog" = "python-client/models.md" },
+        { "Types & Values" = "python-client/types.md" },
+        { "Exceptions" = "python-client/exceptions.md" },
+    ] },
+    { "CLI" = "cli.md" },
+    { "OpenAI-Compatible API" = "rest-api.md" },
+    { "MCP Server" = "mcp-server.md" },
+]
+
+[project.theme]
+logo = "assets/icon.png"
+favicon = "assets/icon.png"
+features = [
+    "navigation.instant",
+    "navigation.tracking",
+    "navigation.sections",
+    "navigation.expand",
+    "navigation.top",
+    "toc.follow",
+    "content.code.copy",
+    "content.code.annotate",
+]
+
+[project.theme.icon]
+repo = "fontawesome/brands/github"
+
+[[project.theme.palette]]
+scheme = "slate"
+primary = "indigo"
+accent = "deep purple"
+toggle.icon = "material/weather-sunny"
+toggle.name = "Switch to light mode"
+
+[[project.theme.palette]]
+scheme = "default"
+primary = "indigo"
+accent = "deep purple"
+toggle.icon = "material/weather-night"
+toggle.name = "Switch to dark mode"
+
+[project.markdown_extensions]
+admonition = {}
+pymdownx.details = {}
+pymdownx.superfences = {}
+pymdownx.highlight.anchor_linenums = true
+pymdownx.highlight.line_spans = "__span"
+pymdownx.highlight.pygments_lang_class = true
+pymdownx.inlinehilite = {}
+pymdownx.snippets = {}
+pymdownx.tabbed.alternate_style = true

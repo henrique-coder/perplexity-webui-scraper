@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal, Self
+
+from orjson import loads
+from pydantic import ConfigDict, validate_call
 
 from perplexity_webui_scraper._internal.constants import ENDPOINT_AUTH_SESSION, ENDPOINT_USER_SETTINGS
 from perplexity_webui_scraper._internal.exceptions import ResearchClarifyingQuestionsError
@@ -15,6 +18,7 @@ from perplexity_webui_scraper.core.account import (
     ensure_model_access,
     model_for_account,
 )
+from perplexity_webui_scraper.core.file_types import FileInput  # noqa: TC001
 from perplexity_webui_scraper.core.files import _FileInfo, upload_file, validate_files
 from perplexity_webui_scraper.core.parser import (
     SchematizedStreamState,
@@ -30,11 +34,8 @@ from perplexity_webui_scraper.models.types import Model  # noqa: TC001
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from perplexity_webui_scraper._internal.types import CitationMode, FileInput
     from perplexity_webui_scraper.config.conversation import ConversationConfig
     from perplexity_webui_scraper.http.client import HTTPClient
-    from perplexity_webui_scraper.models.types import ModelMode
-
 
 _DEFAULT_MODEL: str = "perplexity/best"
 
@@ -57,6 +58,7 @@ class Conversation:
     """
 
     __slots__ = (
+        "_activity",
         "_answer",
         "_backend_uuid",
         "_chunks",
@@ -73,10 +75,11 @@ class Conversation:
     def __init__(self, http: HTTPClient, config: ConversationConfig) -> None:
         self._http = http
         self._config = config
-        self._citation_mode: CitationMode = config.citation_mode
+        self._citation_mode: Literal["default", "markdown", "clean"] = config.citation_mode
         self._backend_uuid: str | None = None
         self._read_write_token: str | None = None
         self._answer: str | None = None
+        self._activity: dict[str, Any] = {}
         self._chunks: list[str] = []
         self._search_results: list[SearchResultItem] = []
         self._raw_data: dict[str, Any] = {}
@@ -98,6 +101,11 @@ class Conversation:
         return self._search_results
 
     @property
+    def activity(self) -> list[Any]:
+        """Allowlisted, user-visible activity from the most recent response."""
+        return list(self._activity.values())
+
+    @property
     def uuid(self) -> str | None:
         """Backend conversation UUID.  ``None`` before the first query completes."""
         return self._backend_uuid
@@ -106,16 +114,17 @@ class Conversation:
     # Public interface
     # ------------------------------------------------------------------
 
+    @validate_call(config=ConfigDict(arbitrary_types_allowed=True))
     def ask(
         self,
         query: str,
         model: str | None = None,
         files: list[FileInput] | None = None,
-        citation_mode: CitationMode | None = None,
+        citation_mode: Literal["default", "markdown", "clean"] | None = None,
         stream: bool = False,
         allow_risky_model: bool | None = None,
-        custom_model_mode: ModelMode | None = None,
-    ) -> Conversation:
+        custom_model_mode: Literal["copilot", "search", "research"] | None = None,
+    ) -> Self:
         """Send a query and return ``self`` for chaining or streaming iteration.
 
         In non-streaming mode, blocks until the response completes.
@@ -125,7 +134,8 @@ class Conversation:
             query: The prompt text.
             model: Model ID override. Falls back to config or ``"perplexity/best"``.
             files: Optional list of attachments.
-            citation_mode: Per-query citation override.
+            citation_mode: ``"default"`` keeps citation markers, ``"markdown"`` links them, and ``"clean"``
+                removes them.
             stream: If ``True``, sets up an internal generator for streaming.
             allow_risky_model: Per-query acknowledgement for a model whose
                 status is not ``"available"``.
@@ -151,14 +161,19 @@ class Conversation:
         """Yield streaming response frames.
 
         Only yields when the conversation was started with ``stream=True``.
-        After iteration completes, the internal generator is cleared.
+        After iteration completes or stops early, the internal generator is closed.
 
         Yields:
             Incremental Response objects.
         """
-        if self._stream_generator is not None:
-            yield from self._stream_generator
+        generator = self._stream_generator
+
+        if generator is not None:
             self._stream_generator = None
+            try:
+                yield from generator
+            finally:
+                generator.close()
 
     # ------------------------------------------------------------------
     # Private execution
@@ -177,7 +192,7 @@ class Conversation:
         file_urls: list[str] = []
 
         if files:
-            validated: list[_FileInfo] = validate_files(files)
+            validated: list[_FileInfo] = validate_files(list(files))
 
             with ThreadPoolExecutor() as executor:
                 file_urls = list(executor.map(lambda f: upload_file(f, self._http), validated))
@@ -189,6 +204,7 @@ class Conversation:
             config=self._config,
             backend_uuid=self._backend_uuid,
             read_write_token=self._read_write_token,
+            rum_session_id=getattr(self._http, "rum_session_id", None),
         )
 
         self._http.init_search(query)
@@ -201,12 +217,12 @@ class Conversation:
     def _validate_request_access(self, model: Model, has_files: bool) -> Model:
         """Ensure the account can use the selected model and attachments."""
         response = self._http.get(ENDPOINT_AUTH_SESSION)
-        session = AccountSession.model_validate(response.json())
+        session = AccountSession.model_validate(loads(response.content))
         settings: AccountSettings | None = None
 
         if session.account_tier == "unknown":
             settings_response = self._http.get(ENDPOINT_USER_SETTINGS)
-            settings = AccountSettings.model_validate(settings_response.json())
+            settings = AccountSettings.model_validate(loads(settings_response.content))
 
         profile = AccountProfile(session=session, settings=settings)
         account_tier = profile.account_tier
@@ -221,14 +237,17 @@ class Conversation:
 
     def _reset_state(self) -> None:
         """Reset all mutable response state before a new query."""
+        self._schematized_state.search_results = []
+        self._schematized_state.activity = {}
         self._reset_response_state()
         self._stream_generator = None
 
     def _reset_response_state(self) -> None:
         """Reset response fields while retaining conversation continuation tokens."""
+        self._search_results = list(self._schematized_state.search_results)
         self._answer = None
+        self._activity = {}
         self._chunks = []
-        self._search_results = []
         self._raw_data = {}
         self._schematized_state = SchematizedStreamState()
 
@@ -238,15 +257,19 @@ class Conversation:
         Args:
             data: Deserialized SSE data dict (already filtered for ``data:`` prefix).
         """
-        if "backend_uuid" in data:
-            self._backend_uuid = data["backend_uuid"]
+        backend_uuid = data.get("backend_uuid")
 
-        if "read_write_token" in data:
-            self._read_write_token = data["read_write_token"]
+        if isinstance(backend_uuid, str) and backend_uuid:
+            self._backend_uuid = backend_uuid
+
+        read_write_token = data.get("read_write_token")
+
+        if isinstance(read_write_token, str) and read_write_token:
+            self._read_write_token = read_write_token
 
         answer, chunks, updated_results, raw_data = process_sse_data(
             data,
-            self._search_results,
+            self._schematized_state.search_results if "blocks" in data else self._search_results,
             self._citation_mode,
             self._schematized_state,
         )
@@ -254,14 +277,21 @@ class Conversation:
         if updated_results is not self._search_results:
             self._search_results = updated_results
 
+        if "blocks" in data and self._schematized_state.search_results:
+            self._search_results = list(self._schematized_state.search_results)
+        elif "blocks" in data and "web_result_block" in raw_data:
+            self._search_results = list(updated_results)
+
         if answer is not None:
             self._answer = answer
 
         if chunks:
             self._chunks = chunks
 
+        self._activity = dict(self._schematized_state.activity)
+
         if raw_data:
-            self._raw_data = raw_data
+            self._raw_data = {key: value for key, value in raw_data.items() if key != "workflow_block"}
 
     def _build_response(self) -> Response:
         """Construct a :class:`~perplexity_webui_scraper.Response` snapshot."""
@@ -270,6 +300,7 @@ class Conversation:
             chunks=list(self._chunks),
             last_chunk=self._chunks[-1] if self._chunks else None,
             search_results=list(self._search_results),
+            activity=list(self._activity.values()),
             conversation_uuid=self._backend_uuid,
             raw_data=dict(self._raw_data),
         )
@@ -326,9 +357,8 @@ class Conversation:
         questions = "\n".join(f"{index}. {question}" for index, question in enumerate(error.questions, start=1))
         query = (
             "Continue the Deep Research task without asking the user for input. "
-            "Answer the clarification questions below by choosing the most "
-            "reasonable options from the original context. If ambiguity remains, "
-            "state the assumption briefly and proceed with the research.\n\n"
+            "Answer the clarification questions below using the original context. "
+            "If an answer depends on an ambiguous assumption, state it briefly and continue.\n\n"
             f"Clarification questions:\n{questions}"
         )
 
@@ -342,4 +372,5 @@ class Conversation:
             config=self._config,
             backend_uuid=self._backend_uuid,
             read_write_token=self._read_write_token,
+            rum_session_id=getattr(self._http, "rum_session_id", None),
         )

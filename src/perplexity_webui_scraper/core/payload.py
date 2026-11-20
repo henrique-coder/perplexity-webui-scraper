@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Final
 from uuid import uuid4
 
 from perplexity_webui_scraper._internal.constants import (
+    API_SOURCE,
     API_VERSION,
     PROMPT_SOURCE,
     SEND_BACK_TEXT,
@@ -34,7 +35,7 @@ SOURCE_MAP: Final[dict[str, str]] = {
     "finance": "edgar",
     "all": "web",
 }
-"""Maps ``SourceFocus`` literals to Perplexity's internal source identifiers."""
+"""Maps public source values to Perplexity's internal source identifiers."""
 
 TIME_MAP: Final[dict[str, str]] = {
     "all": "",
@@ -43,7 +44,7 @@ TIME_MAP: Final[dict[str, str]] = {
     "month": "MONTH",
     "year": "YEAR",
 }
-"""Maps ``TimeRange`` literals to Perplexity's recency filter identifiers."""
+"""Maps public recency values to Perplexity's filter identifiers."""
 
 
 def build_payload(
@@ -53,6 +54,7 @@ def build_payload(
     config: ConversationConfig,
     backend_uuid: str | None,
     read_write_token: str | None,
+    rum_session_id: str | None = None,
 ) -> dict[str, Any]:
     """Build the JSON payload for a Perplexity SSE ask request.
 
@@ -65,6 +67,7 @@ def build_payload(
             ``None`` for the first query in a thread.
         read_write_token: Read-write token from the previous SSE response.
             ``None`` for the first query.
+        rum_session_id: Optional RUM session identifier sent with the request payload.
 
     Returns:
         Dict with ``"params"`` and ``"query_str"`` keys, ready for JSON
@@ -75,10 +78,10 @@ def build_payload(
 
     client_coordinates: dict[str, Any] | None = None
 
-    if config.coordinates is not None:
+    if config.latitude is not None and config.longitude is not None:
         client_coordinates = {
-            "location_lat": config.coordinates.latitude,
-            "location_lng": config.coordinates.longitude,
+            "location_lat": config.latitude,
+            "location_lng": config.longitude,
             "name": "",
         }
 
@@ -98,12 +101,16 @@ def build_payload(
         "search_recency_filter": TIME_MAP.get(config.time_range, "") or None,
         "is_incognito": not config.save_to_library,
         "use_schematized_api": USE_SCHEMATIZED_API,
-        "local_search_enabled": config.coordinates is not None,
+        "local_search_enabled": config.latitude is not None,
         "prompt_source": PROMPT_SOURCE,
         "query_source": "home",
         "send_back_text_in_streaming_api": SEND_BACK_TEXT,
         "version": API_VERSION,
+        "source": API_SOURCE,
     }
+
+    if rum_session_id is not None:
+        params["rum_session_id"] = rum_session_id
 
     if backend_uuid is None:
         params["frontend_context_uuid"] = str(uuid4())

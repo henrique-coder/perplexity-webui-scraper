@@ -9,7 +9,14 @@ from __future__ import annotations
 
 
 __all__: list[str] = [
+    "AuthRequestError",
     "AuthenticationError",
+    "CompactTokenAlignmentError",
+    "CompactTokenChecksumError",
+    "CompactTokenFormatError",
+    "CompactTokenTruncatedError",
+    "CredentialError",
+    "EmbeddedUUIDError",
     "FileAccessError",
     "FileUploadError",
     "FileValidationError",
@@ -19,9 +26,12 @@ __all__: list[str] = [
     "ModelStatusError",
     "PerplexityError",
     "RateLimitError",
+    "RawCookieFormatError",
     "ResearchClarifyingQuestionsError",
     "ResponseParsingError",
+    "SessionTokenError",
     "StreamingError",
+    "UnsupportedTokenVersionError",
 ]
 
 
@@ -36,30 +46,71 @@ class PerplexityError(Exception):
         self.message = message
         super().__init__(message)
 
+    def __str__(self) -> str:
+        """Render only the public message, never an upstream exception context."""
+        return self.message
+
+
+class SessionTokenError(PerplexityError, ValueError):
+    """Base class for malformed session credentials and compact tokens."""
+
+
+class CredentialError(SessionTokenError):
+    """Base class for malformed raw cookie credentials."""
+
+
+class RawCookieFormatError(CredentialError):
+    """Raw session cookie is malformed or contains an invalid JWE."""
+
+
+class CompactTokenFormatError(SessionTokenError):
+    """Compact token prefix, encoding, or sentinel is invalid."""
+
+
+class CompactTokenTruncatedError(CompactTokenFormatError):
+    """Compact token does not contain a complete payload."""
+
+
+class CompactTokenAlignmentError(CompactTokenFormatError):
+    """Compact token byte representation is not aligned."""
+
+
+class UnsupportedTokenVersionError(CompactTokenFormatError):
+    """Compact token uses an unsupported protocol version."""
+
+
+class CompactTokenChecksumError(CompactTokenFormatError):
+    """Compact token checksum does not match its payload."""
+
+
+class EmbeddedUUIDError(CompactTokenFormatError):
+    """Compact token contains an invalid account UUID."""
+
 
 class HTTPError(PerplexityError):
     """Raised when an HTTP request returns an unexpected status code.
 
     Attributes:
         status_code: HTTP status code, if available.
-        url: Request URL, if available.
-        response_body: First 500 characters of the response body, if available.
     """
 
     def __init__(
         self,
         message: str,
         status_code: int | None = None,
-        url: str | None = None,
-        response_body: str | None = None,
     ) -> None:
         self.status_code = status_code
-        self.url = url
-        self.response_body = response_body[:500] if response_body and len(response_body) > 500 else response_body
         super().__init__(message)
 
+    def clear_previous_exception_context(self) -> None:
+        """Clear traceback metadata so a reused exception cannot leak it."""
+        self.__traceback__ = None
+        self.__cause__ = None
+        self.__context__ = None
+        self.__suppress_context__ = True
+
     def __repr__(self) -> str:
-        return f"HTTPError(status={self.status_code}, url={self.url!r}, message={self.message!r})"
+        return f"HTTPError(status={self.status_code}, message={self.message!r})"
 
 
 class AuthenticationError(HTTPError):
@@ -75,11 +126,39 @@ class AuthenticationError(HTTPError):
 class RateLimitError(HTTPError):
     """Raised when the Perplexity rate limit is exceeded (HTTP 429)."""
 
-    def __init__(self, message: str | None = None) -> None:
+    def __init__(self, message: str | None = None, retry_after: str | None = None) -> None:
+        self.retry_after = retry_after
         super().__init__(
             message or "Rate limit exceeded (429). Please wait before retrying.",
             status_code=429,
         )
+
+
+class AuthRequestError(PerplexityError):
+    """Raised for sanitized authentication-service failures."""
+
+    def __init__(
+        self,
+        status_code: int | None,
+        error_code: str | None = None,
+        invalid_code: bool = False,
+    ) -> None:
+        self.status_code = status_code
+        self.error_code = error_code
+        self.invalid_code = invalid_code
+        message = "Authentication request failed."
+
+        if status_code is not None:
+            message = f"Authentication request failed with HTTP {status_code}."
+
+        super().__init__(message)
+
+    def clear_previous_exception_context(self) -> None:
+        """Clear traceback metadata so a reused exception cannot leak it."""
+        self.__traceback__ = None
+        self.__cause__ = None
+        self.__context__ = None
+        self.__suppress_context__ = True
 
 
 class ModelAccessError(PerplexityError):
@@ -127,6 +206,13 @@ class FileUploadError(PerplexityError):
         self.file_path = file_path
         super().__init__(f"Upload failed for '{file_path}': {reason}")
 
+    def clear_previous_exception_context(self) -> None:
+        """Clear traceback metadata so a reused exception cannot leak it."""
+        self.__traceback__ = None
+        self.__cause__ = None
+        self.__context__ = None
+        self.__suppress_context__ = True
+
 
 class FileValidationError(PerplexityError):
     """Raised when a file fails local validation before upload.
@@ -161,14 +247,9 @@ class ResearchClarifyingQuestionsError(PerplexityError):
 
 
 class ResponseParsingError(PerplexityError):
-    """Raised when the API response cannot be parsed into a known structure.
+    """Raised when the API response cannot be parsed into a known structure."""
 
-    Attributes:
-        raw_data: Stringified raw response data for debugging, if available.
-    """
-
-    def __init__(self, message: str, raw_data: str | None = None) -> None:
-        self.raw_data = raw_data
+    def __init__(self, message: str) -> None:
         super().__init__(f"Failed to parse API response: {message}")
 
 

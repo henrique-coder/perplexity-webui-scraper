@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, Literal
 
 from perplexity_webui_scraper._internal.exceptions import (
     FileAccessError,
@@ -10,27 +10,22 @@ from perplexity_webui_scraper._internal.exceptions import (
     ModelStatusError,
 )
 from perplexity_webui_scraper.config.conversation import ConversationConfig
-from perplexity_webui_scraper.core.response import Coordinates
-
-
-if TYPE_CHECKING:
-    from perplexity_webui_scraper._internal.types import ResearchInteraction, SearchFocus, SourceFocus, TimeRange
-    from perplexity_webui_scraper.core.client import Perplexity
-    from perplexity_webui_scraper.models.types import Model
+from perplexity_webui_scraper.core.client import Perplexity  # noqa: TC001
+from perplexity_webui_scraper.models.types import Model  # noqa: TC001
 
 
 def _ask(
     client: Perplexity,
     model: Model,
     query: str,
-    search_focus: SearchFocus = "web",
-    source_focus: SourceFocus = "web",
-    time_range: TimeRange = "all",
+    search_focus: Literal["web", "writing"] = "web",
+    source_focus: Literal["web", "academic", "social", "finance", "all"] = "web",
+    time_range: Literal["all", "day", "week", "month", "year"] = "all",
     language: str = "en-US",
     latitude: float | None = None,
     longitude: float | None = None,
     allow_risky_model: bool = False,
-    research_interaction: str = "auto",
+    research_interaction: Literal["auto", "manual"] = "auto",
 ) -> dict[str, Any]:
     """Execute a single Perplexity query and return a structured result dict.
 
@@ -39,22 +34,17 @@ def _ask(
         model: The resolved :class:`~perplexity_webui_scraper.models.types.Model`.
         query: The user's search query.
         search_focus: ``"web"`` for web search; ``"writing"`` for pure generation.
-        source_focus: Source category filter.
-        time_range: Recency filter for search results.
+        source_focus: One or more of ``"web"``, ``"academic"``, ``"social"``, ``"finance"``, or ``"all"``.
+        time_range: ``"all"``, ``"day"``, ``"week"``, ``"month"``, or ``"year"``.
         language: BCP-47 response language tag.
-        latitude: Optional latitude for localised results.
-        longitude: Optional longitude for localised results.
+        latitude: Optional latitude in degrees, from -90 through 90.
+        longitude: Optional longitude in degrees, from -180 through 180. Both coordinates are required together.
         allow_risky_model: Acknowledge any non-available model status.
-        research_interaction: Deep Research clarification handling: ``"auto"`` or ``"manual"``.
+        research_interaction: ``"auto"`` answers Deep Research questions; ``"manual"`` returns them as an error.
 
     Returns:
         Dict with ``answer``, ``search_results``, and ``conversation_uuid`` keys.
     """
-    coordinates: Coordinates | None = None
-
-    if latitude is not None and longitude is not None:
-        coordinates = Coordinates(latitude=latitude, longitude=longitude)
-
     config = ConversationConfig(
         model=model.id,
         search_focus=search_focus,
@@ -62,10 +52,11 @@ def _ask(
         time_range=time_range,
         citation_mode="clean",
         language=language,
-        coordinates=coordinates,
+        latitude=latitude,
+        longitude=longitude,
         allow_risky_model=allow_risky_model,
         custom_model_mode=model.mode,
-        research_interaction=cast("ResearchInteraction", research_interaction),
+        research_interaction=research_interaction,
     )
 
     conversation = client.create_conversation(config)

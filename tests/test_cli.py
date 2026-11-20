@@ -2,18 +2,28 @@
 
 from __future__ import annotations
 
+from io import StringIO
 from pathlib import Path
 from subprocess import run
-from tomllib import loads
+from typing import Any
 from unittest.mock import Mock, patch
 
 from pytest import raises
+from rich.console import Console
 from typer.testing import CliRunner
 
-from perplexity_webui_scraper.cli.__main__ import _COMMANDS, _load_command, api, cli, token
+from perplexity_webui_scraper._internal.constants import SESSION_COOKIE_PREFIX, SESSION_TOKEN_JWE_HEADER
+from perplexity_webui_scraper.auth.session_token import pack_session_token
+from perplexity_webui_scraper.cli.__main__ import _COMMANDS, _load_command, api, cli
+from perplexity_webui_scraper.cli.commands.token import _prompt_otp, _prompt_totp
+from perplexity_webui_scraper.cli.commands.token import run_command as run_token_command
 
 
 runner = CliRunner()
+_TOKEN_UUID = "123e4567-e89b-42d3-a456-426614174000"
+_TOKEN_JWE = f"{SESSION_TOKEN_JWE_HEADER}..EBESExQVFhcYGRob.AQIDBAUGBw.MDEyMzQ1Njc4OTo7PD0-Pw"
+_RAW_TOKEN = f"{SESSION_COOKIE_PREFIX}{_TOKEN_UUID}={_TOKEN_JWE}"
+_COMPACT_TOKEN = pack_session_token(_RAW_TOKEN)
 
 
 def test_root_help_lists_commands_without_importing_feature_modules() -> None:
@@ -26,19 +36,12 @@ def test_root_help_lists_commands_without_importing_feature_modules() -> None:
 
 
 def test_help_aliases_work_for_root_and_all_subcommands() -> None:
-    for command in ([], ["token"], ["api"], ["mcp"]):
+    for command in ([], ["token"], ["token", "convert"], ["token", "deconvert"], ["api"], ["mcp"]):
         for option in ("-h", "--help"):
             result = runner.invoke(cli, [*command, option])
 
             assert result.exit_code == 0, (command, option, result.output)
             assert "Usage:" in result.output
-
-
-def test_public_extra_order_matches_all_extra() -> None:
-    project = loads(Path("pyproject.toml").read_text())
-    extras = project["project"]["optional-dependencies"]
-    assert list(extras) == ["all", "token", "api", "mcp"]
-    assert extras["all"] == ["perplexity-webui-scraper[token,api,mcp]"]
 
 
 def test_base_only_install_runs_root_help_without_feature_dependencies() -> None:
@@ -113,35 +116,228 @@ def test_missing_token_extra_is_reported_as_clean_cli_error() -> None:
     assert "perplexity-webui-scraper[token]" in result.output
 
 
-def test_token_dispatch_uses_token_extra_app() -> None:
-    token_app = Mock()
-    with (
-        patch("perplexity_webui_scraper.cli.__main__._load_command", return_value=(token_app, "token")),
-        patch("perplexity_webui_scraper.cli.__main__.echo"),
+def test_token_email_options_dispatch_to_authentication_command() -> None:
+    for option in ("-e", "--email"):
+        run_token = Mock()
+        with patch("perplexity_webui_scraper.cli.__main__.import_module", return_value=Mock(run_command=run_token)):
+            result = runner.invoke(cli, ["token", option, "user@example.test"])
+
+        assert result.exit_code == 0
+        run_token.assert_called_once_with("user@example.test")
+
+
+def test_token_convert_and_deconvert_use_masked_input_without_authentication(monkeypatch: Any) -> None:
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.authenticate", Mock(side_effect=AssertionError))
+    prompt = Mock(side_effect=[_RAW_TOKEN, _COMPACT_TOKEN, _COMPACT_TOKEN])
+    confirm = Mock(return_value=False)
+    copy_credential = Mock()
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.Prompt.ask", prompt)
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.Confirm.ask", confirm)
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.copy", copy_credential)
+
+    raw_conversion = runner.invoke(cli, ["token", "convert"])
+    compact_validation = runner.invoke(cli, ["token", "convert"])
+    raw_restoration = runner.invoke(cli, ["token", "deconvert"])
+
+    assert raw_conversion.exit_code == 0, raw_conversion.output
+    assert _COMPACT_TOKEN in raw_conversion.output
+    assert compact_validation.exit_code == 0, compact_validation.output
+    assert _COMPACT_TOKEN in compact_validation.output
+    assert raw_restoration.exit_code == 0, raw_restoration.output
+    assert _RAW_TOKEN in raw_restoration.output
+    assert prompt.call_count == 3
+    assert all(prompt_call.kwargs["password"] is True for prompt_call in prompt.call_args_list)
+    assert confirm.call_count == 3
+    copy_credential.assert_not_called()
+
+
+def test_token_conversion_copies_only_after_user_confirmation(monkeypatch: Any) -> None:
+    credential = _RAW_TOKEN
+    copy_credential = Mock()
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.Prompt.ask", Mock(return_value=credential))
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.Confirm.ask", Mock(return_value=True))
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.copy", copy_credential)
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.sys_stdin_is_tty", lambda: False)
+
+    result = runner.invoke(cli, ["token", "convert"])
+
+    assert result.exit_code == 0, result.output
+    copy_credential.assert_called_once()
+
+
+def test_token_transform_rejects_positional_credentials_without_echoing_them() -> None:
+    for operation, credential in (
+        ("convert", _RAW_TOKEN),
+        ("convert", _COMPACT_TOKEN),
+        ("deconvert", _COMPACT_TOKEN),
     ):
-        token("user@example.com")
+        result = runner.invoke(cli, ["token", operation, credential], input="n\n")
 
-    token_app.assert_called_once_with("user@example.com")
-
-
-def test_token_command_dispatches_email_to_authentication_function() -> None:
-    token_run = Mock()
-    token_module = Mock(run=token_run)
-    with patch("perplexity_webui_scraper.cli.__main__.import_module", return_value=token_module):
-        result = runner.invoke(cli, ["token", "--email", "user@example.com"])
-
-    assert result.exit_code == 0
-    token_run.assert_called_once_with("user@example.com")
+        assert result.exit_code == 2
+        assert _RAW_TOKEN not in result.output
+        assert _COMPACT_TOKEN not in result.output
 
 
-def test_token_command_accepts_short_email_option() -> None:
-    token_run = Mock()
-    token_module = Mock(run=token_run)
-    with patch("perplexity_webui_scraper.cli.__main__.import_module", return_value=token_module):
-        result = runner.invoke(cli, ["token", "-e", "user@example.com"])
+def test_bare_token_command_invokes_interactive_auth(monkeypatch: Any) -> None:
+    output = StringIO()
+    console = Console(file=output, color_system="standard", force_terminal=False, soft_wrap=True)
+    prompt_email = Mock(return_value="person@example.test")
+    authenticate_mock = Mock(return_value=_COMPACT_TOKEN)
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.console", console)
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.sys_stdin_is_tty", lambda: False)
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token._prompt_email", prompt_email)
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.authenticate", authenticate_mock)
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.Confirm.ask", Mock(return_value=False))
 
-    assert result.exit_code == 0
-    token_run.assert_called_once_with("user@example.com")
+    result = runner.invoke(cli, ["token"])
+
+    assert result.exit_code == 0, result.output
+    prompt_email.assert_called_once_with(None)
+    authenticate_mock.assert_called_once()
+
+
+def test_token_deconvert_accepts_quoted_compact_token(monkeypatch: Any) -> None:
+    monkeypatch.setattr(
+        "perplexity_webui_scraper.cli.commands.token.Prompt.ask",
+        Mock(return_value=f'"{_COMPACT_TOKEN}"'),
+    )
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.Confirm.ask", Mock(return_value=False))
+
+    result = runner.invoke(cli, ["token", "deconvert"])
+
+    assert result.exit_code == 0, result.output
+    assert _RAW_TOKEN in result.output
+
+
+def test_token_convert_help_and_removed_shortcut_flag(monkeypatch: Any) -> None:
+    monkeypatch.setattr("perplexity_webui_scraper.cli.__main__._load_command", Mock(side_effect=AssertionError))
+    result = runner.invoke(cli, ["token", "convert", "--help"])
+
+    assert result.exit_code == 0, result.output
+    assert "Restore a compact wsk_ token" not in result.output
+    assert "Usage:" in result.output
+
+    for removed_flag in ("-c", "--convert"):
+        rejected = runner.invoke(cli, ["token", removed_flag])
+
+        assert rejected.exit_code != 0
+        assert "No such option" in rejected.output
+
+    for operation in ("convert", "deconvert"):
+        combined = runner.invoke(cli, ["token", "--email", "user@example.test", operation])
+
+        assert combined.exit_code == 2
+        assert "--email option cannot be combined" in combined.output
+
+
+def test_token_otp_prompt_repeats_locally_before_returning_a_valid_code() -> None:
+    email = "person@example.test"
+    valid_link = (
+        "https://www.perplexity.ai/api/auth/callback/email?"
+        "callbackUrl=https%3A%2F%2Fwww.perplexity.ai%2F%3Flogin-source%3DfloatingSignup"
+        "&email=person%40example.test&token=950515"
+    )
+    responses = iter(["saas", "12345", "1234567", "95a515", valid_link, "950515"])
+    output = StringIO()
+    console = Console(file=output, color_system="standard", force_terminal=True, soft_wrap=True)
+
+    with (
+        patch("perplexity_webui_scraper.cli.commands.token.console", console),
+        patch(
+            "perplexity_webui_scraper.cli.commands.token.Prompt.ask",
+            side_effect=lambda *_args, **_kwargs: next(responses),
+        ) as prompt,
+    ):
+        assert _prompt_otp(email) == valid_link
+        assert _prompt_otp(email) == "950515"
+
+    assert prompt.call_count == 6
+    assert all(prompt_call.kwargs.get("password") is True for prompt_call in prompt.call_args_list)
+    assert output.getvalue().count("Invalid format.") == 4
+
+
+def test_token_otp_and_totp_prompts_do_not_echo_secrets_via_getpass() -> None:
+    email = "person@example.test"
+    synthetic_link = (
+        "https://www.perplexity.ai/api/auth/callback/email?"
+        "callbackUrl=https%3A%2F%2Fwww.perplexity.ai%2F%3Flogin-source%3DfloatingSignup"
+        "&email=person%40example.test&token=950515"
+    )
+    synthetic_totp = "654321"
+    output = StringIO()
+    console = Console(file=output, color_system="standard", force_terminal=True, soft_wrap=True)
+    secrets = iter([synthetic_link, synthetic_totp])
+
+    with (
+        patch("perplexity_webui_scraper.cli.commands.token.console", console),
+        patch("getpass.getpass", side_effect=lambda *_args, **_kwargs: next(secrets)) as getpass_mock,
+    ):
+        assert _prompt_otp(email) == synthetic_link
+        assert _prompt_totp() == synthetic_totp
+
+    assert getpass_mock.call_count == 2
+    rendered = output.getvalue()
+    assert synthetic_link not in rendered
+    assert "950515" not in rendered
+    assert synthetic_totp not in rendered
+
+
+def test_token_completion_messages_request_clipboard_consent(monkeypatch: Any) -> None:
+    output = StringIO()
+    console = Console(
+        file=output,
+        color_system="standard",
+        force_terminal=True,
+        soft_wrap=True,
+    )
+    credential = "wsk_synthetic_credential"
+
+    with (
+        patch("perplexity_webui_scraper.cli.commands.token.console", console),
+        patch("perplexity_webui_scraper.cli.commands.token.authenticate", return_value=credential),
+        patch("perplexity_webui_scraper.cli.commands.token.Confirm.ask", return_value=True),
+        patch("perplexity_webui_scraper.cli.commands.token.copy"),
+        patch("perplexity_webui_scraper.cli.commands.token._prompt_email", return_value="person@example.test"),
+    ):
+        monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.sys_stdin_is_tty", lambda: True)
+        console_input = Mock()
+        monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.console.input", console_input)
+        monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.run_command", run_token_command)
+        run_token_command("person@example.test")
+
+    rendered = output.getvalue()
+    assert "Credential copied to clipboard." in rendered
+    assert "Keep this credential private; it grants access to your account." in rendered
+    assert "Press ENTER to clear the screen and exit..." in console_input.call_args.args[0]
+
+
+def test_token_authentication_uses_full_screen_until_enter(monkeypatch: Any) -> None:
+    output = StringIO()
+    screen_console = Console(
+        file=output,
+        color_system="standard",
+        force_terminal=True,
+        legacy_windows=False,
+        soft_wrap=True,
+        _environ={"TERM": "xterm"},
+    )
+    input_prompt = Mock()
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.console", screen_console)
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.authenticate", Mock(return_value=_COMPACT_TOKEN))
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.Confirm.ask", Mock(return_value=False))
+    monkeypatch.setattr(
+        "perplexity_webui_scraper.cli.commands.token._prompt_email",
+        Mock(return_value="person@example.test"),
+    )
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.sys_stdin_is_tty", lambda: True)
+    monkeypatch.setattr(screen_console, "input", input_prompt)
+
+    result = runner.invoke(cli, ["token", "--email", "person@example.test"])
+
+    assert result.exit_code == 0, result.output
+    assert output.getvalue().count("\x1b[?1049h") == 1
+    assert output.getvalue().count("\x1b[?1049l") == 1
+    assert input_prompt.call_count == 1
 
 
 def test_api_dispatch_passes_cli_options_to_launcher() -> None:
