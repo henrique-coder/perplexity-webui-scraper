@@ -4,14 +4,14 @@ from pathlib import Path
 from tarfile import TarInfo
 from tarfile import open as open_tar
 from typing import Any
-from unittest.mock import MagicMock
-from urllib.error import HTTPError
+from unittest.mock import MagicMock, patch
+from urllib.error import HTTPError, URLError
 from urllib.request import Request
 from zipfile import ZipFile
 
 from pytest import raises
 
-from scripts.verify_pypi_uploads import fetch_published_files, missing_artifact_paths
+from scripts.verify_pypi_uploads import fetch_published_files, missing_artifact_paths, verify_with_retries
 from scripts.verify_pypi_uploads import main as check_pypi_artifacts
 from scripts.verify_release_artifacts import validate_artifacts
 
@@ -60,6 +60,7 @@ def test_check_pypi_artifacts_verify_only_requires_every_digest(tmp_path: Path, 
         "scripts.verify_pypi_uploads.fetch_published_files",
         lambda _package, _version: {(tmp_path / "dist" / wheel.name).name: wheel_digest},
     )
+    monkeypatch.setattr("scripts.verify_pypi_uploads.sleep", lambda _seconds: None)
 
     with raises(ValueError, match="PyPI publication incomplete"):
         check_pypi_artifacts(["--verify-only"])
@@ -117,3 +118,73 @@ def test_validate_artifacts_rejects_malformed_wheel_archive(tmp_path: Path) -> N
     valid_sdist = _write_artifacts(valid_directory, PACKAGE_VERSION, PACKAGE_VERSION)[1]
     with raises(ValueError, match="Invalid wheel archive"):
         validate_artifacts([malformed_wheel, valid_sdist], PACKAGE_VERSION)
+
+
+def test_verify_pypi_uploads_retries_cdn_propagation_delays(tmp_path: Path) -> None:
+    artifacts = _write_artifacts(tmp_path, PACKAGE_VERSION, PACKAGE_VERSION)
+    hashes = {path.name: sha256(path.read_bytes()).hexdigest() for path in artifacts}
+    sleep_calls: list[float] = []
+    responses: list[dict[str, str] | BaseException] = [
+        {},
+        URLError("temporary edge failure"),
+        {artifacts[0].name: hashes[artifacts[0].name]},
+        hashes,
+    ]
+
+    with patch("scripts.verify_pypi_uploads.fetch_published_files", side_effect=responses) as fetch_mock:
+        missing = verify_with_retries(
+            artifacts,
+            "package",
+            PACKAGE_VERSION,
+            max_attempts=5,
+            delay_seconds=1.5,
+            sleep_fn=sleep_calls.append,
+        )
+
+    assert missing == []
+    assert fetch_mock.call_count == 4
+    assert sleep_calls == [1.5, 1.5, 1.5]
+
+
+def test_verify_pypi_uploads_fails_immediately_on_digest_mismatch(tmp_path: Path) -> None:
+    artifacts = _write_artifacts(tmp_path, PACKAGE_VERSION, PACKAGE_VERSION)
+    sleep_calls: list[float] = []
+    mismatched = {artifacts[0].name: "0" * 64}
+
+    with (
+        patch("scripts.verify_pypi_uploads.fetch_published_files", return_value=mismatched) as fetch_mock,
+        raises(ValueError, match="different SHA-256 digest"),
+    ):
+        verify_with_retries(
+            artifacts,
+            "package",
+            PACKAGE_VERSION,
+            max_attempts=5,
+            delay_seconds=1.0,
+            sleep_fn=sleep_calls.append,
+        )
+
+    assert fetch_mock.call_count == 1
+    assert sleep_calls == []
+
+
+def test_verify_pypi_uploads_main_writes_publish_output_and_succeeds(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    dist_dir = tmp_path / "dist"
+    dist_dir.mkdir()
+    artifacts = _write_artifacts(dist_dir, PACKAGE_VERSION, PACKAGE_VERSION)
+    hashes = {path.name: sha256(path.read_bytes()).hexdigest() for path in artifacts}
+    output_file = tmp_path / "github_output.txt"
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("PACKAGE_NAME", "package")
+    monkeypatch.setenv("VERSION", PACKAGE_VERSION)
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output_file))
+
+    with patch("scripts.verify_pypi_uploads.fetch_published_files", return_value=hashes):
+        assert check_pypi_artifacts(["--verify-only"]) == 0
+        assert check_pypi_artifacts([]) == 0
+
+    assert output_file.read_text(encoding="utf-8") == "publish=false\n"
