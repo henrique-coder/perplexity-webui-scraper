@@ -218,3 +218,11 @@ def test_resolve_and_unpack_enforce_single_normalization_and_size_limit() -> Non
         resolve_session_token(backslash_wrapped)
     with raises(CompactTokenFormatError, match="length"):
         unpack_session_token("wsk_" + "A" * 9000)
+
+
+def test_pack_and_unpack_accept_both_raw_and_compact_tokens() -> None:
+    raw = _synthetic_raw()
+    compact = pack_session_token(raw)
+
+    assert pack_session_token(compact) == compact
+    assert unpack_session_token(raw) == unpack_session_token(compact) == resolve_session_token(raw)

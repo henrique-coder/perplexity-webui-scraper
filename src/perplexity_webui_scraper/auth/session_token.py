@@ -146,8 +146,8 @@ def _checksum(payload: bytes, version: int) -> int:
 
 
 def pack_session_token(raw_input: str) -> str:
-    """Validate and encode a raw session cookie into the compact v1 format."""
-    credentials = validate_raw_cookie(raw_input)
+    """Validate a raw session cookie or compact token and encode it in the compact v1 format."""
+    credentials = resolve_session_token(raw_input)
     uuid_bytes = _uuid_bytes(credentials.uuid)
     iv, ciphertext, tag = _parse_jwe(credentials.cookie_value)
     payload = uuid_bytes + iv + tag + ciphertext
@@ -202,8 +202,8 @@ def _unpack_session_token_normalized(value: str) -> SessionCredentials:
 
 
 def unpack_session_token(compact_token: str) -> SessionCredentials:
-    """Decode and validate a compact v1 session token."""
-    return _unpack_session_token_normalized(_normalize_input(compact_token))
+    """Decode a compact v1 token (or validate a raw cookie pair) into SessionCredentials."""
+    return resolve_session_token(compact_token)
 
 
 def resolve_session_token(token_input: str) -> SessionCredentials:
