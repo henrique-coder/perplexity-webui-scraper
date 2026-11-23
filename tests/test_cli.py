@@ -15,7 +15,7 @@ from typer.testing import CliRunner
 from perplexity_webui_scraper._internal.constants import SESSION_COOKIE_PREFIX, SESSION_TOKEN_JWE_HEADER
 from perplexity_webui_scraper.auth.session_token import pack_session_token
 from perplexity_webui_scraper.cli.__main__ import _COMMANDS, _load_command, api, cli
-from perplexity_webui_scraper.cli.commands.token import _prompt_otp, _prompt_totp
+from perplexity_webui_scraper.cli.commands.token import _prompt_email, _prompt_otp, _prompt_totp
 from perplexity_webui_scraper.cli.commands.token import run_command as run_token_command
 
 
@@ -128,7 +128,7 @@ def test_token_email_options_dispatch_to_authentication_command() -> None:
 
 def test_token_convert_and_deconvert_use_masked_input_without_authentication(monkeypatch: Any) -> None:
     monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.authenticate", Mock(side_effect=AssertionError))
-    prompt = Mock(side_effect=[_RAW_TOKEN, _COMPACT_TOKEN, _COMPACT_TOKEN])
+    prompt = Mock(side_effect=[_RAW_TOKEN, _COMPACT_TOKEN, _COMPACT_TOKEN, _RAW_TOKEN])
     confirm = Mock(return_value=False)
     copy_credential = Mock()
     monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.Prompt.ask", prompt)
@@ -138,6 +138,7 @@ def test_token_convert_and_deconvert_use_masked_input_without_authentication(mon
     raw_conversion = runner.invoke(cli, ["token", "convert"])
     compact_validation = runner.invoke(cli, ["token", "convert"])
     raw_restoration = runner.invoke(cli, ["token", "deconvert"])
+    raw_passthrough = runner.invoke(cli, ["token", "deconvert"])
 
     assert raw_conversion.exit_code == 0, raw_conversion.output
     assert _COMPACT_TOKEN in raw_conversion.output
@@ -145,9 +146,11 @@ def test_token_convert_and_deconvert_use_masked_input_without_authentication(mon
     assert _COMPACT_TOKEN in compact_validation.output
     assert raw_restoration.exit_code == 0, raw_restoration.output
     assert _RAW_TOKEN in raw_restoration.output
-    assert prompt.call_count == 3
+    assert raw_passthrough.exit_code == 0, raw_passthrough.output
+    assert _RAW_TOKEN in raw_passthrough.output
+    assert prompt.call_count == 4
     assert all(prompt_call.kwargs["password"] is True for prompt_call in prompt.call_args_list)
-    assert confirm.call_count == 3
+    assert confirm.call_count == 4
     copy_credential.assert_not_called()
 
 
@@ -252,11 +255,11 @@ def test_token_otp_prompt_repeats_locally_before_returning_a_valid_code() -> Non
         assert _prompt_otp(email) == "950515"
 
     assert prompt.call_count == 6
-    assert all(prompt_call.kwargs.get("password") is True for prompt_call in prompt.call_args_list)
+    assert all(prompt_call.kwargs.get("password") is not True for prompt_call in prompt.call_args_list)
     assert output.getvalue().count("Invalid format.") == 4
 
 
-def test_token_otp_and_totp_prompts_do_not_echo_secrets_via_getpass() -> None:
+def test_token_otp_and_totp_prompts_show_typed_input() -> None:
     email = "person@example.test"
     synthetic_link = (
         "https://www.perplexity.ai/api/auth/callback/email?"
@@ -266,20 +269,86 @@ def test_token_otp_and_totp_prompts_do_not_echo_secrets_via_getpass() -> None:
     synthetic_totp = "654321"
     output = StringIO()
     console = Console(file=output, color_system="standard", force_terminal=True, soft_wrap=True)
-    secrets = iter([synthetic_link, synthetic_totp])
+    responses = iter([synthetic_link, synthetic_totp])
 
     with (
         patch("perplexity_webui_scraper.cli.commands.token.console", console),
-        patch("getpass.getpass", side_effect=lambda *_args, **_kwargs: next(secrets)) as getpass_mock,
+        patch(
+            "perplexity_webui_scraper.cli.commands.token.Prompt.ask",
+            side_effect=lambda *_args, **_kwargs: next(responses),
+        ) as prompt,
     ):
         assert _prompt_otp(email) == synthetic_link
         assert _prompt_totp() == synthetic_totp
 
-    assert getpass_mock.call_count == 2
-    rendered = output.getvalue()
-    assert synthetic_link not in rendered
-    assert "950515" not in rendered
-    assert synthetic_totp not in rendered
+    assert prompt.call_count == 2
+    assert all(
+        "password" not in prompt_call.kwargs or prompt_call.kwargs["password"] is False
+        for prompt_call in prompt.call_args_list
+    )
+
+
+def test_token_email_prompt_reprompts_until_valid() -> None:
+    output = StringIO()
+    console = Console(file=output, color_system="standard", force_terminal=False, soft_wrap=True)
+    responses = iter(["", "nope", "person@example.test"])
+
+    with (
+        patch("perplexity_webui_scraper.cli.commands.token.console", console),
+        patch(
+            "perplexity_webui_scraper.cli.commands.token.Prompt.ask",
+            side_effect=lambda *_args, **_kwargs: next(responses),
+        ) as prompt,
+    ):
+        assert _prompt_email(None) == "person@example.test"
+
+    assert prompt.call_count == 3
+    assert output.getvalue().count("Enter a valid email address.") == 2
+
+
+def test_token_transform_exits_cleanly_on_closed_input(monkeypatch: Any) -> None:
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.sys_stdin_is_tty", lambda: False)
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.Prompt.ask", Mock(return_value=_RAW_TOKEN))
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.Confirm.ask", Mock(side_effect=EOFError))
+
+    eof_result = runner.invoke(cli, ["token", "convert"])
+
+    assert eof_result.exit_code == 1
+    assert isinstance(eof_result.exception, SystemExit)
+    assert "Input closed" in eof_result.output
+
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.Prompt.ask", Mock(side_effect=KeyboardInterrupt))
+    interrupted = runner.invoke(cli, ["token", "convert"])
+
+    assert interrupted.exit_code == 0
+
+
+def test_token_auth_handles_closed_input_and_errors_without_traceback(monkeypatch: Any) -> None:
+    output = StringIO()
+    console = Console(file=output, color_system="standard", force_terminal=False, soft_wrap=True)
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.console", console)
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.sys_stdin_is_tty", lambda: False)
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token._prompt_email", Mock(return_value="a@b.test"))
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.authenticate", Mock(side_effect=EOFError))
+
+    eof_result = runner.invoke(cli, ["token"])
+
+    assert eof_result.exit_code == 1
+    assert isinstance(eof_result.exception, SystemExit)
+    assert "input closed" in output.getvalue()
+
+    output_error = StringIO()
+    error_console = Console(file=output_error, color_system="standard", force_terminal=True, soft_wrap=True)
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.console", error_console)
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.sys_stdin_is_tty", lambda: True)
+    monkeypatch.setattr("perplexity_webui_scraper.cli.commands.token.authenticate", Mock(side_effect=RuntimeError("")))
+    monkeypatch.setattr(error_console, "input", Mock(side_effect=KeyboardInterrupt))
+
+    failed_result = runner.invoke(cli, ["token", "--email", "a@b.test"])
+
+    assert failed_result.exit_code == 1
+    assert isinstance(failed_result.exception, SystemExit)
+    assert "RuntimeError" in output_error.getvalue()
 
 
 def test_token_completion_messages_request_clipboard_consent(monkeypatch: Any) -> None:

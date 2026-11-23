@@ -89,7 +89,7 @@ def token(
     },
 )
 def token_convert(context: Context) -> None:
-    """Convert a raw cookie to compact format or validate a compact token."""
+    """Convert a raw cookie or wsk_ token to the compact wsk_ format."""
     if context.args:
         echo(
             "Passing credentials as command-line arguments is not supported. "
@@ -116,7 +116,7 @@ def token_convert(context: Context) -> None:
     },
 )
 def token_deconvert(context: Context) -> None:
-    """Restore a compact wsk_ token to its raw session-cookie pair."""
+    """Restore a raw session-cookie pair from a wsk_ token or raw cookie."""
     if context.args:
         echo(
             "Passing credentials as command-line arguments is not supported. "
