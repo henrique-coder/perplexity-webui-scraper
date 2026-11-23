@@ -76,7 +76,7 @@ Checks the authenticated account's Perplexity tier (cached in memory per credent
 
 When initializing a new thread, the server prepends a master `[System]` instruction clarifying that `/v1/chat/completions` is strictly a read-only Perplexity WebUI mirror for direct Q&A and research, preventing agent harnesses from attempting autonomous tool execution.
 
-Non-streaming responses return assistant text in `choices[0].message.content`. Token counts are reported as zero. Follow-up requests can continue a cached thread by setting `perplexity.thread_uuid` to the previous response's thread UUID. Streaming responses emit standard `data:` SSE chunks ending with `data: [DONE]` and safe `event: error` frames on upstream failure. No hidden reasoning or client-executable tool calls are exposed.
+Non-streaming responses return assistant text in `choices[0].message.content`. Token counts are reported as zero. Follow-up requests can continue a cached thread by setting `perplexity.thread_uuid` to the previous response's thread UUID. Streaming responses emit standard `data:` SSE chunks ending with `data: [DONE]` and safe `event: error` frames on upstream failure. Upstream and unexpected request failures return OpenAI-style error objects (`401` upstream auth, `429` rate limit, `502` upstream error, `500` internal error) without leaking upstream details. No hidden reasoning or client-executable tool calls are exposed.
 
 ### OpenAI Python SDK and `curl`
 

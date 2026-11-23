@@ -74,7 +74,7 @@ To convert an existing raw cookie or validate an existing compact credential wit
 uv run perplexity-webui-scraper token convert
 ```
 
-Use `token deconvert` to restore a compact `wsk_` token to its raw session-cookie pair. The CLI masks pasted input and never accepts credentials as positional arguments. Conversion does not encrypt the cookie or improve its security.
+Use `token deconvert` to restore either a compact `wsk_` token or a raw cookie to its raw session-cookie pair. Only the pasted credential prompt in `token convert` and `token deconvert` is masked (email, six-digit verification codes/links, and TOTP inputs remain visible); neither command accepts credentials as positional arguments. Conversion does not encrypt the cookie or improve its security.
 
 ### 2. Basic usage
 
@@ -136,13 +136,13 @@ for model in MODELS.list_all():
 
 Use `-h` or `--help` with the root command or any subcommand. The token command accepts `-e` or `--email`.
 
-| Command                                           | Extra   | Description                                                                     |
-| ------------------------------------------------- | ------- | ------------------------------------------------------------------------------- |
-| `perplexity-webui-scraper token -e/--email EMAIL` | `token` | Authenticate and print a compact `wsk_` account session credential              |
-| `perplexity-webui-scraper token convert`          | `token` | Convert a raw cookie or validate a compact credential offline with masked input |
-| `perplexity-webui-scraper token deconvert`        | `token` | Restore a compact `wsk_` credential to its raw session-cookie pair              |
-| `perplexity-webui-scraper api`                    | `api`   | Start the OpenAI-compatible REST API server                                     |
-| `perplexity-webui-scraper mcp`                    | `mcp`   | Start the MCP server                                                            |
+| Command                                           | Extra   | Description                                                                           |
+| ------------------------------------------------- | ------- | ------------------------------------------------------------------------------------- |
+| `perplexity-webui-scraper token -e/--email EMAIL` | `token` | Authenticate and print a compact `wsk_` account session credential                    |
+| `perplexity-webui-scraper token convert`          | `token` | Convert a raw cookie or validate a compact credential offline with masked input       |
+| `perplexity-webui-scraper token deconvert`        | `token` | Restore a `wsk_` token or raw cookie to its raw session-cookie pair with masked input |
+| `perplexity-webui-scraper api`                    | `api`   | Start the OpenAI-compatible REST API server                                           |
+| `perplexity-webui-scraper mcp`                    | `mcp`   | Start the MCP server                                                                  |
 
 ## API
 

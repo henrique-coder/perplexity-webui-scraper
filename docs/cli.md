@@ -10,7 +10,7 @@ perplexity-webui-scraper --help
 | ------------------------------------------------- | ------- | -------------------------------------------------------------- | ------------------------------------ |
 | `perplexity-webui-scraper token -e/--email EMAIL` | `token` | Authenticate and print a compact `wsk_` session credential.    | [Session Token](token.md)            |
 | `perplexity-webui-scraper token convert`          | `token` | Convert a raw cookie or validate a compact credential offline. | [Session Token](token.md)            |
-| `perplexity-webui-scraper token deconvert`        | `token` | Restore a compact credential to its raw cookie pair.           | [Session Token](token.md)            |
+| `perplexity-webui-scraper token deconvert`        | `token` | Restore the raw cookie pair from a `wsk_` token or raw cookie. | [Session Token](token.md)            |
 | `perplexity-webui-scraper api`                    | `api`   | Start the OpenAI-compatible REST API server.                   | [OpenAI-Compatible API](rest-api.md) |
 | `perplexity-webui-scraper mcp`                    | `mcp`   | Start the MCP stdio server.                                    | [MCP Server](mcp-server.md)          |
 
