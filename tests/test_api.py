@@ -9,16 +9,21 @@ from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, call, patch
 
 from fastapi import HTTPException
-from pytest import fixture, mark, raises, warns
+from pytest import MonkeyPatch, fixture, mark, raises, warns
 from starlette.testclient import TestClient
+from typer import Exit
 
 from perplexity_webui_scraper._internal.constants import MAX_FILES, SESSION_COOKIE_PREFIX, SESSION_TOKEN_JWE_HEADER
 from perplexity_webui_scraper._internal.exceptions import (
     AuthenticationError,
+    FileValidationError,
     ModelAccessError,
     ModelRiskWarning,
     ModelStatusError,
+    PerplexityError,
+    RateLimitError,
 )
+from perplexity_webui_scraper.api import launcher
 from perplexity_webui_scraper.api.app import app
 from perplexity_webui_scraper.api.auth import AccountTierCache, ClientPool, account_tier_cache, client_pool
 from perplexity_webui_scraper.api.helpers import (
@@ -799,3 +804,90 @@ def test_chat_completion_forwards_master_prompt_even_with_agent_fields(client: T
     assert forwarded_query.index("Who won the 2026 Nobel Prize in Physics?") < forwarded_query.index(
         _MASTER_REMINDER_PROMPT
     )
+
+
+@mark.parametrize(
+    ("exc", "expected_status", "expected_code"),
+    [
+        (AuthenticationError("synthetic upstream detail"), 401, "upstream_authentication_failed"),
+        (RateLimitError("synthetic upstream detail"), 429, "rate_limit_exceeded"),
+        (PerplexityError("synthetic upstream detail"), 502, "upstream_error"),
+        (FileValidationError("img.png", "too large"), 400, "file_validation_failed"),
+        (RuntimeError("synthetic upstream detail"), 500, "internal_error"),
+    ],
+)
+@mark.parametrize("stream", [False, True])
+def test_chat_completions_returns_openai_errors_without_upstream_leaks(
+    exc: Exception,
+    expected_status: int,
+    expected_code: str,
+    stream: bool,
+) -> None:
+    conversation = _mock_conversation()
+    conversation.ask.side_effect = exc
+    conversation.uuid = None
+    upstream = MagicMock()
+    upstream.create_conversation.return_value = conversation
+    safe_client = TestClient(app, raise_server_exceptions=False)
+
+    with patch("perplexity_webui_scraper.api.routes.completions._client_pool.get_or_create", return_value=upstream):
+        response = safe_client.post(
+            "/v1/chat/completions",
+            json={
+                "model": "perplexity/best",
+                "messages": [{"role": "user", "content": "Hello"}],
+                "stream": stream,
+            },
+            headers={"Authorization": f"Bearer {TOKEN}"},
+        )
+
+    assert response.status_code == expected_status
+    assert response.json()["error"]["code"] == expected_code
+    assert "synthetic upstream detail" not in response.text
+
+
+def test_models_endpoint_returns_openai_500_on_unexpected_exception() -> None:
+    upstream = MagicMock()
+    upstream.get_account_profile.side_effect = RuntimeError("synthetic upstream detail")
+    safe_client = TestClient(app, raise_server_exceptions=False)
+
+    with patch("perplexity_webui_scraper.api.routes.models.client_pool.get_or_create", return_value=upstream):
+        response = safe_client.get("/v1/models", headers={"Authorization": f"Bearer {pack_session_token(TOKEN)}"})
+
+    assert response.status_code == 500
+    assert response.json()["error"]["code"] == "internal_error"
+    assert "synthetic upstream detail" not in response.text
+
+
+def test_api_launcher_validates_credentials_before_starting(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.delenv("PERPLEXITY_SESSION_TOKEN", raising=False)
+    monkeypatch.delenv("PERPLEXITY_API_KEY", raising=False)
+
+    with (
+        patch("perplexity_webui_scraper.api.launcher.uvicorn_run") as uvicorn_mock,
+        raises(Exit) as api_key_exit,
+    ):
+        monkeypatch.setenv("PERPLEXITY_API_KEY", "gateway-secret")
+        launcher.main(default_session_token=None, gateway_api_key=None)
+
+    assert api_key_exit.value.exit_code == 2
+    uvicorn_mock.assert_not_called()
+
+    monkeypatch.delenv("PERPLEXITY_API_KEY", raising=False)
+
+    with (
+        patch("perplexity_webui_scraper.api.launcher.uvicorn_run") as uvicorn_mock,
+        raises(Exit) as invalid_token_exit,
+    ):
+        monkeypatch.setenv("PERPLEXITY_SESSION_TOKEN", "not-a-token")
+        launcher.main(default_session_token=None, gateway_api_key=None)
+
+    assert invalid_token_exit.value.exit_code == 2
+    uvicorn_mock.assert_not_called()
+
+    for valid_token in (TOKEN, pack_session_token(TOKEN)):
+        monkeypatch.setenv("PERPLEXITY_SESSION_TOKEN", valid_token)
+        with patch("perplexity_webui_scraper.api.launcher.uvicorn_run") as uvicorn_mock:
+            launcher.main(default_session_token=None, gateway_api_key=None)
+
+        uvicorn_mock.assert_called_once()

@@ -8,8 +8,11 @@ from typing import Annotated
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
-from typer import Option, Typer
+from typer import Exit, Option, Typer
 from uvicorn import run as uvicorn_run
+
+from perplexity_webui_scraper._internal.exceptions import SessionTokenError
+from perplexity_webui_scraper.auth.session_token import resolve_session_token
 
 
 console = Console(stderr=True, soft_wrap=True)
@@ -74,14 +77,27 @@ def main(
         environ["PERPLEXITY_API_KEY"] = gateway_api_key
 
     if environ.get("PERPLEXITY_API_KEY") and not environ.get("PERPLEXITY_SESSION_TOKEN"):
-        raise ValueError("PERPLEXITY_API_KEY requires PERPLEXITY_SESSION_TOKEN")
+        console.print(
+            "[bold red]--api-key / PERPLEXITY_API_KEY requires --session-token / PERPLEXITY_SESSION_TOKEN.[/bold red]"
+        )
+        raise Exit(code=2)
 
-    if environ.get("PERPLEXITY_SESSION_TOKEN") and environ.get("PERPLEXITY_API_KEY"):
+    configured_token = environ.get("PERPLEXITY_SESSION_TOKEN")
+
+    if configured_token:
+        try:
+            resolve_session_token(configured_token)
+        except SessionTokenError as error:
+            console.print("[bold red]Invalid --session-token / PERPLEXITY_SESSION_TOKEN:[/bold red] ", end="")
+            console.print(str(error), markup=False, highlight=False)
+            raise Exit(code=2) from None
+
+    if configured_token and environ.get("PERPLEXITY_API_KEY"):
         auth_label = "Authorization: Bearer <custom API key> (server session token)"
-    elif environ.get("PERPLEXITY_SESSION_TOKEN"):
+    elif configured_token:
         auth_label = "None — passwordless (using server session token)"
     else:
-        auth_label = "Authorization: Bearer <wsk_ or session cookie>"
+        auth_label = "Authorization: Bearer <wsk_ token or raw session cookie>"
 
     info = Text.assemble(
         ("🌐  URL:   ", "bold cyan"),
